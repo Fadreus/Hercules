@@ -2179,6 +2179,12 @@ packet(0x96e,-1,clif->ackmergeitems);
 	packet(0x0960,5,clif->pChangeDir,2,4);  // CZ_CHANGE_DIRECTION
 #endif
 
+//2012-07-02
+#if PACKETVER >= 20120702
+// new packets
+	packet(0x098a, -1); // ZC_CLANINFO
+#endif
+
 //2012-07-10
 #if PACKETVER >= 20120710
 	packet(0x0886,2,clif->pReqCloseBuyingStore,0);  // CZ_REQ_CLOSE_BUYING_STORE
@@ -2216,6 +2222,15 @@ packet(0x96e,-1,clif->ackmergeitems);
 	packet(0x0368,6,clif->pSolveCharName,2);  // CZ_REQNAME_BYGID
 	packet(0x0363,8,clif->pDull); // CZ_JOIN_BATTLE_FIELD
 	packet(0x0436,4,clif->pDull); // CZ_GANGSI_RANK
+#endif
+
+//2012-07-16aRagExe
+#if PACKETVER >= 20120716
+// new packets
+	packet(0x0988, 6); // ZC_NOTIFY_CLAN_CONNECTINFO
+	packet(0x0989, 2); // ZC_ACK_CLAN_LEAVE
+	packet(0x098d, -1, clif->pClanMessage, 2, 4); // CZ_CLAN_CHAT
+	packet(0x098e, -1); // ZC_NOTIFY_CLAN_CHAT
 #endif
 
 // 2012-09-25aRagexe
@@ -3913,5 +3928,99 @@ packet(0x96e,-1,clif->ackmergeitems);
 // changed packet sizes
 #endif
 #endif  // PACKETVER_ZERO
+
+// 2017-12-13bRagexe
+#if PACKETVER >= 20171213
+// new packets
+	packet(0x0ae3,-1); // AC_LOGIN_OTP
+	packet(0x0ae6,30);
+	packet(0x0ae7,30);
+// changed packet sizes
+#endif
+
+// 2017-12-20aRagexe
+#if PACKETVER >= 20171220
+// new packets
+	packet(0x0ae8,2);
+	packet(0x0ae9,64);
+	packet(0x0aea,11);
+// changed packet sizes
+#endif
+
+// 2017-12-27aRagexe
+#if PACKETVER >= 20171227
+// new packets
+	packet(0x0aeb,11);
+	packet(0x0aec,2);
+// changed packet sizes
+	packet(0x0aea,2);
+#endif
+
+// 2018-01-03aRagexe
+#if PACKETVER >= 20180103
+// new packets
+	packet(0x0aed,2);
+	packet(0x0aee,2);
+// changed packet sizes
+#ifdef PACKETVER_RE
+	packet(0x09a0,6); // HC_CHARLIST_NOTIFY
+#endif
+// changed packet sizes
+#endif
+
+#if PACKETVER >= 20180117
+// new packets
+	packet(0x0aef,2);
+	packet(0x0af0,10);
+// changed packet sizes
+	packet(0x0ae9,13);
+#endif
+
+// 2018-01-24bRagexeRE
+#if PACKETVER >= 20180124
+// new packets
+	packet(0x0af2,40,clif->pDull/*,XXX*/);
+	packet(0x0af3,-1,clif->pDull/*,XXX*/);
+// changed packet sizes
+#ifndef PACKETVER_RE
+	packet(0x0821,102,clif->pDull/*,XXX*/); // AC_OTP_USER
+#endif
+#endif
+
+#ifdef PACKETVER_ZERO
+// 2018-01-31dRagexe_zero
+#if PACKETVER >= 20180131
+// new packets
+	packet(0x0af2,40,clif->pDull/*,XXX*/);
+	packet(0x0af3,-1,clif->pDull/*,XXX*/);
+	packet(0x0af4,11,clif->pDull/*,XXX*/);
+// changed packet sizes
+	packet(0x0821,102); // AC_OTP_USER
+	packet(0x0ae6,10,clif->pDull/*,XXX*/);
+#endif
+#endif  // PACKETVER_ZERO
+
+#ifdef PACKETVER_ZERO
+// 2018-02-07bRagexe_zero
+#if PACKETVER >= 20180207
+// new packets
+	packet(0x0af5,3);
+	packet(0x0af6,88);
+	packet(0x0af7,32);
+// changed packet sizes
+#endif
+#else  // PACKETVER_ZERO
+// 2018-02-07bRagexeRE, 2018-02-07bRagexe
+#if PACKETVER >= 20180207
+// new packets
+	packet(0x0af4,11);
+	packet(0x0af5,3);
+	packet(0x0af6,88);
+	packet(0x0af7,32);
+// changed packet sizes
+	packet(0x0ae6,10);
+#endif
+#endif  // PACKETVER_ZERO
+
 
 #endif /* MAP_PACKETS_H */

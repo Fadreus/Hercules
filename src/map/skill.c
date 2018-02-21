@@ -26,6 +26,7 @@
 #include "map/battle.h"
 #include "map/battleground.h"
 #include "map/chrif.h"
+#include "map/clan.h"
 #include "map/clif.h"
 #include "map/date.h"
 #include "map/elemental.h"
@@ -987,7 +988,7 @@ int can_copy (struct map_session_data *sd, uint16 skill_id, struct block_list* b
 		 (skill_id >= GC_DARKCROW && skill_id <= SU_FRESHSHRIMP)))
 		return 0;
 	// Reproduce will only copy skills according on the list. [Jobbie]
-	else if( sd->sc.data[SC__REPRODUCE] && !skill->dbs->reproduce_db[skill->get_index(skill_id)] )
+	else if (sd->sc.data[SC__REPRODUCE] && (skill->get_inf2(skill_id) & INF2_ALLOW_REPRODUCE) == 0)
 		return 0;
 
 	return 1;
@@ -5207,7 +5208,7 @@ int skill_castend_damage_id(struct block_list* src, struct block_list *bl, uint1
 						item_tmp.nameid = sg->item_id ? sg->item_id : ITEMID_BOOBY_TRAP;
 						item_tmp.identify = 1;
 						if( item_tmp.nameid )
-							map->addflooritem(bl, &item_tmp, 1, bl->m, bl->x, bl->y, 0, 0, 0, 0);
+							map->addflooritem(bl, &item_tmp, 1, bl->m, bl->x, bl->y, 0, 0, 0, 0, false);
 					}
 					skill->delunit(su);
 				}
@@ -7452,7 +7453,7 @@ int skill_castend_nodamage_id(struct block_list *src, struct block_list *bl, uin
 				eflag = pc->additem(sd,&item_tmp,1,LOG_TYPE_PRODUCE);
 				if(eflag) {
 					clif->additem(sd,0,0,eflag);
-					map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+					map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 				}
 			}
 			break;
@@ -8176,7 +8177,7 @@ int skill_castend_nodamage_id(struct block_list *src, struct block_list *bl, uin
 									item_tmp.identify = 1;
 									if ((success = pc->additem(sd, &item_tmp, amount, LOG_TYPE_SKILL)) != 0) {
 										clif->additem(sd,0,0,success);
-										map->addflooritem(&sd->bl, &item_tmp, amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+										map->addflooritem(&sd->bl, &item_tmp, amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 									}
 								}
 							}
@@ -8188,7 +8189,7 @@ int skill_castend_nodamage_id(struct block_list *src, struct block_list *bl, uin
 							item_tmp.identify = 1;
 							if (item_tmp.nameid && (flag=pc->additem(sd,&item_tmp,1,LOG_TYPE_SKILL)) != 0) {
 								clif->additem(sd,0,0,flag);
-								map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+								map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 							}
 						}
 					}
@@ -17180,6 +17181,7 @@ struct skill_unit_group* skill_initunitgroup (struct block_list* src, int count,
 	group->party_id    = status->get_party_id(src);
 	group->guild_id    = status->get_guild_id(src);
 	group->bg_id       = bg->team_get_id(src);
+	group->clan_id     = clan->get_id(src);
 	group->group_id    = skill->get_new_group_id();
 	CREATE(group->unit.data, struct skill_unit, count);
 	group->unit.count  = count;
@@ -17502,7 +17504,7 @@ int skill_unit_timer_sub(union DBKey key, struct DBData *data, va_list ap)
 					memset(&item_tmp,0,sizeof(item_tmp));
 					item_tmp.nameid = group->item_id ? group->item_id : ITEMID_BOOBY_TRAP;
 					item_tmp.identify = 1;
-					map->addflooritem(bl, &item_tmp, 1, bl->m, bl->x, bl->y, 0, 0, 0, 0);
+					map->addflooritem(bl, &item_tmp, 1, bl->m, bl->x, bl->y, 0, 0, 0, 0, false);
 				}
 				skill->delunit(su);
 			}
@@ -18457,7 +18459,7 @@ int skill_produce_mix(struct map_session_data *sd, uint16 skill_id, int nameid, 
 							tmp_item.amount = qty * skill->dbs->changematerial_db[i].qty[j];
 							if((flag = pc->additem(sd,&tmp_item,tmp_item.amount,LOG_TYPE_PRODUCE))) {
 								clif->additem(sd,0,0,flag);
-								map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+								map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 							}
 							k++;
 						}
@@ -18471,7 +18473,7 @@ int skill_produce_mix(struct map_session_data *sd, uint16 skill_id, int nameid, 
 		} else if (tmp_item.amount) { //Success
 			if((flag = pc->additem(sd,&tmp_item,tmp_item.amount,LOG_TYPE_PRODUCE))) {
 				clif->additem(sd,0,0,flag);
-				map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+				map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 			}
 			if( skill_id == GN_MIX_COOKING || skill_id == GN_MAKEBOMB || skill_id ==  GN_S_PHARMACY )
 				clif->msgtable_skill(sd, skill_id, MSG_SKILL_SUCCESS);
@@ -18531,7 +18533,7 @@ int skill_produce_mix(struct map_session_data *sd, uint16 skill_id, int nameid, 
 					tmp_item.identify = 1;
 					if( pc->additem(sd,&tmp_item,tmp_item.amount,LOG_TYPE_PRODUCE) ) {
 						clif->additem(sd,0,0,flag);
-						map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+						map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 					}
 					clif->msgtable_skill(sd, skill_id, MSG_SKILL_FAILURE);
 				}
@@ -18588,7 +18590,7 @@ int skill_arrow_create (struct map_session_data *sd, int nameid)
 			continue;
 		if((flag = pc->additem(sd,&tmp_item,tmp_item.amount,LOG_TYPE_PRODUCE))) {
 			clif->additem(sd,0,0,flag);
-			map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+			map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 		}
 	}
 
@@ -18843,7 +18845,7 @@ int skill_elementalanalysis(struct map_session_data *sd, uint16 skill_lv, const 
 			int flag = pc->additem(sd,&tmp_item,tmp_item.amount,LOG_TYPE_CONSUME);
 			if (flag) {
 				clif->additem(sd,0,0,flag);
-				map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+				map->addflooritem(&sd->bl, &tmp_item, tmp_item.amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 			}
 		}
 
@@ -19849,21 +19851,6 @@ bool skill_parse_row_magicmushroomdb(char* split[], int column, int current)
 	return true;
 }
 
-bool skill_parse_row_reproducedb(char* split[], int column, int current)
-{
-	uint16 skill_id;
-	uint16 idx;
-	nullpo_retr(false, split);
-	skill_id = atoi(split[0]);
-	idx = skill->get_index(skill_id);
-	if( !idx )
-		return false;
-
-	skill->dbs->reproduce_db[idx] = true;
-
-	return true;
-}
-
 bool skill_parse_row_abradb(char* split[], int columns, int current)
 {
 // skill_id,DummyName,RequiredHocusPocusLevel,Rate
@@ -20167,6 +20154,12 @@ void skill_validate_skillinfo(struct config_setting_t *conf, struct s_skill_db *
 					sk->inf2 |= INF2_SHOW_SKILL_SCALE;
 				} else {
 					sk->inf2 &= ~INF2_SHOW_SKILL_SCALE;
+				}
+			} else if (strcmpi(type, "AllowReproduce") == 0) {
+				if (on) {
+					sk->inf2 |= INF2_ALLOW_REPRODUCE;
+				} else {
+					sk->inf2 &= ~INF2_ALLOW_REPRODUCE;
 				}
 			} else if (strcmpi(type, "None") != 0) {
 				skilldb_invalid_error(type, config_setting_name(t), sk->nameid);
@@ -21280,7 +21273,6 @@ void skill_readdb(bool minimal)
 	sv->readdb(map->db_path, "spellbook_db.txt",             ',',   3,                        3,     MAX_SKILL_SPELLBOOK_DB, skill->parse_row_spellbookdb);
 	//Guillotine Cross
 	sv->readdb(map->db_path, "magicmushroom_db.txt",         ',',   1,                        1, MAX_SKILL_MAGICMUSHROOM_DB, skill->parse_row_magicmushroomdb);
-	sv->readdb(map->db_path, "skill_reproduce_db.txt",       ',',   1,                        1,               MAX_SKILL_DB, skill->parse_row_reproducedb);
 	sv->readdb(map->db_path, "skill_improvise_db.txt",       ',',   2,                        2,     MAX_SKILL_IMPROVISE_DB, skill->parse_row_improvisedb);
 	sv->readdb(map->db_path, "skill_changematerial_db.txt",  ',',   4,                    4+2*5,       MAX_SKILL_PRODUCE_DB, skill->parse_row_changematerialdb);
 }
@@ -21594,7 +21586,6 @@ void skill_defaults(void)
 	skill->parse_row_abradb = skill_parse_row_abradb;
 	skill->parse_row_spellbookdb = skill_parse_row_spellbookdb;
 	skill->parse_row_magicmushroomdb = skill_parse_row_magicmushroomdb;
-	skill->parse_row_reproducedb = skill_parse_row_reproducedb;
 	skill->parse_row_improvisedb = skill_parse_row_improvisedb;
 	skill->parse_row_changematerialdb = skill_parse_row_changematerialdb;
 	skill->usave_add = skill_usave_add;

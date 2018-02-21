@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2017  Hercules Dev Team
+ * Copyright (C) 2013-2018  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,9 @@
 #ifdef COMMON_UTILS_H /* HCache */
 struct HCache_interface *HCache;
 #endif // COMMON_UTILS_H
+#ifdef LOGIN_ACCOUNT_H /* account */
+struct account_interface *account;
+#endif // LOGIN_ACCOUNT_H
 #ifdef MAP_ATCOMMAND_H /* atcommand */
 struct atcommand_interface *atcommand;
 #endif // MAP_ATCOMMAND_H
@@ -53,6 +56,9 @@ struct chat_interface *chat;
 #ifdef MAP_CHRIF_H /* chrif */
 struct chrif_interface *chrif;
 #endif // MAP_CHRIF_H
+#ifdef MAP_CLAN_H /* clan */
+struct clan_interface *clan;
+#endif // MAP_CLAN_H
 #ifdef MAP_CLIF_H /* clif */
 struct clif_interface *clif;
 #endif // MAP_CLIF_H
@@ -98,6 +104,9 @@ struct instance_interface *instance;
 #ifdef CHAR_INT_AUCTION_H /* inter_auction */
 struct inter_auction_interface *inter_auction;
 #endif // CHAR_INT_AUCTION_H
+#ifdef CHAR_INT_CLAN_H /* inter_clan */
+struct inter_clan_interface *inter_clan;
+#endif // CHAR_INT_CLAN_H
 #ifdef CHAR_INT_ELEMENTAL_H /* inter_elemental */
 struct inter_elemental_interface *inter_elemental;
 #endif // CHAR_INT_ELEMENTAL_H
@@ -134,12 +143,18 @@ struct inter_storage_interface *inter_storage;
 #ifdef MAP_INTIF_H /* intif */
 struct intif_interface *intif;
 #endif // MAP_INTIF_H
+#ifdef LOGIN_IPBAN_H /* ipban */
+struct ipban_interface *ipban;
+#endif // LOGIN_IPBAN_H
 #ifdef MAP_IRC_BOT_H /* ircbot */
 struct irc_bot_interface *ircbot;
 #endif // MAP_IRC_BOT_H
 #ifdef MAP_ITEMDB_H /* itemdb */
 struct itemdb_interface *itemdb;
 #endif // MAP_ITEMDB_H
+#ifdef LOGIN_LOGIN_H /* lchrif */
+struct lchrif_interface *lchrif;
+#endif // LOGIN_LOGIN_H
 #ifdef LOGIN_LCLIF_H /* lclif */
 struct lclif_interface *lclif;
 #endif // LOGIN_LCLIF_H
@@ -155,6 +170,9 @@ struct login_interface *login;
 #ifdef CHAR_LOGINIF_H /* loginif */
 struct loginif_interface *loginif;
 #endif // CHAR_LOGINIF_H
+#ifdef LOGIN_LOGINLOG_H /* loginlog */
+struct loginlog_interface *loginlog;
+#endif // LOGIN_LOGINLOG_H
 #ifdef MAP_MAIL_H /* mail */
 struct mail_interface *mail;
 #endif // MAP_MAIL_H
@@ -283,6 +301,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_ALL)) != 0 && !HPM_SYMBOL("HCache", HCache))
 		return "HCache";
 #endif // COMMON_UTILS_H
+#ifdef LOGIN_ACCOUNT_H /* account */
+	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("account", account))
+		return "account";
+#endif // LOGIN_ACCOUNT_H
 #ifdef MAP_ATCOMMAND_H /* atcommand */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("atcommand", atcommand))
 		return "atcommand";
@@ -315,6 +337,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("chrif", chrif))
 		return "chrif";
 #endif // MAP_CHRIF_H
+#ifdef MAP_CLAN_H /* clan */
+	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("clan", clan))
+		return "clan";
+#endif // MAP_CLAN_H
 #ifdef MAP_CLIF_H /* clif */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("clif", clif))
 		return "clif";
@@ -375,6 +401,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_CHAR)) != 0 && !HPM_SYMBOL("inter_auction", inter_auction))
 		return "inter_auction";
 #endif // CHAR_INT_AUCTION_H
+#ifdef CHAR_INT_CLAN_H /* inter_clan */
+	if ((server_type&(SERVER_TYPE_CHAR)) != 0 && !HPM_SYMBOL("inter_clan", inter_clan))
+		return "inter_clan";
+#endif // CHAR_INT_CLAN_H
 #ifdef CHAR_INT_ELEMENTAL_H /* inter_elemental */
 	if ((server_type&(SERVER_TYPE_CHAR)) != 0 && !HPM_SYMBOL("inter_elemental", inter_elemental))
 		return "inter_elemental";
@@ -423,6 +453,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("intif", intif))
 		return "intif";
 #endif // MAP_INTIF_H
+#ifdef LOGIN_IPBAN_H /* ipban */
+	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("ipban", ipban))
+		return "ipban";
+#endif // LOGIN_IPBAN_H
 #ifdef MAP_IRC_BOT_H /* ircbot */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("ircbot", ircbot))
 		return "ircbot";
@@ -431,6 +465,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("itemdb", itemdb))
 		return "itemdb";
 #endif // MAP_ITEMDB_H
+#ifdef LOGIN_LOGIN_H /* lchrif */
+	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("lchrif", lchrif))
+		return "lchrif";
+#endif // LOGIN_LOGIN_H
 #ifdef LOGIN_LCLIF_H /* lclif */
 	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("lclif", lclif))
 		return "lclif";
@@ -451,6 +489,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_CHAR)) != 0 && !HPM_SYMBOL("loginif", loginif))
 		return "loginif";
 #endif // CHAR_LOGINIF_H
+#ifdef LOGIN_LOGINLOG_H /* loginlog */
+	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("loginlog", loginlog))
+		return "loginlog";
+#endif // LOGIN_LOGINLOG_H
 #ifdef MAP_MAIL_H /* mail */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("mail", mail))
 		return "mail";

@@ -352,6 +352,7 @@ STATIC_ASSERT(((MAPID_1_1_MAX - 1) | MAPID_BASEMASK) == MAPID_BASEMASK, "First c
 		|| map->list[m].flag.gvg \
 		|| ((map->agit_flag || map->agit2_flag) && map->list[m].flag.gvg_castle) \
 		|| map->list[m].flag.battleground \
+		|| map->list[m].flag.cvc \
 		)
 // Specifies maps that have special GvG/WoE restrictions
 #define map_flag_gvg(m) (map->list[m].flag.gvg || ((map->agit_flag || map->agit2_flag) && map->list[m].flag.gvg_castle))
@@ -531,6 +532,7 @@ struct flooritem_data {
 	int first_get_charid,second_get_charid,third_get_charid;
 	int64 first_get_tick,second_get_tick,third_get_tick;
 	struct item item_data;
+	bool showdropeffect;
 };
 
 enum status_point_types { //we better clean up this enum and change it name [Hemagx]
@@ -736,6 +738,7 @@ enum map_zone_merge_type {
 #define MAP_ZONE_PVP_NAME "PvP"
 #define MAP_ZONE_GVG_NAME "GvG"
 #define MAP_ZONE_BG_NAME "Battlegrounds"
+#define MAP_ZONE_CVC_NAME "CvC"
 #define MAP_ZONE_PK_NAME "PK Mode"
 #define MAP_ZONE_MAPFLAG_LENGTH 50
 
@@ -822,6 +825,7 @@ struct map_data {
 		unsigned gvg_dungeon : 1; // Celest
 		unsigned gvg_noparty : 1;
 		unsigned battleground : 2; // [BattleGround System]
+		unsigned cvc : 1;
 		unsigned nozenypenalty : 1;
 		unsigned notrade : 1;
 		unsigned noskill : 1;
@@ -1208,7 +1212,7 @@ END_ZEROED_BLOCK;
 	int (*clearflooritem_timer) (int tid, int64 tick, int id, intptr_t data);
 	int (*removemobs_timer) (int tid, int64 tick, int id, intptr_t data);
 	void (*clearflooritem) (struct block_list* bl);
-	int (*addflooritem) (const struct block_list *bl, struct item *item_data, int amount, int16 m, int16 x, int16 y, int first_charid, int second_charid, int third_charid, int flags);
+	int (*addflooritem) (const struct block_list *bl, struct item *item_data, int amount, int16 m, int16 x, int16 y, int first_charid, int second_charid, int third_charid, int flags, bool showdropeffect);
 	// player to map session
 	void (*addnickdb) (int charid, const char* nick);
 	void (*delnickdb) (int charid, const char* nick);

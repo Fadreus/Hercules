@@ -34,9 +34,12 @@ PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
 #define HPM_HOOKS_INCLUDE "HPMHooking/HPMHooking_login.Hooks.inc"
 #define HPM_POINTS_INCLUDE "HPMHooking/HPMHooking_login.HookingPoints.inc"
 #define HPM_SOURCES_INCLUDE "HPMHooking/HPMHooking_login.sources.inc"
+#include "login/account.h"
+#include "login/ipban.h"
 #include "login/lclif.h"
 #include "login/lclif.p.h"
 #include "login/login.h"
+#include "login/loginlog.h"
 #elif defined (HPMHOOKING_CHAR)
 #define HPM_SERVER_TYPE SERVER_TYPE_CHAR
 #define HPM_CORE_INCLUDE "HPMHooking/HPMHooking_char.HPMHooksCore.inc"
@@ -46,6 +49,7 @@ PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
 #include "char/char.h"
 #include "char/geoip.h"
 #include "char/int_auction.h"
+#include "char/int_clan.h"
 #include "char/int_elemental.h"
 #include "char/int_guild.h"
 #include "char/int_homun.h"
@@ -73,6 +77,7 @@ PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
 #include "map/channel.h"
 #include "map/chat.h"
 #include "map/chrif.h"
+#include "map/clan.h"
 #include "map/clif.h"
 #include "map/duel.h"
 #include "map/elemental.h"

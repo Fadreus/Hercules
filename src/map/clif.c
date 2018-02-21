@@ -29,6 +29,7 @@
 #include "map/channel.h"
 #include "map/chat.h"
 #include "map/chrif.h"
+#include "map/clan.h"
 #include "map/elemental.h"
 #include "map/guild.h"
 #include "map/homunculus.h"
@@ -419,8 +420,14 @@ bool clif_send(const void* buf, int len, struct block_list* bl, enum send_target
 
 	sd = BL_CAST(BL_PC, bl);
 
-	switch(type) {
+	if (sd != NULL && pc_isinvisible(sd)) {
+		if (type == AREA || type == BG || type == BG_AREA)
+			type = SELF;
+		else if (type == AREA_WOS || type == BG_WOS || type == BG_AREA_WOS)
+			return true;
+	}
 
+	switch(type) {
 		case ALL_CLIENT: //All player clients.
 			iter = mapit_getallusers();
 			while ((tsd = BL_UCAST(BL_PC, mapit->next(iter))) != NULL) {
@@ -659,6 +666,22 @@ bool clif_send(const void* buf, int len, struct block_list* bl, enum send_target
 			}
 			break;
 
+		case CLAN:
+			if (sd && sd->status.clan_id) {
+				struct clan *c = clan->search(sd->status.clan_id);
+
+				nullpo_retr(false, c);
+
+				for (i = 0; i < VECTOR_LENGTH(c->members); i++) {
+					if (VECTOR_INDEX(c->members, i).online == 0 || (sd = VECTOR_INDEX(c->members, i).sd) == NULL || (fd = sd->fd) <= 0)
+						continue;
+					WFIFOHEAD(fd, len);
+					memcpy(WFIFOP(fd, 0), buf, len);
+					WFIFOSET(fd, len);
+				}
+			}
+			break;
+
 		default:
 			ShowError("clif_send: Unrecognized type %u\n", type);
 			return false;
@@ -796,7 +819,15 @@ void clif_dropflooritem(struct flooritem_data* fitem) {
 	p.subX = fitem->subx;
 	p.subY = fitem->suby;
 	p.count = fitem->item_data.amount;
-
+#ifdef PACKETVER_ZERO
+	if (fitem->showdropeffect) {
+		p.showdropeffect = itemdb_showdropeffect(fitem->item_data.nameid);
+		p.dropeffectmode = itemdb_dropeffectmode(fitem->item_data.nameid);
+	} else {
+		p.showdropeffect = 0;
+		p.dropeffectmode = 0;
+	}
+#endif
 	clif->send(&p, sizeof(p), &fitem->bl, AREA);
 }
 
@@ -1526,6 +1557,8 @@ bool clif_spawn(struct block_list *bl)
 				clif->specialeffect(&nd->bl,423,AREA);
 			else if (nd->size == SZ_MEDIUM)
 				clif->specialeffect(&nd->bl,421,AREA);
+			if (nd->clan_id > 0)
+				clif->sc_load(&nd->bl, nd->bl.id, AREA, status->dbs->IconChangeTable[SC_CLAN_INFO], 0, nd->clan_id, 0);
 		}
 			break;
 		case BL_PET:
@@ -1902,19 +1935,25 @@ void clif_changemap(struct map_session_data *sd, short m, int x, int y) {
 
 /// Notifies the client of a position change to coordinates on given map, which is on another map-server (ZC_NPCACK_SERVERMOVE).
 /// 0092 <map name>.16B <x>.W <y>.W <ip>.L <port>.W
+/// 0ac7 <map name>.16B <x>.W <y>.W <ip>.L <port>.W <zero>.128B
 void clif_changemapserver(struct map_session_data* sd, unsigned short map_index, int x, int y, uint32 ip, uint16 port) {
 	int fd;
+#if PACKETVER >= 20170315
+	const int cmd = 0xac7;
+#else
+	const int cmd = 0x92;
+#endif
 	nullpo_retv(sd);
 	fd = sd->fd;
 
-	WFIFOHEAD(fd,packet_len(0x92));
-	WFIFOW(fd,0) = 0x92;
-	mapindex->getmapname_ext(mapindex_id2name(map_index), WFIFOP(fd,2));
-	WFIFOW(fd,18) = x;
-	WFIFOW(fd,20) = y;
-	WFIFOL(fd,22) = htonl(ip);
-	WFIFOW(fd,26) = sockt->ntows(htons(port)); // [!] LE byte order here [!]
-	WFIFOSET(fd,packet_len(0x92));
+	WFIFOHEAD(fd, packet_len(cmd));
+	WFIFOW(fd, 0) = cmd;
+	mapindex->getmapname_ext(mapindex_id2name(map_index), WFIFOP(fd, 2));
+	WFIFOW(fd, 18) = x;
+	WFIFOW(fd, 20) = y;
+	WFIFOL(fd, 22) = htonl(ip);
+	WFIFOW(fd, 26) = sockt->ntows(htons(port)); // [!] LE byte order here [!]
+	WFIFOSET(fd, packet_len(cmd));
 }
 
 void clif_blown(struct block_list *bl)
@@ -4374,6 +4413,8 @@ void clif_getareachar_unit(struct map_session_data* sd,struct block_list *bl) {
 				clif->specialeffect_single(bl,423,sd->fd);
 			else if (nd->size == SZ_MEDIUM)
 				clif->specialeffect_single(bl,421,sd->fd);
+			if (nd->clan_id > 0)
+				clif->sc_load(&nd->bl, nd->bl.id, AREA, status->dbs->IconChangeTable[SC_CLAN_INFO], 0, nd->clan_id, 0);
 		}
 			break;
 		case BL_MOB:
@@ -6580,9 +6621,6 @@ void clif_party_created(struct map_session_data *sd,int result)
 }
 
 /// Adds new member to a party.
-/// 0104 <account id>.L <role>.L <x>.W <y>.W <state>.B <party name>.24B <char name>.24B <map name>.16B (ZC_ADD_MEMBER_TO_GROUP)
-/// 01e9 <account id>.L <role>.L <x>.W <y>.W <state>.B <party name>.24B <char name>.24B <map name>.16B <item pickup rule>.B <item share rule>.B (ZC_ADD_MEMBER_TO_GROUP2)
-/// 0a43 <account id>.L <role>.L <class>.W <base level>.W <x>.W <y>.W <state>.B <party name>.24B <char name>.24B <map name>.16B <item pickup rule>.B <item share rule>.B (ZC_ADD_MEMBER_TO_GROUP3)
 /// role:
 ///     0 = leader
 ///     1 = normal
@@ -6592,19 +6630,12 @@ void clif_party_created(struct map_session_data *sd,int result)
 void clif_party_member_info(struct party_data *p, struct map_session_data *sd)
 {
 	int i;
-#if PACKETVER < 20170502
-	unsigned char buf[81];
-	const int cmd = 0x1e9;
-	const int offset = 0;
-#else
-	unsigned char buf[85];
-// [4144] probably 0xa43 packet can works on older clients because in client was added in 2015-10-07
-	const int cmd = 0xa43;
-	int offset = 4;
-#endif
+	struct PACKET_ZC_ADD_MEMBER_TO_GROUP packet;
 
 	nullpo_retv(p);
 	nullpo_retv(sd);
+
+	memset(&packet, 0, sizeof(packet));
 	if (!sd) { //Pick any party member (this call is used when changing item share rules)
 		ARR_FIND(0, MAX_PARTY, i, p->data[i].sd != 0);
 	} else {
@@ -6614,27 +6645,28 @@ void clif_party_member_info(struct party_data *p, struct map_session_data *sd)
 		return; //Should never happen...
 	sd = p->data[i].sd;
 
-	WBUFW(buf, 0) = cmd;
-	WBUFL(buf, 2) = sd->status.account_id;
-	WBUFL(buf, 6) = (p->party.member[i].leader) ? 0 : 1;
-#if PACKETVER >= 20170502
-	WBUFW(buf, 10) = sd->status.class;
-	WBUFW(buf, 12) = sd->status.base_level;
+	packet.packetType = partymemberinfo;
+	packet.AID = sd->status.account_id;
+#if PACKETVER >= 20171207
+	packet.GID = sd->status.char_id;
 #endif
-	WBUFW(buf, offset + 10) = sd->bl.x;
-	WBUFW(buf, offset + 12) = sd->bl.y;
-	WBUFB(buf, offset + 14) = (p->party.member[i].online) ? 0 : 1;
-	memcpy(WBUFP(buf, offset + 15), p->party.name, NAME_LENGTH);
-	memcpy(WBUFP(buf, offset + 39), sd->status.name, NAME_LENGTH);
-	mapindex->getmapname_ext(map->list[sd->bl.m].custom_name ? map->list[map->list[sd->bl.m].instance_src_map].name : map->list[sd->bl.m].name, WBUFP(buf, offset + 63));
-	WBUFB(buf, offset + 79) = (p->party.item & 1) ? 1 : 0;
-	WBUFB(buf, offset + 80) = (p->party.item & 2) ? 1 : 0;
-	clif->send(buf, packet_len(cmd), &sd->bl, PARTY);
+	packet.leader = (p->party.member[i].leader) ? 0 : 1;
+#if PACKETVER >= 20170502
+	packet.class = sd->status.class;
+	packet.baseLevel = sd->status.base_level;
+#endif
+	packet.x = sd->bl.x;
+	packet.y = sd->bl.y;
+	packet.offline = (p->party.member[i].online) ? 0 : 1;
+	memcpy(packet.partyName, p->party.name, NAME_LENGTH);
+	memcpy(packet.playerName, sd->status.name, NAME_LENGTH);
+	mapindex->getmapname_ext(map->list[sd->bl.m].custom_name ? map->list[map->list[sd->bl.m].instance_src_map].name : map->list[sd->bl.m].name, packet.mapName);
+	packet.sharePickup = (p->party.item & 1) ? 1 : 0;
+	packet.shareLoot = (p->party.item & 2) ? 1 : 0;
+	clif->send(&packet, sizeof(packet), &sd->bl, PARTY);
 }
 
 /// Sends party information (ZC_GROUP_LIST).
-/// 00fb <packet len>.W <party name>.24B { <account id>.L <nick>.24B <map name>.16B <role>.B <state>.B }*
-/// 0a44 <packet len>.W <party name>.24B { <account id>.L <nick>.24B <map name>.16B <role>.B <state>.B <class>.W <base level>.W }* <item pickup rule>.B <item share rule>.B <unknown>.L
 /// role:
 ///     0 = leader
 ///     1 = normal
@@ -6643,23 +6675,16 @@ void clif_party_member_info(struct party_data *p, struct map_session_data *sd)
 ///     1 = disconnected
 void clif_party_info(struct party_data* p, struct map_session_data *sd)
 {
+	struct PACKET_ZC_GROUP_LIST *packet;
 	struct map_session_data* party_sd = NULL;
 	int i, c;
-#if PACKETVER < 20170502
-	const int cmd = 0xfb;
-	const int size = 46;
-	unsigned char buf[2 + 2 + NAME_LENGTH + 46 * MAX_PARTY];
-#else
-// [4144] probably 0xa44 packet can works on older clients because in client was added in 2015-10-07
-	const int cmd = 0xa44;
-	const int size = 50;
-	unsigned char buf[2 + 2 + NAME_LENGTH + 50 * MAX_PARTY + 6];
-#endif
-
+	unsigned char buf[sizeof(*packet) + sizeof(struct PACKET_ZC_GROUP_LIST_SUB) * MAX_PARTY];
 	nullpo_retv(p);
 
-	WBUFW(buf, 0) = cmd;
-	memcpy(WBUFP(buf, 4), p->party.name, NAME_LENGTH);
+	memset(buf, 0, sizeof(buf));
+	packet = (struct PACKET_ZC_GROUP_LIST *)buf;
+	packet->packetType = partyinfo;
+	memcpy(packet->partyName, p->party.name, NAME_LENGTH);
 	for(i = 0, c = 0; i < MAX_PARTY; i++)
 	{
 		struct party_member *m = &p->party.member[i];
@@ -6669,30 +6694,26 @@ void clif_party_info(struct party_data* p, struct map_session_data *sd)
 		if (party_sd == NULL)
 			party_sd = p->data[i].sd;
 
-		WBUFL(buf, 28 + c * size) = m->account_id;
-		memcpy(WBUFP(buf, 28 + c * size + 4), m->name, NAME_LENGTH);
-		mapindex->getmapname_ext(mapindex_id2name(m->map), WBUFP(buf, 28 + c * size + 28));
-		WBUFB(buf, 28 + c * size + 44) = (m->leader) ? 0 : 1;
-		WBUFB(buf, 28 + c * size + 45) = (m->online) ? 0 : 1;
+		packet->members[c].AID = m->account_id;
+#if PACKETVER >= 20171207
+		packet->members[c].GID = m->char_id;
+#endif
+		memcpy(packet->members[c].playerName, m->name, NAME_LENGTH);
+		mapindex->getmapname_ext(mapindex_id2name(m->map), packet->members[c].mapName);
+		packet->members[c].leader = (m->leader) ? 0 : 1;
+		packet->members[c].offline = (m->online) ? 0 : 1;
 #if PACKETVER >= 20170502
-		WBUFW(buf, 28 + c * size + 46) = m->class;
-		WBUFW(buf, 28 + c * size + 48) = m->lv;
+		packet->members[c].class = m->class;
+		packet->members[c].baseLevel = m->lv;
 #endif
 		c++;
 	}
-#if PACKETVER < 20170502
-	WBUFW(buf, 2) = 28 + c * size;
-#else
-	WBUFB(buf, 28 + c * size) = (p->party.item & 1) ? 1 : 0;
-	WBUFB(buf, 28 + c * size + 1) = (p->party.item & 2) ? 1 : 0;
-	WBUFL(buf, 28 + c * size + 2) = 0; // unknown
-	WBUFW(buf, 2) = 28 + c * size + 6;
-#endif
+	packet->packetLen = sizeof(*packet) + c * sizeof(struct PACKET_ZC_GROUP_LIST_SUB);
 
 	if (sd) { // send only to self
-		clif->send(buf, WBUFW(buf, 2), &sd->bl, SELF);
+		clif->send(buf, packet->packetLen, &sd->bl, SELF);
 	} else if (party_sd) { // send to whole party
-		clif->send(buf, WBUFW(buf, 2), &party_sd->bl, PARTY);
+		clif->send(buf, packet->packetLen, &party_sd->bl, PARTY);
 	}
 }
 
@@ -7388,7 +7409,7 @@ void clif_mvp_item(struct map_session_data *sd,int nameid)
 /// 010b <exp>.L
 void clif_mvp_exp(struct map_session_data *sd, unsigned int exp)
 {
-#if PACKETVER >= 20131223		// Kro removed this packet [Napster]
+#if PACKETVER >= 20131223 // Kro removed this packet [Napster]
 	if (battle_config.mvp_exp_reward_message) {
 		char e_msg[CHAT_SIZE_MAX];
 		sprintf(e_msg, msg_txt(855), exp);
@@ -9915,7 +9936,6 @@ void clif_parse_Hotkey(int fd, struct map_session_data *sd) {
 
 /// Displays cast-like progress bar (ZC_PROGRESS).
 /// 02f0 <color>.L <time>.L
-/* TODO ZC_PROGRESS_ACTOR <account_id>.L */
 void clif_progressbar(struct map_session_data * sd, unsigned int color, unsigned int second)
 {
 	int fd;
@@ -9942,6 +9962,30 @@ void clif_progressbar_abort(struct map_session_data * sd)
 	WFIFOHEAD(fd,packet_len(0x2f2));
 	WFIFOW(fd,0) = 0x2f2;
 	WFIFOSET(fd,packet_len(0x2f2));
+}
+
+/**
+* Displays cast-like progress bar on a unit.
+* 09d1 <id>.L <color>.L <time>.L
+*
+* @param bl       Source block list.
+* @param color    Message color (RGB format: 0xRRGGBB).
+* @param time   Time in seconds.
+*/
+void clif_progressbar_unit(struct block_list *bl, uint32 color, uint32 time)
+{
+#if PACKETVER >= 20130821
+	struct ZC_PROGRESS_ACTOR p;
+	nullpo_retv(bl);
+
+	p.PacketType = progressbarunit;
+	p.GID = bl->id;
+	p.color = color;
+	p.time = time;
+	clif->send(&p, sizeof(p), bl, AREA);
+#else
+	ShowWarning("clif_progressbar_unit: Using progressbar with units available for PACKETVER >= 20130821 only.");
+#endif
 }
 
 void clif_parse_progressbar(int fd, struct map_session_data * sd) __attribute__((nonnull (2)));
@@ -11845,8 +11889,8 @@ void clif_parse_ItemIdentify(int fd,struct map_session_data *sd)
 	clif_menuskill_clear(sd);
 }
 
-///	Identifying item with right-click (CZ_REQ_ONECLICK_ITEMIDENTIFY).
-///	0A35 <index>.W
+/// Identifying item with right-click (CZ_REQ_ONECLICK_ITEMIDENTIFY).
+/// 0A35 <index>.W
 void clif_parse_OneClick_ItemIdentify(int fd, struct map_session_data *sd)
 {
 	int cmd = RFIFOW(fd,0);
@@ -13320,6 +13364,12 @@ bool clif_sub_guild_invite(int fd, struct map_session_data *sd, struct map_sessi
 
 	if (t_sd->state.noask) {// @noask [LuzZza]
 		clif->noask_sub(sd, t_sd, 2);
+		return false;
+	}
+
+	// Players in a clan can't join a guild
+	if (t_sd->clan != NULL) {
+		clif->message(fd, msg_fd(fd, 140)); // You can't join in a clan if you're in a guild.
 		return false;
 	}
 
@@ -16516,15 +16566,15 @@ void clif_bg_message(struct battleground_data *bgd, int src_id, const char *name
 		return;
 
 	len = (int)strlen(mes);
-	Assert_retv(len <= INT16_MAX - NAME_LENGTH - 8);
-	buf = (unsigned char*)aMalloc((len + NAME_LENGTH + 8)*sizeof(unsigned char));
+	Assert_retv(len <= INT16_MAX - NAME_LENGTH - 9);
+	buf = (unsigned char *)aCalloc(len + NAME_LENGTH + 9, sizeof(unsigned char));
 
-	WBUFW(buf,0) = 0x2dc;
-	WBUFW(buf,2) = len + NAME_LENGTH + 8;
-	WBUFL(buf,4) = src_id;
-	memcpy(WBUFP(buf,8), name, NAME_LENGTH);
-	memcpy(WBUFP(buf,32), mes, len); // [!] no NUL terminator
-	clif->send(buf,WBUFW(buf,2), &sd->bl, BG);
+	WBUFW(buf, 0) = 0x2dc;
+	WBUFW(buf, 2) = len + NAME_LENGTH + 9;
+	WBUFL(buf, 4) = src_id;
+	safestrncpy(WBUFP(buf, 8), name, NAME_LENGTH);
+	safestrncpy(WBUFP(buf, 32), mes, len + 1);
+	clif->send(buf, WBUFW(buf, 2), &sd->bl, BG);
 
 	aFree(buf);
 }
@@ -18425,19 +18475,19 @@ void clif_parse_BankWithdraw(int fd, struct map_session_data *sd)
 void clif_parse_BankCheck(int fd, struct map_session_data* sd) __attribute__((nonnull (2)));
 void clif_parse_BankCheck(int fd, struct map_session_data* sd)
 {
-#if PACKETVER >= 20130313
+#if PACKETVER >= 20130320
 	struct packet_banking_check p;
 
+	p.PacketType = banking_checkType;
 	if (!battle_config.feature_banking) {
-		clif->messagecolor_self(fd, COLOR_RED, msg_fd(fd,1483));
-		return;
+		p.Money = 0;
+		p.Reason = (short)1;
+	} else {
+		p.Money = (int)sd->status.bank_vault;
+		p.Reason = (short)0;
 	}
 
-	p.PacketType = banking_checkType;
-	p.Money = (int)sd->status.bank_vault;
-	p.Reason = (short)0;
-
-	clif->send(&p,sizeof(p), &sd->bl, SELF);
+	clif->send(&p, sizeof(p), &sd->bl, SELF);
 #endif
 }
 
@@ -19263,6 +19313,156 @@ const char *clif_get_bl_name(const struct block_list *bl)
 		return "Unknown";
 
 	return name;
+}
+
+/**
+ * Clan System: Sends the basic clan informations to client.
+ * 098a <length>.W <clan id>.L <clan name>.24B <clan master>.24B <clan map>.16B <alliance count>.B
+ *      <antagonist count>.B { <alliance>.24B } * alliance count { <antagonist>.24B } * antagonist count (ZC_CLANINFO)
+ */
+void clif_clan_basicinfo(struct map_session_data *sd)
+{
+#if PACKETVER >= 20120716
+	int len, i, fd;
+	struct clan *c, *ally, *antagonist;
+	struct PACKET_ZC_CLANINFO *packet = NULL;
+
+	nullpo_retv(sd);
+	nullpo_retv(c = sd->clan);
+
+	len = sizeof(struct PACKET_ZC_CLANINFO);
+	fd = sd->fd;
+
+	WFIFOHEAD(fd, len);
+	packet = WFIFOP(fd, 0);
+
+	packet->PacketType = clanBasicInfo;
+	packet->ClanID = c->clan_id;
+
+	safestrncpy(packet->ClanName, c->name, NAME_LENGTH);
+	safestrncpy(packet->MasterName, c->master, NAME_LENGTH);
+
+	mapindex->getmapname_ext(c->map, packet->Map);
+
+	packet->AllyCount = VECTOR_LENGTH(c->allies);
+	packet->AntagonistCount = VECTOR_LENGTH(c->antagonists);
+
+	// All allies and antagonists are assumed as valid entries
+	// since it only gets inside the vector after the validation
+	// on clan->config_read
+	for (i = 0; i < VECTOR_LENGTH(c->allies); i++) {
+		struct clan_relationship *al = &VECTOR_INDEX(c->allies, i);
+
+		if ((ally = clan->search(al->clan_id)) != NULL) {
+			safestrncpy(WFIFOP(fd, len), ally->name, NAME_LENGTH);
+			len += NAME_LENGTH;
+		}
+	}
+
+	for (i = 0; i < VECTOR_LENGTH(c->antagonists); i++) {
+		struct clan_relationship *an = &VECTOR_INDEX(c->antagonists, i);
+
+		if ((antagonist = clan->search(an->clan_id)) != NULL) {
+			safestrncpy(WFIFOP(fd, len), antagonist->name, NAME_LENGTH);
+			len += NAME_LENGTH;
+		}
+	}
+
+	packet->PacketLength = len;
+	WFIFOSET(fd, len);
+#endif
+}
+
+/**
+ * Clan System: Updates the online and maximum player count of a clan.
+ * 0988 <online count>.W <maximum member amount>.W (ZC_NOTIFY_CLAN_CONNECTINFO)
+ */
+void clif_clan_onlinecount(struct clan *c)
+{
+#if PACKETVER >= 20120716
+	struct map_session_data *sd;
+	struct PACKET_ZC_NOTIFY_CLAN_CONNECTINFO p;
+
+	nullpo_retv(c);
+
+	p.PacketType = clanOnlineCount;
+	p.NumConnect = c->connect_member;
+	p.NumTotal = c->max_member;
+
+	if ((sd = clan->getonlinesd(c)) != NULL) {
+		clif->send(&p, sizeof(p), &sd->bl, CLAN);
+	}
+#endif
+}
+
+/**
+* Clan System: Notifies the client that the player has left his clan.
+* 0989 (ZC_ACK_CLAN_LEAVE)
+**/
+void clif_clan_leave(struct map_session_data* sd)
+{
+#if PACKETVER >= 20131223
+	struct PACKET_ZC_ACK_CLAN_LEAVE p;
+
+	nullpo_retv(sd);
+
+	p.PacketType = clanLeave;
+
+	clif->send(&p, sizeof(p), &sd->bl, SELF);
+#endif
+}
+
+/**
+ * Clan System: Sends a clan message to a player
+ * 098e <length>.W <name>.24B <message>.?B (ZC_NOTIFY_CLAN_CHAT)
+ */
+void clif_clan_message(struct clan *c, const char *mes, int len)
+{
+#if PACKETVER >= 20120716
+	struct map_session_data *sd;
+	struct PACKET_ZC_NOTIFY_CLAN_CHAT *p;
+	unsigned int max_len = CHAT_SIZE_MAX - 5 - NAME_LENGTH;
+	int packet_length;
+
+	nullpo_retv(c);
+	nullpo_retv(mes);
+
+	if (len == 0) {
+		return;
+	} else if (len > max_len) {
+		ShowWarning("clif_clan_message: Truncated message '%s' (len=%d, max=%u, clan_id=%d).\n", mes, len, max_len, c->clan_id);
+		len = max_len;
+	}
+
+	packet_length = sizeof(*p) + len + 1;
+	p = (struct PACKET_ZC_NOTIFY_CLAN_CHAT *)aMalloc(packet_length);
+	p->PacketType = clanMessage;
+	p->PacketLength = packet_length;
+	// p->MemberName is being ignored on the client side.
+	safestrncpy(p->Message, mes, len + 1);
+
+	if ((sd = clan->getonlinesd(c)) != NULL)
+		clif->send(p, packet_length, &sd->bl, CLAN);
+	aFree(p);
+#endif
+}
+
+void clif_parse_ClanMessage(int fd, struct map_session_data *sd) __attribute__((nonnull (2)));
+/**
+ * Clan System: Parses a clan message from a player.
+ * 098d <length>.W <text>.?B (<name> : <message>) (CZ_CLAN_CHAT)
+ */
+void clif_parse_ClanMessage(int fd, struct map_session_data *sd)
+{
+#if PACKETVER >= 20120716
+	const struct packet_chat_message *packet = RP2PTR(fd);
+	char message[CHAT_SIZE_MAX + NAME_LENGTH + 3 + 1];
+
+	if (clif->process_chat_message(sd, packet, message, sizeof(message)) == NULL)
+		return;
+
+	clan->send_message(sd, message);
+#endif
 }
 
 /* */
@@ -20117,10 +20317,22 @@ void packetdb_loaddb(void) {
 
 #define packet(id, size, ...) packetdb_addpacket((id), (size), ##__VA_ARGS__, 0xFFFF)
 #include "packets.h" /* load structure data */
-#include "packets_shuffle.h"
+#ifdef PACKETVER_ZERO
+#include "packets_shuffle_zero.h"
+#else  // PACKETVER_ZERO
+#include "packets_shuffle_main.h"
+#endif  // PACKETVER_ZERO
 #undef packet
 #define packetKeys(a,b,c) do { clif->cryptKey[0] = (a); clif->cryptKey[1] = (b); clif->cryptKey[2] = (c); } while(0)
-#include "packets_keys.h"
+#if defined(OBFUSCATIONKEY1) && defined(OBFUSCATIONKEY2) && defined(OBFUSCATIONKEY3)
+	packetKeys(OBFUSCATIONKEY1,OBFUSCATIONKEY2,OBFUSCATIONKEY3);
+#else  // defined(OBFUSCATIONKEY1) && defined(OBFUSCATIONKEY2) && defined(OBFUSCATIONKEY3)
+#ifdef PACKETVER_ZERO
+#include "packets_keys_zero.h"
+#else  // PACKETVER_ZERO
+#include "packets_keys_main.h"
+#endif  // PACKETVER_ZERO
+#endif  // defined(OBFUSCATIONKEY1) && defined(OBFUSCATIONKEY2) && defined(OBFUSCATIONKEY3)
 #undef packetKeys
 }
 void clif_bc_ready(void) {
@@ -20367,6 +20579,7 @@ void clif_defaults(void) {
 	clif->font = clif_font;
 	clif->progressbar = clif_progressbar;
 	clif->progressbar_abort = clif_progressbar_abort;
+	clif->progressbar_unit = clif_progressbar_unit;
 	clif->showdigit = clif_showdigit;
 	clif->elementalconverter_list = clif_elementalconverter_list;
 	clif->spellbook_list = clif_spellbook_list;
@@ -20976,4 +21189,10 @@ void clif_defaults(void) {
 	clif->rodex_icon = clif_rodex_icon;
 	clif->rodex_send_mails_all = clif_rodex_send_mails_all;
 	clif->skill_scale = clif_skill_scale;
+	// -- Clan system
+	clif->clan_basicinfo = clif_clan_basicinfo;
+	clif->clan_onlinecount = clif_clan_onlinecount;
+	clif->clan_leave = clif_clan_leave;
+	clif->clan_message = clif_clan_message;
+	clif->pClanMessage = clif_parse_ClanMessage;
 }

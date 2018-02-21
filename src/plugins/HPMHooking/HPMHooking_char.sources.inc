@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2017  Hercules Dev Team
+ * Copyright (C) 2013-2018  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ HPMHooks.source.DB = *DB;
 HPMHooks.source.des = *des;
 HPMHooks.source.geoip = *geoip;
 HPMHooks.source.inter_auction = *inter_auction;
+HPMHooks.source.inter_clan = *inter_clan;
 HPMHooks.source.inter_elemental = *inter_elemental;
 HPMHooks.source.inter_guild = *inter_guild;
 HPMHooks.source.inter_homunculus = *inter_homunculus;

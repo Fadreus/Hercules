@@ -27,6 +27,7 @@
 #include "map/battleground.h"
 #include "map/chat.h"
 #include "map/chrif.h"
+#include "map/clan.h"
 #include "map/clif.h"
 #include "map/duel.h"
 #include "map/elemental.h"
@@ -2057,7 +2058,7 @@ bool unit_can_reach_bl(struct block_list *bl,struct block_list *tbl, int range, 
 
 #ifdef OFFICIAL_WALKPATH
 	if( !path->search_long(NULL, bl, bl->m, bl->x, bl->y, tbl->x-dx, tbl->y-dy, CELL_CHKNOPASS) // Check if there is an obstacle between
-	  && wpd.path_len > 14	// Official number of walkable cells is 14 if and only if there is an obstacle between. [malufett]
+	  && wpd.path_len > 14 // Official number of walkable cells is 14 if and only if there is an obstacle between. [malufett]
 	  && (bl->type != BL_NPC) ) // If type is a NPC, please disregard.
 		return false;
 #endif
@@ -2725,6 +2726,7 @@ int unit_free(struct block_list *bl, clr_type clrtype)
 			map->foreachpc(clif->friendslist_toggle_sub, sd->status.account_id, sd->status.char_id, 0);
 			party->send_logout(sd);
 			guild->send_memberinfoshort(sd,0);
+			clan->member_offline(sd);
 			pc->cleareventtimer(sd);
 			pc->inventory_rental_clear(sd);
 			pc->delspiritball(sd,sd->spiritball,1);

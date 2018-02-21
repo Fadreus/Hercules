@@ -29,6 +29,7 @@
 #include "map/channel.h"
 #include "map/chat.h"
 #include "map/chrif.h"
+#include "map/clan.h"
 #include "map/clif.h"
 #include "map/date.h" // is_day_of_*()
 #include "map/duel.h"
@@ -1523,6 +1524,12 @@ int pc_reg_received(struct map_session_data *sd)
 
 	status_calc_pc(sd,SCO_FIRST|SCO_FORCE);
 	chrif->scdata_request(sd->status.account_id, sd->status.char_id);
+
+	if (sd->status.clan_id)
+		clan->member_online(sd, true);
+
+	//Auth is fully okay, update last_login
+	sd->status.last_login = time(NULL);
 
 	// Storage Request
 	intif->request_account_storage(sd);
@@ -4781,7 +4788,7 @@ int pc_dropitem(struct map_session_data *sd,int n,int amount)
 		return 0;
 	}
 
-	if (!map->addflooritem(&sd->bl, &sd->status.inventory[n], amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 2))
+	if (!map->addflooritem(&sd->bl, &sd->status.inventory[n], amount, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 2, false))
 		return 0;
 
 	pc->delitem(sd, n, amount, 1, DELITEM_NORMAL, LOG_TYPE_PICKDROP_PLAYER);
@@ -7962,7 +7969,7 @@ int pc_dead(struct map_session_data *sd,struct block_list *src) {
 		item_tmp.card[1]=0;
 		item_tmp.card[2]=GetWord(sd->status.char_id,0); // CharId
 		item_tmp.card[3]=GetWord(sd->status.char_id,1);
-		map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0);
+		map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 	}
 
 	// activate Steel body if a super novice dies at 99+% exp [celest]

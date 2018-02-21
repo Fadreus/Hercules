@@ -123,6 +123,7 @@ enum e_skill_inf2 {
 	INF2_FREE_CAST_NORMAL  = 0x08000,
 	INF2_FREE_CAST_REDUCED = 0x10000,
 	INF2_SHOW_SKILL_SCALE  = 0x20000,
+	INF2_ALLOW_REPRODUCE   = 0x40000,
 };
 
 
@@ -1370,7 +1371,7 @@ enum e_skill {
 	GM_FORCE_TRANSFER,
 	GM_WIDE_RESURRECTION,
 	ALL_NIFLHEIM_RECALL,
- 	ALL_PRONTERA_RECALL,
+	ALL_PRONTERA_RECALL,
 	ALL_GLASTHEIM_RECALL,
 	ALL_THANATOS_RECALL,
 
@@ -1773,6 +1774,7 @@ struct skill_unit_group {
 	int party_id;
 	int guild_id;
 	int bg_id;
+	int clan_id;
 	int map;
 	int target_flag; //Holds BCT_* flag for battle_check_target
 	int bl_flag;     //Holds BL_* flag for map_foreachin* functions
@@ -1897,7 +1899,6 @@ BEGIN_ZEROED_BLOCK; // This block will be zeroed in skill_defaults() as well as 
 	struct s_skill_improvise_db improvise_db[MAX_SKILL_IMPROVISE_DB];
 	struct s_skill_changematerial_db changematerial_db[MAX_SKILL_PRODUCE_DB];
 	struct s_skill_spellbook_db spellbook_db[MAX_SKILL_SPELLBOOK_DB];
-	bool reproduce_db[MAX_SKILL_DB];
 END_ZEROED_BLOCK;
 	struct s_skill_unit_layout unit_layout[MAX_SKILL_UNIT_LAYOUT];
 };
@@ -2121,7 +2122,6 @@ struct skill_interface {
 	bool (*parse_row_abradb) (char* split[], int columns, int current);
 	bool (*parse_row_spellbookdb) (char* split[], int columns, int current);
 	bool (*parse_row_magicmushroomdb) (char* split[], int column, int current);
-	bool (*parse_row_reproducedb) (char* split[], int column, int current);
 	bool (*parse_row_improvisedb) (char* split[], int columns, int current);
 	bool (*parse_row_changematerialdb) (char* split[], int columns, int current);
 	/* save new unit skill */
