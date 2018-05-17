@@ -740,7 +740,7 @@ enum map_zone_merge_type {
 #define MAP_ZONE_BG_NAME "Battlegrounds"
 #define MAP_ZONE_CVC_NAME "CvC"
 #define MAP_ZONE_PK_NAME "PK Mode"
-#define MAP_ZONE_MAPFLAG_LENGTH 50
+#define MAP_ZONE_MAPFLAG_LENGTH 65
 
 struct map_zone_data {
 	char name[MAP_ZONE_NAME_LENGTH];/* 20'd */
@@ -857,6 +857,8 @@ struct map_data {
 		unsigned notomb : 1;
 		unsigned nocashshop : 1;
 		unsigned noautoloot : 1;
+		unsigned pairship_startable : 1;
+		unsigned pairship_endable : 1;
 		uint32 noviewid; ///< noviewid (bitmask - @see enum equip_pos)
 	} flag;
 	struct point save;
@@ -909,7 +911,10 @@ struct map_data {
 	/* */
 	int (*getcellp)(struct map_data* m, const struct block_list *bl, int16 x, int16 y, cell_chk cellchk);
 	void (*setcell) (int16 m, int16 x, int16 y, cell_t cell, bool flag);
-	char *cellPos;
+	struct {
+		uint8 *data;
+		int len;
+	} cell_buf;
 
 	/* ShowEvent Data Cache */
 	struct questinfo *qi_data;
@@ -1064,20 +1069,20 @@ struct charid2nick {
 	struct charid_request* requests;// requests of notification on this nick
 };
 
-// This is the main header found at the very beginning of the map cache
-struct map_cache_main_header {
-	uint32 file_size;
-	uint16 map_count;
-};
-
-// This is the header appended before every compressed map cells info in the map cache
-struct map_cache_map_info {
-	char name[MAP_NAME_LENGTH];
+// New mcache file format header
+#if !defined(sun) && (!defined(__NETBSD__) || __NetBSD_Version__ >= 600000000) // NetBSD 5 and Solaris don't like pragma pack but accept the packed attribute
+#pragma pack(push, 1)
+#endif // not NetBSD < 6 / Solaris
+struct map_cache_header {
+	int16 version;
+	uint8 md5_checksum[16];
 	int16 xs;
 	int16 ys;
 	int32 len;
-};
-
+} __attribute__((packed));
+#if !defined(sun) && (!defined(__NETBSD__) || __NetBSD_Version__ >= 600000000) // NetBSD 5 and Solaris don't like pragma pack but accept the packed attribute
+#pragma pack(pop)
+#endif // not NetBSD < 6 / Solaris
 
 /*=====================================
 * Interface : map.h
@@ -1167,7 +1172,6 @@ END_ZEROED_BLOCK;
 	struct map_data *list;
 	/* [Ind/Hercules] */
 	struct eri *iterator_ers;
-	char *cache_buffer; // Has the uncompressed gat data of all maps, so just one allocation has to be made
 	/* */
 	struct eri *flooritem_ers;
 	/* */
@@ -1291,7 +1295,7 @@ END_ZEROED_BLOCK;
 
 	bool (*iwall_set) (int16 m, int16 x, int16 y, int size, int8 dir, bool shootable, const char* wall_name);
 	void (*iwall_get) (struct map_session_data *sd);
-	void (*iwall_remove) (const char *wall_name);
+	bool (*iwall_remove) (const char *wall_name);
 
 	int (*addmobtolist) (unsigned short m, struct spawn_data *spawn); // [Wizputer]
 	void (*spawnmobs) (int16 m); // [Wizputer]
@@ -1317,8 +1321,8 @@ END_ZEROED_BLOCK;
 	void (*iwall_nextxy) (int16 x, int16 y, int8 dir, int pos, int16 *x1, int16 *y1);
 	struct DBData (*create_map_data_other_server) (union DBKey key, va_list args);
 	int (*eraseallipport_sub) (union DBKey key, struct DBData *data, va_list va);
-	char* (*init_mapcache) (FILE *fp);
-	int (*readfromcache) (struct map_data *m, char *buffer);
+	bool (*readfromcache) (struct map_data *m);
+	bool (*readfromcache_v1) (FILE *fp, struct map_data *m, unsigned int file_size);
 	int (*addmap) (const char *mapname);
 	void (*delmapid) (int id);
 	void (*zone_db_clear) (void);

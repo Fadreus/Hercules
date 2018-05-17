@@ -3956,10 +3956,10 @@ const char *npc_parse_mob(const char *w1, const char *w2, const char *w3, const 
 	}
 
 	//Use db names instead of the spawn file ones.
-	if(battle_config.override_mob_names==1)
-		strcpy(mobspawn.name,"--en--");
-	else if (battle_config.override_mob_names==2)
-		strcpy(mobspawn.name,"--ja--");
+	if (battle_config.override_mob_names == 1)
+		strcpy(mobspawn.name, DEFAULT_MOB_NAME);
+	else if (battle_config.override_mob_names == 2)
+		strcpy(mobspawn.name, DEFAULT_MOB_JNAME);
 	else
 		safestrncpy(mobspawn.name, mobname, sizeof(mobspawn.name));
 
@@ -4517,6 +4517,10 @@ const char *npc_parse_mapflag(const char *w1, const char *w2, const char *w3, co
 		map->list[m].flag.nocashshop = (state) ? 1 : 0;
 	} else if (!strcmpi(w3,"noviewid")) {
 		map->list[m].flag.noviewid = (state) ? atoi(w4) : 0;
+	} else if (!strcmpi(w3, "pairship_startable")) {
+		map->list[m].flag.pairship_startable = (state) ? 1 : 0;
+	}  else if (!strcmpi(w3, "pairship_endable")) {
+		map->list[m].flag.pairship_endable = (state) ? 1 : 0;
 	} else {
 		npc->parse_unknown_mapflag(mapname, w3, w4, start, buffer, filepath, retval);
 	}

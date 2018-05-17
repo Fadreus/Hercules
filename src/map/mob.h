@@ -60,6 +60,9 @@ struct hplugin_data_store;
 
 #define MAX_MOB_CHAT 250 //Max Skill's messages
 
+#define DEFAULT_MOB_NAME "--en--"
+#define DEFAULT_MOB_JNAME "--ja--"
+
 // On official servers, monsters will only seek targets that are closer to walk to than their
 // search range. The search range is affected depending on if the monster is walking or not.
 // On some maps there can be a quite long path for just walking two cells in a direction and
@@ -447,6 +450,8 @@ struct mob_interface {
 	int (*db_searchname) (const char *str);
 	int (*db_searchname_array_sub) (struct mob_db *monster, const char *str, int flag);
 	// MvP Tomb System
+	void (*mvptomb_spawn_delayed) (struct npc_data *nd);
+	int (*mvptomb_delayspawn) (int tid, int64 tick, int id, intptr_t data);
 	void (*mvptomb_create) (struct mob_data *md, char *killer, time_t time);
 	void (*mvptomb_destroy) (struct mob_data *md);
 	int (*db_searchname_array) (struct mob_db **data, int size, const char *str, int flag);
@@ -533,13 +538,15 @@ struct mob_interface {
 	int (*read_randommonster) (void);
 	bool (*parse_row_chatdb) (char **str, const char *source, int line, int *last_msg_id);
 	void (*readchatdb) (void);
-	bool (*parse_row_mobskilldb) (char **str, int columns, int current);
 	void (*readskilldb) (void);
 	bool (*readdb_race2) (char *fields[], int columns, int current);
 	bool (*readdb_itemratio) (char *str[], int columns, int current);
 	void (*load) (bool minimal);
 	void (*clear_spawninfo) (void);
 	void (*destroy_mob_db) (int index);
+	bool (*skill_db_libconfig) (const char *filename, bool ignore_missing);
+	bool (*skill_db_libconfig_sub) (struct config_setting_t *it, int n);
+	bool (*skill_db_libconfig_sub_skill) (struct config_setting_t *it, int n, int mob_id);
 };
 
 #ifdef HERCULES_CORE

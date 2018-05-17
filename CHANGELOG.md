@@ -1,3 +1,4 @@
+
 # Changelog
 All notable changes to this project will be documented in this file.
 
@@ -8,6 +9,94 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/spec
 <!--
 If you are reading this in a text editor, simply ignore this section
 -->
+
+## [v2018.05.06] `May 6 2018`
+### Added
+- Added a configurable PIN code blacklist, to prevent use of certain codes. (#2007 and #2029, issue #769)
+- Added/updated packets support for clients from 2018-04-11 to 2018-05-02. (#2021, #2030)
+- Implemented option to allow guild skill cooldowns to continue when the leader is logged out. Enabled by default and controlled by the `guild_skill_relog_delay` flag in guild.conf. (#2005, issue #1774)
+- Implemented the Private Airship system, currently using the list of maps from the Zero server. (#1998)
+- Added the constants `DEFAULT_MOB_JNAME` and `DEFAULT_MOB_NAME` (source only) to replace hardcoded use of `"--ja--"` and `"--en--"` respectively. (part of #2027)
+
+### Changed
+- Replaced custom messages related to the PIN code system with the official ones. (part of #2007)
+- Updated the minimum client version that enables certain features: new drop packet now in `PACKETVER >= 20180418`, attendance system now in `PACKETVER_ZERO_NUM >= 20180411`. (#2020)
+- Introduced a friendly error message when the `delwall()` script command fails due to a non-existent wall. (#2017)
+- Refactored some code to move `MAPID_*` related code into separate functions. (#2022)
+- Changed the plugins Makefile to honor the `$MYPLUGIN` variable passed through the environment, to make it easier to compile specific plugins without editing files. (#2025)
+- Converted the Mob Skill DB to the libconfig format. A converter script (`mobskilldbconverter.py`) has been provided for convenience. (#2019)
+
+### Fixed
+- Fixed interaction between Curse and Blessing. When under Curse or Stone Curse, Blessing will only remove the negative statuses and will need to be cast again to obtain the buff. (#1706, issue #680)
+- Added support for `time_t` as return type in the HPMHookGen. (bb0e228bd29dd689ca76f64578de8759415a763b)
+- Fixed some possible buffer overflows. (#2028)
+- Fixed the return value of `BUILDIN(getunitdata)`. (d6785d389cbee4f34078f6762626ca61b2d6cc25)
+- Improved support for clients version 2018-02-07 and Zero 2018-01-31. (part of #2030)
+- Fixed the clan names in some clan-related NPC dialogs. (#2032)
+- Fixed the display name of monster summoned through the `SA_SUMMONMONSTER` skill. (#2027)
+
+### Removed
+- Removed all the code related to the anonymous-stat-reporting system. (#2023)
+
+## [v2018.04.08] `April 8 2018`
+### Added
+- Added/updated packets support for clients from 2018-03-14 to 2018-04-04. (#1994 and #2014)
+- Introduced macros `PACKETVER_RE_NUM`, `PACKETVER_ZERO_NUM` and `PACKETVER_MAIN_NUM` to simplify client type-specific version checks.
+  These macros are defined to `PACKETVER` only if, respectively, `PACKETVER_RE`, `PACKETVER_ZERO` or neither are defined. (part of #1994)
+- Implemented Hat Effects, available in clients starting from 2015-04-22. (#1965)
+  - The `hateffect()` script command has been implemented.
+  - The related constants (with prefix `HAT_EF_*`) have been added and made available to the script engine.
+- Added the 2015 variant of the quest-related packets. (#1111)
+- Added login date information for guild members, on clients starting from 2016-10-26. The message format can be customized on the client side, by editing line 3012 of msgstringtable.txt. (#1986)
+- Added support for the `ZC_FORMATSTRING_MSG` and `ZC_MSG_COLOR` packets, handling msgstringtable messages. (#2012)
+- Added a setting (`storage_use_item` in `items.conf`) to control the use of items (usable/consumable/boxes) when the storage is open. (#1868, issue #1806)
+- Implemented the Attendance System, requiring client 2018-03-07bRagexeRE or newer. Configuration is available in `feature.conf` and `db/attendance_db.conf`. (#1990)
+- Added a configurable delay to the MVP Tombstone. The delay can be configured through the `mvp_tomb_spawn_delay` setting in `monster.conf`. (#2001, issue #1980)
+
+### Changed
+- Updated the functions handling quest-related packets to use the struct-based form. (part of #1111)
+- Converted the Pet DB to the libconfig format. A converter script (`petdbconverter.py`) has been provided for convenience. (#2000)
+- The `noteleport` mapflag has been added to the Archer Village (`pay_arche`), to match official servers. (part of #2006)
+- The `script->sprintf()` function has been renamed to `script->sprintf_helper()`. (part of #2009)
+
+### Fixed
+- Removed a duplicated line in the login server VS project that would prevent Visual Studio from loading it. (#1992)
+- Prevented a console warning when a nonexistent map is passed to the `getmapinfo()` script command. (584e8de35)
+- Fixed a RODEX loading data problem when a message's expiration date was manually edited. (#1995)
+- Corrected the error messages displayed when using various restricted items to match the official servers. (#2006)
+- Added a missing status refresh for the Homunculus Autofeed system when changing maps. (#2002)
+- Fixed a NULL pointer check failure when `TK_JUMPKICK` is used by a non-player. (#2015, issue #1875)
+- Fixed compilation of the HPMHooking plugin on systems where `sprintf()` is a macro. (#2009, issue #2003)
+
+## [v2018.03.11] `March 11 2018`
+### Added
+- Added a new `mapcache` plugin to convert, update or recreate mapcache files in the new format. (part of #1552)
+- Added appveyor configuration to the repository. (part of #1552)
+- Exposed `script->sprintf()` to plugins. (#1976)
+- Added/updated packets support for clients from 2018-02-21 to 2018-03-09. (#1983)
+
+### Changed
+- Updated the mapcache to a new, git-friendly, format having one file per map. (#1552, #1981)
+  - For info on how to convert or recreate mapcache entries, see the mapcache plugin (`./map-server --load-plugin mapcache --help`)
+- Removed the display of PIN codes and passwords from the `@accinfo` GM command. Old code is kept commented out for those that may wish to re-enable it. (#1975)
+- Updated README.md with some clarifications and corrections. (#1985)
+
+### Fixed
+- Updated the VS project files with the recently added .h files, for better intellisense/search. (#1970)
+- Fixed a NULL pointer in `login->accounts`, only affecting plugins. (part of #1979)
+- Fixed a case of use after free in the `@reloadatcommand` GM command. (part of #1979)
+- Added several missing checks in various `clif_parse_*` functions. (part of #1979)
+- Fixed various PIN code related exploits. (part of #1979)
+- Fixed a case of use after free when the option `delay_battle_damage` is set to false. (part of #1979)
+- Fixed a segmentation fault in clan-related code when using the `db2sql` plugin. (#1989, issue #1984)
+- Fixed an incorrect behavior in RODEX returned messages. (part of #1987)
+- Fixed an error that made RODEX mails impossible to delete in some cases. (part of #1987)
+- Fixed a NULL pointer in RODEX when the user tried to perform actions on unloaded mails. (part of #1987, issue #1977)
+- Fixed an incorrect interaction between RODEX and NPCs. (#1936)
+- Fixed an incorrect Kafra Points / Cash Points calculation. (#1541, issue #1540)
+
+### Removed
+- Removed the old `mapcache` executable, superseded by the new plugin. (part of #1552)
 
 ## [v2018.02.11+1] `February 13 2018` `PATCH 1`
 ### Fixed
@@ -160,6 +249,9 @@ If you are reading this in a text editor, simply ignore this section
 - New versioning scheme and project changelogs/release notes (#1853)
 
 [Unreleased]: https://github.com/HerculesWS/Hercules/compare/stable...master
+[v2018.05.06]: https://github.com/HerculesWS/Hercules/compare/v2018.04.08...v2018.05.06
+[v2018.04.08]: https://github.com/HerculesWS/Hercules/compare/v2018.03.11...v2018.04.08
+[v2018.03.11]: https://github.com/HerculesWS/Hercules/compare/v2018.02.11+1...v2018.03.11
 [v2018.02.11+1]: https://github.com/HerculesWS/Hercules/compare/v2018.02.11...v2018.02.11+1
 [v2018.02.11]: https://github.com/HerculesWS/Hercules/compare/v2018.01.14...v2018.02.11
 [v2018.01.14]: https://github.com/HerculesWS/Hercules/compare/v2017.12.17...v2018.01.14
