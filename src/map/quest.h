@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 struct block_list;
 struct config_setting_t;
 struct map_session_data;
+struct questinfo;
 
 #define MAX_QUEST_DB (60355+1) // Highest quest ID + 1
 
@@ -79,6 +80,19 @@ struct quest_interface {
 	void (*clear) (void);
 	int (*read_db) (void);
 	struct quest_db *(*read_db_sub) (struct config_setting_t *cs, int n, const char *source);
+
+	int (*questinfo_validate_icon) (int icon);
+	void (*questinfo_refresh) (struct map_session_data *sd);
+	bool (*questinfo_validate) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_job) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_sex) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_baselevel) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_joblevel) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_items) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_homunculus_level) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_homunculus_type) (struct map_session_data *sd, struct questinfo *qi);
+	bool (*questinfo_validate_quests) (struct map_session_data *sd, struct questinfo *qi);
+	void (*questinfo_vector_clear) (int m);
 };
 
 #ifdef HERCULES_CORE

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2016  Hercules Dev Team
+ * Copyright (C) 2013-2018  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,11 +42,7 @@
 	#define DLL                   HINSTANCE
 #else // ! WIN32
 	#include <dlfcn.h>
-	#ifdef RTLD_DEEPBIND // Certain linux distributions require this, but it's not available everywhere
-		#define plugin_open(x) dlopen((x),RTLD_NOW|RTLD_DEEPBIND)
-	#else // ! RTLD_DEEPBIND
-		#define plugin_open(x) dlopen((x),RTLD_NOW)
-	#endif // RTLD_DEEPBIND
+	#define plugin_open(x)         dlopen((x), RTLD_NOW)
 	#define plugin_import(x,y,z)   (z)dlsym((x),(y))
 	#define plugin_close(x)        dlclose(x)
 	#define plugin_geterror(buf)   ((void)buf, dlerror())

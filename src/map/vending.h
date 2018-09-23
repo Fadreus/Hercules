@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -45,7 +45,7 @@ struct vending_interface {
 	void (*open) (struct map_session_data* sd, const char* message, const uint8* data, int count);
 	void (*list) (struct map_session_data* sd, unsigned int id);
 	void (*purchase) (struct map_session_data* sd, int aid, unsigned int uid, const uint8* data, int count);
-	bool (*search) (struct map_session_data* sd, unsigned short nameid);
+	bool (*search) (struct map_session_data* sd, int nameid);
 	bool (*searchall) (struct map_session_data* sd, const struct s_search_store_search* s);
 };
 

@@ -38,7 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct inter_clan_interface inter_clan_s;
+static struct inter_clan_interface inter_clan_s;
 struct inter_clan_interface *inter_clan;
 
 /**
@@ -51,7 +51,7 @@ struct inter_clan_interface *inter_clan;
  * @param kick_interval Time needed to consider a player inactive and kick it
  * @return 0 on failure, 1 on success
  */
-int inter_clan_kick_inactive_members(int clan_id, int kick_interval)
+static int inter_clan_kick_inactive_members(int clan_id, int kick_interval)
 {
 	if (clan_id <= 0) {
 		ShowError("inter_clan_kick_inactive_members: Invalid clan id received '%d'\n", clan_id);
@@ -81,7 +81,7 @@ int inter_clan_kick_inactive_members(int clan_id, int kick_interval)
  * @param clan_id Id of the clan
  * @param kick_interval Time needed to consider a player inactive and ignore it on the count
  */
-int inter_clan_count_members(int clan_id, int kick_interval)
+static int inter_clan_count_members(int clan_id, int kick_interval)
 {
 	struct SqlStmt *stmt;
 	int count = 0;
@@ -123,32 +123,6 @@ int inter_clan_count_members(int clan_id, int kick_interval)
 	return count;
 }
 
-int mapif_parse_ClanMemberCount(int fd, int clan_id, int kick_interval)
-{
-
-	WFIFOHEAD(fd, 10);
-	WFIFOW(fd, 0) = 0x3858;
-	WFIFOL(fd, 2) = clan_id;
-	WFIFOL(fd, 6) = inter_clan->count_members(clan_id, kick_interval);
-	WFIFOSET(fd, 10);
-	return 0;
-}
-
-int mapif_parse_ClanMemberKick(int fd, int clan_id, int kick_interval)
-{
-	int count = 0;
-
-	if (inter_clan->kick_inactive_members(clan_id, kick_interval) == 1)
-		count = inter_clan->count_members(clan_id, kick_interval);
-
-	WFIFOHEAD(fd, 10);
-	WFIFOW(fd, 0) = 0x3858;
-	WFIFOL(fd, 2) = clan_id;
-	WFIFOL(fd, 6) = count;
-	WFIFOSET(fd, 10);
-	return 0;
-}
-
 // Communication from the map server
 // - Can analyzed only one by one packet
 // Data packet length that you set to inter.c
@@ -156,7 +130,7 @@ int mapif_parse_ClanMemberKick(int fd, int clan_id, int kick_interval)
 // Must Return
 //  1 : ok
 //  0 : error
-int inter_clan_parse_frommap(int fd)
+static int inter_clan_parse_frommap(int fd)
 {
 	RFIFOHEAD(fd);
 

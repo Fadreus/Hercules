@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -50,7 +50,7 @@ struct item_data;
 #define NUM_WHISPER_VAR 10
 
 /// Maximum amount of elements in script arrays
-#define SCRIPT_MAX_ARRAYSIZE (UINT_MAX - 1)
+#define SCRIPT_MAX_ARRAYSIZE (INT_MAX - 1)
 
 #define SCRIPT_BLOCK_SIZE 512
 
@@ -143,7 +143,6 @@ struct item_data;
 /// Returns if this a reference to a param
 #define reference_toparam(data) ( script->str_data[reference_getid(data)].type == C_PARAM )
 /// Returns if this a reference to a variable
-//##TODO confirm it's C_NAME [FlavioJS]
 #define reference_tovariable(data) ( script->str_data[reference_getid(data)].type == C_NAME )
 /// Returns the unique id of the reference (id and index)
 #define reference_getuid(data) ( (data)->u.num )
@@ -456,6 +455,22 @@ enum script_iteminfo_types {
 };
 
 /**
+ * Player blocking actions related flags.
+ */
+enum pcblock_action_flag {
+	PCBLOCK_NONE     = 0x00,
+	PCBLOCK_MOVE     = 0x01,
+	PCBLOCK_ATTACK   = 0x02,
+	PCBLOCK_SKILL    = 0x04,
+	PCBLOCK_USEITEM  = 0x08,
+	PCBLOCK_CHAT     = 0x10,
+	PCBLOCK_IMMUNE   = 0x20,
+	PCBLOCK_SITSTAND = 0x40,
+	PCBLOCK_COMMANDS = 0x80,
+	PCBLOCK_ALL      = 0xFF,
+};
+
+/**
  * Structures
  **/
 
@@ -692,7 +707,7 @@ struct script_interface {
 	int string_list_size;
 	int string_list_pos;
 	/*  */
-	unsigned short current_item_id;
+	int current_item_id;
 	/* */
 	struct script_label_entry *labels;
 	int label_count;
@@ -813,6 +828,7 @@ struct script_interface {
 	void (*setarray_pc) (struct map_session_data* sd, const char* varname, uint32 idx, void* value, int* refcache);
 	bool (*config_read) (const char *filename, bool imported);
 	int (*add_str) (const char* p);
+	int (*add_variable) (const char *varname);
 	const char* (*get_str) (int id);
 	int (*search_str) (const char* p);
 	void (*setd_sub) (struct script_state *st, struct map_session_data *sd, const char *varname, int elem, const void *value, struct reg_db *ref);
@@ -856,7 +872,7 @@ struct script_interface {
 	void (*add_translatable_string) (const struct script_string_buf *string, const char *start_point);
 	const char *(*parse_expr) (const char *p);
 	const char *(*parse_line) (const char *p);
-	void (*read_constdb) (void);
+	void (*read_constdb) (bool reload);
 	void (*constdb_comment) (const char *comment);
 	void (*load_parameters) (void);
 	const char* (*print_line) (StringBuf *buf, const char *p, const char *mark, int line);

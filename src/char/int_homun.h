@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #define CHAR_INT_HOMUN_H
 
 #include "common/hercules.h"
+#include "common/mmo.h"
 
 /**
  * inter_homunculus interface
@@ -30,6 +31,12 @@ struct inter_homunculus_interface {
 	int (*sql_init) (void);
 	void (*sql_final) (void);
 	int (*parse_frommap) (int fd);
+
+	bool (*create) (struct s_homunculus *hd);
+	bool (*save) (const struct s_homunculus *hd);
+	bool (*load) (int homun_id, struct s_homunculus* hd);
+	bool (*delete) (int homun_id);
+	bool (*rename) (const char *name);
 };
 
 #ifdef HERCULES_CORE

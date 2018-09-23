@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -33,13 +33,14 @@ struct guild_storage;
 struct inter_storage_interface {
 	int (*tosql) (int account_id, const struct storage_data *p);
 	int (*fromsql) (int account_id, struct storage_data *p);
-	int (*guild_storage_tosql) (int guild_id, const struct guild_storage *p);
+	bool (*guild_storage_tosql) (int guild_id, const struct guild_storage *p);
 	int (*guild_storage_fromsql) (int guild_id, struct guild_storage* p);
 	int (*sql_init) (void);
 	void (*sql_final) (void);
 	int (*delete_) (int account_id);
 	int (*guild_storage_delete) (int guild_id);
 	int (*parse_frommap) (int fd);
+	bool (*retrieve_bound_items) (int char_id, int account_id, int guild_id);
 };
 
 #ifdef HERCULES_CORE

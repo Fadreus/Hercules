@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -366,6 +366,7 @@ struct Battle_Config {
 	int castrate_dex_scale; // added by [MouseJstr]
 	int area_size; // added by [MouseJstr]
 	int chat_area_size; // added by [gumi]
+	int dead_area_size; // Monster die area [KirieZ]
 
 	int max_def, over_def_bonus; //added by [Skotlex]
 
@@ -563,6 +564,7 @@ struct Battle_Config {
 	int feature_rodex_use_accountmail;
 
 	int feature_enable_homun_autofeed;
+	int feature_enable_pet_autofeed;
 
 	int storage_use_item;
 

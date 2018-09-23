@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #define CHAR_INT_ELEMENTAL_H
 
 #include "common/hercules.h"
+#include "common/mmo.h"
 
 /**
  * inter_elemental_interface interface
@@ -30,6 +31,11 @@ struct inter_elemental_interface {
 	void (*sql_init) (void);
 	void (*sql_final) (void);
 	int (*parse_frommap) (int fd);
+
+	bool (*create) (struct s_elemental *ele);
+	bool (*save) (const struct s_elemental *ele);
+	bool (*load) (int ele_id, int char_id, struct s_elemental *ele);
+	bool (*delete) (int ele_id);
 };
 
 #ifdef HERCULES_CORE

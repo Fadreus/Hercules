@@ -247,8 +247,8 @@ increments of 45 degrees, where 0 means facing towards the top of the map.
 and to make it look southeast it's facing 5.)
 
 Sprite is the sprite identifier used to display this particular NPC. For a
-full list of sprite numbers see http://kalen.s79.xrea.com/npc/npce.shtml as
-well as db/constants.conf.
+full list of sprite numbers see http://nn.ai4rei.net/dev/npclist/ as
+well as doc/constants.md.
 You may also use a monster's ID constant instead to display a monster sprite
 for this NPC, in npcs that have view ids of mobs it's encouraged to use
 OnTouch events with a 2,2 range and with an 'end' after the header to avoid
@@ -536,7 +536,7 @@ suffix is 32.
 
 Some variables are special, that is, they are already defined for you by
 the scripting engine. You can see the full list somewhere in
-'db/constants.conf', which is a file you should read, since it also
+'doc/constants.md', which is a file you should read, since it also
 allows you to replace lots of numbered arguments for many commands with
 easier to read text. The special variables most commonly used are all
 permanent character-based variables:
@@ -699,7 +699,7 @@ Variable References
 Hard-coded constants
 --------------------
 Most of the constants defined by the scripting engine can be found in
-'db/constants.conf' and have the same value independently of settings
+'doc/constants.md' and have the same value independently of settings
 that are core related, but there are constants that can be used to
 retrieve core information that's set when the server is compiled.
 
@@ -716,8 +716,7 @@ MAX_CHAT_USERS		- Maximum Chat users
 MAX_REFINE			- Maximum Refine level
 
 Send targets and status options are also hard-coded and can be found
-in src/map/script.c::script_hardcoded_constants or in functions that
-currently use them.
+in 'doc/constants.md'.
 
 Operators
 ---------
@@ -1977,18 +1976,35 @@ prontera,150,150,0	script	TestNPC	123,{
 
 *is_function("<function name>")
 
-This command checks whether a function exists.
-It returns 1 if function is found, or 0 if it isn't.
+This command checks whether or not a function exists and returns its type.
+Returns false if it cannot be found.
+
+return values:
+
+	FUNCTION_IS_COMMAND - built-in script command (eg: mes, select, ...)
+	FUNCTION_IS_GLOBAL  - user-defined global function (callable with callfunc)
+	FUNCTION_IS_LOCAL   - user-defined local function
+	FUNCTION_IS_LABEL   - user-defined label function (callable with callsub)
 
 Example:
 
-	function	script	try	{
+	function	script	func1	{
 		dothat();
 	}
 
 	-	script	test	FAKE_NPC,{
-		.@try = is_function("try"); // 1
-		.@not = is_function("notafunction"); // 0
+		function func2 {
+			do_something();
+		}
+
+	func3:
+		end;
+
+		is_function("func1"); // FUNCTION_IS_GLOBAL
+		is_function("func2"); // FUNCTION_IS_LOCAL
+		is_function("func3"); // FUNCTION_IS_LABEL
+		is_function("select"); // FUNCTION_IS_COMMAND
+		is_function("invalid"); // false
 	}
 
 ---------------------------------------
@@ -2473,10 +2489,11 @@ arrays:
 ---------------------------------------
 
 *readparam(<parameter number>{, "<player name>"})
+*readparam(<parameter number>{, <account id>})
 
 This function will return the basic stats of an invoking character,
 referred to by the parameter number. Instead of a number, you can use a
-parameter name if it is defined in 'db/constants.conf'.
+parameter name if it is defined in 'doc/constants.md'.
 
 Example parameters:
 
@@ -2508,6 +2525,21 @@ Example 3:
 
 	// Display your current weight
 	mes("Your current weight is "+ (Weight/10) + "/" + (MaxWeight/10));
+
+---------------------------------------
+
+*setparam(<parameter number>, <value>{, "<player name>"})
+*setparam(<parameter number>, <value>{, <account id>})
+
+Sets a parameter on the given player. See readparam() for more info about
+parameters. Keep in mind that not all read-able parameters are also set-able.
+
+Parameters that can be modified include:
+
+StatusPoint, BaseLevel, SkillPoint, Zeny, Sex, Weight, MaxWeight, JobLevel,
+BaseExp, JobExp, Hp, MaxHp, Sp, MaxSp, Karma, Manner, Fame, bVit, bDex, bAgi,
+bStr, bInt, bLuk
+
 
 ---------------------------------------
 
@@ -2756,7 +2788,9 @@ save points. Available information types are:
 
 ---------------------------------------
 
-*getcharip({"<character name>"|<account id>|<char id>})
+*getcharip({"<character name>"})
+*getcharip({<account id>})
+*getcharip({<character id>})
 
 This function will return the IP address of the invoking character, or, if
 a player is specified, of that character. A blank string is returned if no
@@ -3357,12 +3391,13 @@ Examples:
 
 ---------------------------------------
 
-*getunits(<type>, <variable>, <limit>, "<map>"{, <x1>, <y1>, <x2>, <y2>})
+*getunits(<type>, <variable>, <limit>{, "<map>"{, <x1>, <y1>, <x2>, <y2>}})
 
 This function searches a whole map or area for units and adds their GID to
 the provided <variable> array. It filters units by <type> and stops searching
 after <limit> units have been found. Set <limit> to false (0) if you wish to
-disable the limit altogether.
+disable the limit altogether. If <map> is omitted, this command will search
+on the whole server (slow). Returns the number of units added to the array.
 
 Type is the type of unit to search for:
 
@@ -3380,6 +3415,10 @@ Type is the type of unit to search for:
 	BL_ALL   - Any kind of object
 
 ** Do NOT use UNITTYPE_ constants here, they have different values.
+
+** If battle_config.dynamic_mobs is enabled and no player has entered the map
+   yet, the mobs will not have spawned in the map yet, so getunits() will be
+   unable to find them when searching for BL_MOB.
 
 Example:
 
@@ -3408,7 +3447,8 @@ behave specially when talked to by GMs.
 
 ---------------------------------------
 
-*setgroupid(<new group id>{, "<character name>"|<account id>})
+*setgroupid(<new group id>{, "<character name>"})
+*setgroupid(<new group id>{, <account id>})
 
 This function will temporary adjust the id of player group the account to which the
 player specified if the new group id is available.
@@ -3828,7 +3868,7 @@ mob database and return the info set by TYPE argument.
 It will return -1 if there is no such monster (or the type value is
 invalid), or "null" if you requested the monster's name.
 
-Valid types are listed in constants.conf:
+Valid types are listed in doc/constants.md:
 	MOB_NAME		0
 	MOB_LV			1
 	MOB_MAXHP		2
@@ -3979,7 +4019,7 @@ effect being inflicted, in percent.
 	}
 
 You can see the full list of available effect types you can possibly
-inflict in 'db/constants.conf' under 'Eff_'.
+inflict in 'doc/constants.md' under 'Status effects'.
 
 ---------------------------------------
 //=====================================
@@ -4367,7 +4407,7 @@ offline in the mean time, attachrid() returns false, otherwise true.
 
 ---------------------------------------
 
-*rid2name(<rid>)
+*rid2name(<account id>)
 
 Converts rid to name. Note: The player/monster/NPC must be online/enabled.
 Good for PCKillEvent where you can convert 'killedrid' to the name of the
@@ -4611,13 +4651,12 @@ effects.
 
 ---------------------------------------
 
-*recovery()
-*recovery(<account id>)
+*recovery({<account id>})
 *recovery("<map name>"{, <x1>, <y1>, <x2>, <y2>})
 
-In its first form, this command will revive and restore full HP and SP to all
-characters currently connected to the server. In its second form, it will only
-affect the target player. In its third form it will affect a whole map or area.
+This command will revive and restore full HP and SP to all characters currently
+connected to the server. If an account id is supplied, it will instead only
+affect this character. If a map is supplied it will affect a whole map or area.
 
 ---------------------------------------
 
@@ -4630,7 +4669,7 @@ This command will change the job class of the invoking character.
 
 This command does work with numbers, but you can also use job names. The
 full list of job names and the numbers they correspond to can be found in
-'db/constants.conf'.
+'doc/constants.md'.
 
 'upper flag' can alternatively be used to specify the type of job one
 changes to. For example, jobchange(Job_Swordman, 1); will change the
@@ -4778,7 +4817,7 @@ Is subject to EXP bonuses and to the `quest_exp_rate` config option.
 	getexp(10000, 5000);
 
 You can also assign directly to the parameters defined in
-'db/constants.conf':
+'doc/constants.md':
 
 	BaseExp += 10000;
 	JobExp += 5000;
@@ -4857,7 +4896,7 @@ installation that you can look at: 'npc/custom/stylist.txt'
 This command will push the currently attached player to given direction by
 given amount of square cells. Direction is the same as used when declaring
 NPCs, and can be specified by using one of the DIR_* constants
-(db/constants.conf).
+(doc/constants.md).
 
 The knock-back is not restricted by items or map flags, only obstacles are
 taken into account. If there is not enough space to perform the push (e.g.
@@ -5133,8 +5172,10 @@ Example:
 	close();
 ---------------------------------------
 
-*getnameditem(<item id>, <character name|character ID>)
-*getnameditem("<item name>", <character name|character ID>)
+*getnameditem(<item id>, "<character name>")
+*getnameditem(<item id>, <character ID>)
+*getnameditem("<item name>", "<character name>")
+*getnameditem("<item name>", <character ID>)
 
 Create an item signed with the given character's name.
 
@@ -5298,7 +5339,7 @@ Check getitem2() to understand the arguments of the function.
 
 ---------------------------------------
 
-*groupranditem(<item_id/constant>)
+*groupranditem(<item id>)
 
 Returns the item_id of a random item picked from the item container specified. There
 are different item containers and they are specified in 'db/(pre-)re/item_group.conf'.
@@ -5308,7 +5349,7 @@ Example:
 
 ---------------------------------------
 
-*getrandgroupitem(<item_id/constant>, <quantity>)
+*getrandgroupitem(<item id>, <quantity>)
 
 Similar to the above example, this command allows players to obtain the specified
 quantity of a random item from the container. The different containers
@@ -5810,7 +5851,7 @@ These commands will bestow a status effect on a character.
 
 The <effect type> determines which status is invoked. This can be either a number
 or constant, with the common statuses (mostly negative) found in
-'db/constants.conf' with the 'SC_' prefix. A full list is located in
+'doc/constants.md' under 'Status Changes'. A full list is located in
 'src/map/status.h', though they are not currently documented.
 
 The duration of the status is given in <ticks>, or milleseconds.
@@ -6184,12 +6225,15 @@ Examples:
 
 ---------------------------------------
 
-*pcblockmove(<id>, <option>)
+*pcblockmove(<account id>, <option>)
 
-Prevents the given ID from moving when the optionis true , and false
-enables the ID to move again. The ID can either be the GID of a
-monster/NPC or account ID of a character, and will run for the attached
-player if zero is supplied.
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @ /!\ This command is deprecated @
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Prevents the player from moving when the option != 0, and 0 enables the
+player to move again. The player has to be the account ID of a character,
+and will run for the attached player if zero is supplied.
 
 Examples:
 
@@ -6199,6 +6243,53 @@ Examples:
 // Enables the current char to move again.
 	pcblockmove(getcharid(CHAR_ID_ACCOUNT), false);
 
+---------------------------------------
+
+*setpcblock(<type>,<option>)
+*checkpcblock()
+
+Prevents the player from doing the following action.
+
+For setpcblock, when the <option> is true(1) will block them, and false(0)
+will allow those actions again.
+
+The checkpcblock command returned value is a bit mask of the currently
+enabled block flags (or PCBLOCK_NONE when none is set).
+
+The <type> listed are a bit mask of the following:
+	PCBLOCK_NONE (only used by checkpcblock)
+	PCBLOCK_MOVE
+	PCBLOCK_ATTACK
+	PCBLOCK_SKILL
+	PCBLOCK_USEITEM
+	PCBLOCK_CHAT
+	PCBLOCK_IMMUNE
+	PCBLOCK_SITSTAND
+	PCBLOCK_COMMANDS
+
+Examples:
+
+// Make the current attached player invulnerable, same as @monsterignore
+	setpcblock(PCBLOCK_IMMUNE, true);
+
+// Prevents the current char from attacking or using skills
+	setpcblock(PCBLOCK_ATTACK|PCBLOCK_SKILL, true);
+
+// Re-enables attack, skills and item use
+	setpcblock(PCBLOCK_ATTACK|PCBLOCK_SKILL|PCBLOCK_ITEM, false);
+
+// checkpcblock related checks
+	if ((checkpcblock() & PCBLOCK_IMMUNE) != 0)
+		mes "You are invulnerable!";
+
+	if ((checkpcblock() & (PCBLOCK_MOVE|PCBLOCK_SITSTAND)) == (PCBLOCK_MOVE|PCBLOCK_SITSTAND))
+		mes "You can't walk or sit";
+
+	if ((checkpcblock() & (PCBLOCK_ATTACK|PCBLOCK_SKILL)) == PCBLOCK_NONE)
+		mes "You can attack and use skills";
+
+	if ((checkpcblock() & PCBLOCK_CHAT) == PCBLOCK_NONE)
+		mes "You can't chat";
 
 ---------------------------------------
 //=====================================
@@ -6556,17 +6647,48 @@ Examples:
 *unitwarp(<GID>, <Mapname>, <x>, <y>)
 *unitattack(<GID>, <Target ID>)
 *unitstop(<GID>)
-*unittalk(<GID>, <Text>)
+*unittalk(<GID>, <Text>{, show_name{, <send_target>{, <target_id>}}})
 *unitemote(<GID>, <Emote>)
 
 Okay, these commands should be fairly self explaining.
-For the emotions, you can look in db/constants.conf for prefixes with e_
+For the emotions, you can look in 'doc/constants.md' under 'Emotes'
 PS: unitwarp() supports a <GID> of zero, which causes the executor of the
+PS: unittalk() can receive 3 extra parameters:
+	show_name:
+		true: Shows Unit name like "UnitName : Message" (default)
+		false: Hides Unit name
+	send_target:
+		AREA_CHAT_WOC: sends the message to everyone in view range including the attached unit (default)
+		SELF: sends the message to the given unit gid only
+	target_id:
+		if send_target is set to SELF, the message will be shown by the given gid,
+		target_id allows changing the unit that will see the message.
 script to be affected. This can be used with OnTouchNPC to warp
 monsters:
 
 OnTouchNPC:
 	unitwarp(0, "this", -1, -1);
+
+	// hide the npc name from the text
+	unittalk(getnpcid(0), "foobar", false);
+
+	// display by npc to everyone
+	unittalk(getnpcid(0), "foobar", true);
+
+	// display by npc to npc
+	unittalk(getnpcid(0), "foobar", true, SELF);
+
+	// display the text by the npc to the attached player only
+	unittalk(getnpcid(0), "foobar", true, SELF, playerattached());
+
+	// display by player to everyone
+	unittalk(playerattached(), "foobar", true);
+
+	// display by player to himself only
+	unittalk(playerattached(), "foobar", true, SELF);
+
+	// display the text by the 1st player to the attached player only
+	unittalk(getcharid(CHAR_ID_ACCOUNT, "Name"), "foobar", true, SELF, playerattached());
 
 ---------------------------------------
 
@@ -6675,12 +6797,16 @@ A debug message also shows on the console when no events are triggered.
 
 ---------------------------------------
 
-*npctalk("<message>"{, "<npc name>"})
+*npctalk("<message>"{, "<npc name>"{, <show_name>}})
+
+show_npcname values:
+	true: shows npc name (default)
+	false: hide npc name
 
 This command will display a message to the surrounding area as if the NPC
 object running it was a player talking - that is, above their head and in
-the chat window. The display name of the NPC will get appended in front of
-the message to complete the effect.
+the chat window. If show_npcname is true the name of the NPC will get appended in front of
+the message, otherwise the npc name will not be shown.
 
 	// This will make everyone in the area see the NPC greet the character
 	// who just invoked it.
@@ -6768,12 +6894,12 @@ valid <type> for gettimer() are:
 
 ---------------------------------------
 
-*initnpctimer({ "<NPC name>" {, <Attach Flag>} } |
-              { "<NPC name>" | <Attach Flag> })
-*stopnpctimer({ "<NPC name>" {, <Detach Flag>}  } |
-              { "<NPC name>" | <Detach Flag> })
-*startnpctimer({ "<NPC name>" {, <Attach Flag>} } |
-               { "<NPC name>" | <Attach Flag> })
+*initnpctimer({"<NPC name>"{, <Attach Flag>}})
+*initnpctimer({<Attach Flag>})
+*stopnpctimer({"<NPC name>"{, <Detach Flag>}})
+*stopnpctimer({<Detach Flag>}})
+*startnpctimer({"<NPC name>"{, <Attach Flag>}})
+*startnpctimer({<Attach Flag>})
 *setnpctimer(<tick>{, "<NPC name>"})
 *getnpctimer(<type of information>{, "<NPC name>"})
 *attachnpctimer({"<character name>"})
@@ -6954,7 +7080,7 @@ This command will broadcast a message to all or most players, similar to
 The region the broadcast is heard in (target), source of the broadcast and
 the color the message will come up as is determined by the flags.
 
-The flag values are coded as constants in db/constants.conf to make them
+The flag values are coded as constants in doc/constants.md to make them
 easier to use.
 
 Target flags:
@@ -7280,7 +7406,7 @@ to the coordinates specified.
 
 This command marks a specified map with a map flag given. Map flags alter
 the behavior of the map, you can see the list of the available ones in
-'db/constants.conf' under 'mf_'.
+'doc/constants.md' under 'Mapflags'.
 
 The map flags alter the behavior of the map regarding teleporting
 (mf_nomemo, mf_noteleport, mf_nowarp), storing location when
@@ -7553,15 +7679,19 @@ solution rather than sending the map and the monster_id.
 //=====================================
 ---------------------------------------
 
-*debugmes("<message>")
+*debugmes("<format string>"{, <param>{, ...}})
 
-This command will send the message to the server console (map-server
-window). It will not be displayed anywhere else.
-//
+This command will print a message in the server console (map-server window),
+after applying the same format-string replacements as sprintf(). It will not be
+displayed anywhere else. Returns true on success.
+
+Example:
+
 	// Displays "NAME has clicked me!" in the map-server window.
-	debugmes(strcharinfo(PC_NAME)+" has clicked me!");
+	debugmes("%s has clicked me!", strcharinfo(PC_NAME));
 
-	debugmes("\033[38D\033[K ==Message== \n"); // enable colour code.
+	debugmes("\033[0;32mHello World"); // supports ANSI escape sequences
+
 ---------------------------------------
 
 *logmes("<message>"{, <log type>})
@@ -7731,7 +7861,7 @@ A full list of pet IDs can be found inside 'db/pet_db.txt'
 
 This command makes an object display an emotion sprite above their own as
 if they were doing that emotion. For a full list of emotion numbers, see
-'db/constants.conf' under 'e_'. The not so obvious ones are 'e_what' (a
+'doc/constants.md' under 'Emotes'. The not so obvious ones are 'e_what' (a
 question mark) and 'e_gasp' (the exclamation mark).
 
 The optional target parameter specifies who will get the emotion on top of
@@ -8796,14 +8926,14 @@ same time.
 
 This command will make the pet give a bonus to the owner's stat (bonus
 type - bInt, bVit, bDex, bAgi, bLuk, bStr, bSpeedRate - for a full list, see the
-values starting with 'b' in 'db/constants.conf').
+'doc/constants.md' under 'Bonuses / Parameter IDs').
 
 *petrecovery(<status type>, <delay>)
 
 This command will make the pet cure a specified status condition. The
 curing actions will occur once every <delay> seconds. For a full list of
-status conditions that can be cured, see the list of 'SC_' status
-condition constants in 'db/constants.conf'
+status conditions that can be cured, see the list of 'Status Changes' status
+condition constants in 'doc/constants.md'
 
 *petloot(<max items>)
 
@@ -8898,7 +9028,7 @@ Each of these can be 'on' or 'off'. Together they define a cell's behavior.
 This command lets you alter these flags for all map cells in the specified
 (x1,y1)-(x2,y2) rectangle.
 'type' defines which flag to modify. Possible options include cell_walkable,
-cell_shootable, cell_basilica. For a full list, see constants.conf.
+cell_shootable, cell_basilica. For a full list, see 'doc/constants.md'.
 'flag' can be false (clear flat) or true (set flag).
 
 Example:
@@ -8935,7 +9065,7 @@ remove a nonwalkable row of cells after the barricade mobs.
 This command will return true or false, depending on whether the specified cell
 has the 'type' flag set or not. There are various types to check, all
 mimicking the server's cell_chk enumeration. The types can be found in
-db/constants.conf.
+'doc/constants.md' under 'Cell checks'.
 
 The meaning of the individual types can be confusing, so here's an
 overview:
@@ -9227,12 +9357,10 @@ that fails, the command returns an empty string instead.
 //=====================================
 ---------------------------------------
 
-*questinfo(<Quest ID>, <Icon> {, <Map Mark Color>{, <Job Class>}})
+*questinfo(<Icon> {, <Map Mark Color>})
 
-This is esentially a combination of questprogress() and showevent(). Use this only
-in an OnInit label. For the Quest ID, specify the quest ID that you want
-checked if it has been started yet.
-
+This is esentially a showevent() that supports different conditions that can be set using setquestinfo().
+Use this only in an OnInit label.
 For Icon, use one of the following:
 
 No Icon		: QTYPE_NONE
@@ -9263,8 +9391,6 @@ the available color values are:
 When a user shows up on a map, each NPC is checked for questinfo that has been set.
 If questinfo is present, it will check if the quest has been started, if it has not, the bubble will appear.
 
-Optionally, you can also specify a Job Class if the quest bubble should only appear for a certain class.
-
 Example
 	izlude,100,100,4	script	Test	844,{
 		mes("[Test]");
@@ -9272,9 +9398,26 @@ Example
 		close();
 
 	OnInit:
-		questinfo(1001, QTYPE_QUEST, 0, Job_Novice);
+		questinfo(QTYPE_QUEST);
 		end;
 	}
+
+---------------------------------------
+
+*setquestinfo(<Type> {, <Values...>})
+
+Use this command ONLY after a questinfo()
+it allows you to set multiple required conditions for the quest bubble to show up.
+
+supported types: values
+	QINFO_JOB: job_id
+	QINFO_SEX: sex
+	QINFO_BASE_LEVEL: min, max
+	QINFO_JOB_LEVEL: min, max
+	QINFO_ITEM: item_id, amount // append to the items list on each use
+	QINFO_HOMUN_LEVEL: min
+	QINFO_HOMUN_TYPE: homunculus_type (0 - regular, 1 - evolved, 2 - S)
+	QINFO_QUEST: quest_id, state // append to the quests list on each use
 
 ---------------------------------------
 
@@ -9314,19 +9457,19 @@ Add quest of the <ID2> to the the quest log, and the state is "active".
 
 ---------------------------------------
 
-*questprogress(<ID>{, PLAYTIME|HUNTING})
+*questprogress(<ID>{, <type>})
 
 If no additional argument supplied, return the state of the quest:
 	0 = Quest not started (not in quest log)
 	1 = Quest has been given
 	2 = Quest completed
 
-If parameter PLAYTIME is supplied:
+If <type> PLAYTIME is supplied:
 	0 = Quest not started (not in quest log)
 	1 = The time limit has not yet been reached
 	2 = The time limit has been reached
 
-If parameter HUNTING is supplied:
+If <type> HUNTING is supplied:
 	0 = Quest not started (not in quest log)
 	1 = Player hasn't killed all of the target monsters
 	2 = Player has killed all of the target monsters
@@ -9679,11 +9822,11 @@ true otherwise.
 
 ---------------------------------------
 
-*queueopt(<queue_id>, <optionType>, {Optional <option val>})
+*queueopt(<queue_id>, <optionType>{, <event label})
 
-Modifies <queue_id>'s <optionType>. When <option val> is not present
-<optionType> is removed from <queue_id>. When present it modifies
-<queue_id>'s <optionType> with the new <option val> value.
+Modifies <queue_id>'s <optionType>. When <event label> is not present
+<optionType> is removed from <queue_id>. When present it will execute the
+<event label> when the <queue_id>'s <optionType> condition is met.
 
 Returns true on success, false on failure.
 
@@ -9835,9 +9978,9 @@ Applicable Data Types (available as constants) -
 	UDT_WALKTOXY:       Make a unit walk to certain co-ordinates. (Val1 = (int) x, Val2 = (int) y)
 	UDT_SPEED:          Unit Speed. (int)
 	UDT_MODE:           Mode (Mobs only) (int)
-	UDT_AI:             Unit AI Type (see constants.conf for Unit AI Types)
-	UDT_SCOPTION:       Status Options. (see constants.conf for Unit Option Types)
-	UDT_SEX:            Gender of the unit. (see constants.conf for Genders)
+	UDT_AI:             Unit AI Type (see doc/constants.md for Unit AI Types)
+	UDT_SCOPTION:       Status Options. (see doc/constants.md for Unit Option Types)
+	UDT_SEX:            Gender of the unit. (see doc/constants.md for Genders)
 	UDT_CLASS:          Class of the unit. (Monster ID) (int)
 	UDT_HAIRSTYLE:      Hair Style ID. (int)
 	UDT_HAIRCOLOR:      Hair Color ID. (int)
@@ -9900,9 +10043,9 @@ Applicable Data types (available as constants) -
 	UDT_MAPIDXY:        Warp a Unit to a map. (Val1 = (string) MapName, Val2 = (int) x, Val3 = (int) y)
 	UDT_SPEED:          Unit Speed. (int)
 	UDT_MODE:           Mode (Mobs only) (int)
-	UDT_AI:             Unit AI Type (see constants.conf for Unit AI Types)
-	UDT_SCOPTION:       Status Options. (see constants.conf for Unit Option Types)
-	UDT_SEX:            Gender of the unit. (see constants.conf for Genders)
+	UDT_AI:             Unit AI Type (see doc/constants.md for Unit AI Types)
+	UDT_SCOPTION:       Status Options. (see doc/constants.md for Unit Option Types)
+	UDT_SEX:            Gender of the unit. (see doc/constants.md for Genders)
 	UDT_CLASS:          Class of the unit. (Monster ID) (int)
 	UDT_HAIRSTYLE:      Hair Style ID. (int)
 	UDT_HAIRCOLOR:      Hair Color ID. (int)
@@ -9968,7 +10111,7 @@ returns 1 on success, 0 on failure.
 //=====================================
 ---------------------------------------
 
-*join_clan(<ClanID>{,<RID>})
+*join_clan(<ClanID>{, <account id>})
 
 Joins a player into the given clan.
 If no RID is given, will run with the current attached player.
@@ -9977,7 +10120,7 @@ returns true on success, false on failure.
 
 ---------------------------------------
 
-*clan_leave({<RID>})
+*clan_leave({<account id>})
 
 Removes a player from its clan.
 If no RID is given, will run with the current attached player.
@@ -10006,5 +10149,26 @@ the available flags are:
 	P_AIRSHIP_INVALID_END_MAP
 	P_AIRSHIP_ITEM_NOT_ENOUGH
 	P_AIRSHIP_ITEM_INVALID
+
+---------------------------------------
+
+*openstylist()
+
+Opens the styling shop on client
+
+---------------------------------------
+
+*msgtable(<message_id>{, <color>})
+
+Show in client message by <message_id> from msg string table
+with optional <color>.
+
+---------------------------------------
+
+*msgtable2(<message_id>, <param>{, <color>})
+
+Show in client message by <message_id> from msg string table.
+<param> is parameter for this message. Can be string or int.
+Optional <color> can be used for set color for whole message.
 
 ---------------------------------------

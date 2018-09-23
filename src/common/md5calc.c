@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@
  * Implementation of the md5 interface.
  */
 
-struct md5_interface md5_s;
+static struct md5_interface md5_s;
 struct md5_interface *md5;
 
 /// Global variable
@@ -233,7 +233,7 @@ static void md5_buf2binary(const uint8 *buf, const int buf_size, uint8 *output)
 }
 
 /// @copydoc md5_interface::string()
-void md5_string(const char *string, char *output)
+static void md5_string(const char *string, char *output)
 {
 	uint8 digest[16];
 
@@ -249,7 +249,7 @@ void md5_string(const char *string, char *output)
 }
 
 /// @copydoc md5_interface::salt();
-void md5_salt(int len, char *output)
+static void md5_salt(int len, char *output)
 {
 	int i;
 	Assert_retv(len > 0);

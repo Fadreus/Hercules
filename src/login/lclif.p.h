@@ -64,6 +64,7 @@ enum login_packet_id {
 	PACKET_ID_SC_NOTIFY_BAN           = 0x0081,
 	PACKET_ID_AC_ACK_HASH             = 0x01dc,
 	PACKET_ID_AC_REFUSE_LOGIN_R2      = 0x083e,
+	PACKET_ID_AC_REFUSE_LOGIN_R3      = 0x0b02,
 };
 
 /* Packets Structs */
@@ -273,7 +274,8 @@ struct packet_AC_ACCEPT_LOGIN {
 	char last_login_time[26]; ///< Last login timestamp
 	uint8 sex;                ///< Account sex
 #if PACKETVER >= 20170315
-	char unknown1[17];
+	char twitter_auth_token[16];
+	uint8 twitter_flag;
 #endif
 	struct {
 		uint32 ip;        ///< Server IP address

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -81,16 +81,16 @@ struct unit_data {
 
 struct view_data {
 	int16 class;
-	uint16 weapon,
+	int weapon,
 		shield, //Or left-hand weapon.
 		robe,
 		head_top,
 		head_mid,
 		head_bottom,
 		hair_style,
-		hair_color,
-		cloth_color,
 		body_style;
+	uint16 hair_color,
+		cloth_color;
 	char sex;
 	unsigned dead_sit : 2;
 };

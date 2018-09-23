@@ -147,7 +147,8 @@ struct char_interface {
 	int (*mmo_char_sql_init) (void);
 	bool (*char_slotchange) (struct char_session_data *sd, int fd, unsigned short from, unsigned short to);
 	int (*rename_char_sql) (struct char_session_data *sd, int char_id);
-	int (*check_char_name) (char * name, char * esc_name);
+	bool (*name_exists) (const char *name, const char *esc_name);
+	int (*check_char_name) (const char *name, const char *esc_name);
 	int (*make_new_char_sql) (struct char_session_data *sd, const char *name_, int str, int agi, int vit, int int_, int dex, int luk, int slot, int hair_color, int hair_style, short starting_job, uint8 sex);
 	int (*divorce_char_sql) (int partner_id1, int partner_id2);
 	int (*count_users) (void);
@@ -240,7 +241,7 @@ struct char_interface {
 	void (*delete2_cancel) (int fd, struct char_session_data* sd);
 	void (*send_account_id) (int fd, int account_id);
 	void (*parse_char_connect) (int fd, struct char_session_data* sd, uint32 ipl);
-	void (*send_map_info) (int fd, int i, uint32 subnet_map_ip, struct mmo_charstatus *cd);
+	void (*send_map_info) (int fd, int i, uint32 subnet_map_ip, struct mmo_charstatus *cd, char *dnsHost);
 	void (*send_wait_char_server) (int fd);
 	int (*search_default_maps_mapserver) (struct mmo_charstatus *cd);
 	void (*parse_char_select) (int fd, struct char_session_data* sd, uint32 ipl);
@@ -339,6 +340,7 @@ extern char acc_reg_num_db[32];
 extern char acc_reg_str_db[32];
 extern char char_reg_str_db[32];
 extern char char_reg_num_db[32];
+extern char char_achievement_db[256];
 
 extern int guild_exp_rate;
 

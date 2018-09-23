@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -35,15 +35,16 @@
 #include "common/socket.h" // RBUF*
 #include "common/strlib.h" // safestrncpy
 
-struct buyingstore_interface buyingstore_s;
+static struct buyingstore_interface buyingstore_s;
 struct buyingstore_interface *buyingstore;
 
 /// Returns unique buying store id
-unsigned int buyingstore_getuid(void) {
+static unsigned int buyingstore_getuid(void)
+{
 	return buyingstore->nextid++;
 }
 
-bool buyingstore_setup(struct map_session_data* sd, unsigned char slots)
+static bool buyingstore_setup(struct map_session_data *sd, unsigned char slots)
 {
 	nullpo_retr(false, sd);
 	if( !battle_config.feature_buying_store || sd->state.vending || sd->state.buyingstore || sd->state.trading || slots == 0 )
@@ -80,7 +81,7 @@ bool buyingstore_setup(struct map_session_data* sd, unsigned char slots)
 	return true;
 }
 
-void buyingstore_create(struct map_session_data* sd, int zenylimit, unsigned char result, const char* storename, const uint8* itemlist, unsigned int count)
+static void buyingstore_create(struct map_session_data *sd, int zenylimit, unsigned char result, const char *storename, const struct PACKET_CZ_REQ_OPEN_BUYING_STORE_sub *itemlist, unsigned int count)
 {
 	unsigned int i, weight, listidx;
 
@@ -127,13 +128,14 @@ void buyingstore_create(struct map_session_data* sd, int zenylimit, unsigned cha
 	// check item list
 	for (i = 0; i < count; i++) {
 		// itemlist: <name id>.W <amount>.W <price>.L
-		unsigned short nameid, amount;
+		int nameid;
+		unsigned short amount;
 		int price, idx;
 		struct item_data* id;
 
-		nameid = RBUFW(itemlist,i*8+0);
-		amount = RBUFW(itemlist,i*8+2);
-		price  = RBUFL(itemlist,i*8+4);
+		nameid = itemlist[i].itemId;
+		amount = itemlist[i].amount;
+		price  = itemlist[i].price;
 
 		if( ( id = itemdb->exists(nameid) ) == NULL || amount == 0 )
 		{// invalid input
@@ -161,7 +163,8 @@ void buyingstore_create(struct map_session_data* sd, int zenylimit, unsigned cha
 			ARR_FIND( 0, i, listidx, sd->buyingstore.items[listidx].nameid == nameid );
 			if( listidx != i )
 			{// duplicate
-				ShowWarning("buyingstore_create: Found duplicate item on buying list (nameid=%hu, amount=%hu, account_id=%d, char_id=%d).\n", nameid, amount, sd->status.account_id, sd->status.char_id);
+				ShowWarning("buyingstore_create: Found duplicate item on buying list (nameid=%d, amount=%hu, account_id=%d, char_id=%d).\n",
+					nameid, amount, sd->status.account_id, sd->status.char_id);
 				break;
 			}
 		}
@@ -196,7 +199,7 @@ void buyingstore_create(struct map_session_data* sd, int zenylimit, unsigned cha
 	clif->buyingstore_entry(sd);
 }
 
-void buyingstore_close(struct map_session_data* sd)
+static void buyingstore_close(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 	if (sd->state.buyingstore)
@@ -210,7 +213,7 @@ void buyingstore_close(struct map_session_data* sd)
 	}
 }
 
-void buyingstore_open(struct map_session_data* sd, int account_id)
+static void buyingstore_open(struct map_session_data *sd, int account_id)
 {
 	struct map_session_data* pl_sd;
 
@@ -240,8 +243,7 @@ void buyingstore_open(struct map_session_data* sd, int account_id)
 	clif->buyingstore_itemlist(sd, pl_sd);
 }
 
-
-void buyingstore_trade(struct map_session_data* sd, int account_id, unsigned int buyer_id, const uint8* itemlist, unsigned int count)
+static void buyingstore_trade(struct map_session_data* sd, int account_id, unsigned int buyer_id, const struct PACKET_CZ_REQ_TRADE_BUYING_STORE_sub* itemlist, unsigned int count)
 {
 	int zeny = 0;
 	unsigned int i, weight, listidx, k;
@@ -289,20 +291,21 @@ void buyingstore_trade(struct map_session_data* sd, int account_id, unsigned int
 	// check item list
 	for( i = 0; i < count; i++ )
 	{// itemlist: <index>.W <name id>.W <amount>.W
-		unsigned short nameid, amount;
+		int nameid;
+		unsigned short amount;
 		int index;
 
-		index  = RBUFW(itemlist,i*6+0)-2;
-		nameid = RBUFW(itemlist,i*6+2);
-		amount = RBUFW(itemlist,i*6+4);
+		index  = itemlist[i].index - 2;
+		nameid = itemlist[i].itemId;
+		amount = itemlist[i].amount;
 
-		if( i )
+		if (i)
 		{// duplicate check. as the client does this too, only malicious intent should be caught here
-			ARR_FIND( 0, i, k, RBUFW(itemlist,k*6+0)-2 == index );
-			if( k != i )
+			ARR_FIND(0, i, k, itemlist[k].index - 2 == index);
+			if (k != i)
 			{// duplicate
-				ShowWarning("buyingstore_trade: Found duplicate item on selling list (prevnameid=%hu, prevamount=%hu, nameid=%hu, amount=%hu, account_id=%d, char_id=%d).\n",
-					RBUFW(itemlist,k*6+2), RBUFW(itemlist,k*6+4), nameid, amount, sd->status.account_id, sd->status.char_id);
+				ShowWarning("buyingstore_trade: Found duplicate item on selling list (prevnameid=%d, prevamount=%d, nameid=%d, amount=%hu, account_id=%d, char_id=%d).\n",
+					(int)itemlist[k].itemId, (int)itemlist[k].amount, nameid, amount, sd->status.account_id, sd->status.char_id);
 				clif->buyingstore_trade_failed_seller(sd, BUYINGSTORE_TRADE_SELLER_FAILED, nameid);
 				return;
 			}
@@ -361,14 +364,15 @@ void buyingstore_trade(struct map_session_data* sd, int account_id, unsigned int
 	// process item list
 	for( i = 0; i < count; i++ )
 	{// itemlist: <index>.W <name id>.W <amount>.W
-		unsigned short nameid, amount;
+		int nameid;
+		unsigned short amount;
 		int index;
 
-		index  = RBUFW(itemlist,i*6+0)-2;
-		nameid = RBUFW(itemlist,i*6+2);
-		amount = RBUFW(itemlist,i*6+4);
+		index  = itemlist[i].index - 2;
+		nameid = itemlist[i].itemId;
+		amount = itemlist[i].amount;
 
-		ARR_FIND( 0, pl_sd->buyingstore.slots, listidx, pl_sd->buyingstore.items[listidx].nameid == nameid );
+		ARR_FIND(0, pl_sd->buyingstore.slots, listidx, pl_sd->buyingstore.items[listidx].nameid == nameid );
 		zeny = amount*pl_sd->buyingstore.items[listidx].price;
 
 		// move item
@@ -415,9 +419,8 @@ void buyingstore_trade(struct map_session_data* sd, int account_id, unsigned int
 	}
 }
 
-
 /// Checks if an item is being bought in given player's buying store.
-bool buyingstore_search(struct map_session_data* sd, unsigned short nameid)
+static bool buyingstore_search(struct map_session_data *sd, int nameid)
 {
 	unsigned int i;
 
@@ -436,10 +439,9 @@ bool buyingstore_search(struct map_session_data* sd, unsigned short nameid)
 	return true;
 }
 
-
 /// Searches for all items in a buyingstore, that match given ids, price and possible cards.
 /// @return Whether or not the search should be continued.
-bool buyingstore_searchall(struct map_session_data* sd, const struct s_search_store_search* s)
+static bool buyingstore_searchall(struct map_session_data *sd, const struct s_search_store_search *s)
 {
 	unsigned int i, idx;
 	struct s_buyingstore_item* it;
@@ -475,7 +477,8 @@ bool buyingstore_searchall(struct map_session_data* sd, const struct s_search_st
 			;
 		}
 
-		if( !searchstore->result(s->search_sd, sd->buyer_id, sd->status.account_id, sd->message, it->nameid, it->amount, it->price, buyingstore->blankslots, 0) )
+		// TODO: add support for cards and options
+		if (!searchstore->result(s->search_sd, sd->buyer_id, sd->status.account_id, sd->message, it->nameid, it->amount, it->price, buyingstore->blankslots, 0, buyingstore->blankoptions))
 		{// result set full
 			return false;
 		}
@@ -483,11 +486,14 @@ bool buyingstore_searchall(struct map_session_data* sd, const struct s_search_st
 
 	return true;
 }
-void buyingstore_defaults(void) {
+
+void buyingstore_defaults(void)
+{
 	buyingstore = &buyingstore_s;
 
 	buyingstore->nextid = 0;
-	memset(buyingstore->blankslots,0,sizeof(buyingstore->blankslots));
+	memset(buyingstore->blankslots, 0, sizeof(buyingstore->blankslots));
+	memset(buyingstore->blankoptions, 0, sizeof(buyingstore->blankoptions));
 	/* */
 	buyingstore->setup = buyingstore_setup;
 	buyingstore->create = buyingstore_create;
@@ -497,5 +503,4 @@ void buyingstore_defaults(void) {
 	buyingstore->search = buyingstore_search;
 	buyingstore->searchall = buyingstore_searchall;
 	buyingstore->getuid = buyingstore_getuid;
-
 }

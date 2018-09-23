@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -1726,7 +1726,7 @@ struct skill_condition {
 
 // Database skills
 struct s_skill_db {
-	unsigned short nameid;
+	int nameid;
 	char name[MAX_SKILL_NAME_LENGTH];
 	char desc[40];
 	int range[MAX_SKILL_LEVEL],hit,inf,element[MAX_SKILL_LEVEL],nk,splash[MAX_SKILL_LEVEL],max;
@@ -2093,7 +2093,7 @@ struct skill_interface {
 	int (*unit_timer) (int tid, int64 tick, int id, intptr_t data);
 	int (*unit_timer_sub) (union DBKey key, struct DBData *data, va_list ap);
 	void (*init_unit_layout) (void);
-	void (*init_unit_layout_unknown) (int skill_idx);
+	void (*init_unit_layout_unknown) (int skill_idx, int pos);
 	void (*validate_hittype) (struct config_setting_t *conf, struct s_skill_db *sk);
 	void (*validate_skilltype) (struct config_setting_t *conf, struct s_skill_db *sk);
 	void (*validate_attacktype) (struct config_setting_t *conf, struct s_skill_db *sk);
@@ -2172,7 +2172,7 @@ struct skill_interface {
 	int (*check_condition_castbegin_mount_unknown) (struct status_change *sc, uint16 *skill_id);
 	int (*check_condition_castbegin_madogear_unknown) (struct status_change *sc, uint16 *skill_id);
 	int (*check_condition_castbegin_unknown) (struct status_change *sc, uint16 *skill_id);
-	void (*check_condition_castend_unknown) (struct map_session_data* sd, uint16 *skill_id, uint16 *skill_lv);
+	bool (*check_condition_castend_unknown) (struct map_session_data* sd, uint16 *skill_id, uint16 *skill_lv);
 	bool (*get_requirement_off_unknown) (struct status_change *sc, uint16 *skill_id);
 	bool (*get_requirement_item_unknown) (struct status_change *sc, struct map_session_data* sd, uint16 *skill_id, uint16 *skill_lv, uint16 *idx, int *i);
 	void (*get_requirement_unknown) (struct status_change *sc, struct map_session_data* sd, uint16 *skill_id, uint16 *skill_lv, struct skill_condition *req);

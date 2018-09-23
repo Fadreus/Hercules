@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2013-2016  Hercules Dev Team
+//= Copyright (C) 2013-2018  Hercules Dev Team
 //= Copyright (C)  Ridley
 //= Copyright (C)  Ziu
 //=
@@ -185,19 +185,17 @@ dali,138,118,0	script	Dimensional Device#dimen	PORTAL,{
 			if (getcharid(CHAR_ID_CHAR) != getpartyleader(.@party_id, 2))
 				end;
 			.@instance = instance_create(.@md_name$, .@party_id);
-			if (.@instance < 0) {
-				mesf("Party Name: %s", .@p_name$);
-				mesf("Party Leader: %s", strcharinfo(PC_NAME));
-				mesf("^0000FF%s^000000 - Reservation Failed!", .@md_name$);
-				close();
+			if (.@instance >= 0) {
+				if (instance_attachmap("1@sara", .@instance) == "") {
+					mesf("Party Name: %s", .@p_name$);
+					mesf("Party Leader: %s", strcharinfo(PC_NAME));
+					mesf("^0000FF%s^000000 - Reservation Failed!", .@md_name$);
+					instance_destroy(.@instance);
+					close();
+				}
+				instance_set_timeout(3600, 300, .@instance);
+				instance_init(.@instance);
 			}
-			if (instance_attachmap("1@sara", .@instance) == "") {
-				mesf("^0000FF%s^000000 - Reservation Failed!", .@md_name$);
-				instance_destroy(.@instance);
-				close();
-			}
-			instance_set_timeout(3600, 300, .@instance);
-			instance_init(.@instance);
 			mes("^FF0000The dimensional boots up cleanly. Use the device to enter the crack in space and time.^000000");
 			close();
 		case 2:

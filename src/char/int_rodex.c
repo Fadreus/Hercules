@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct inter_rodex_interface inter_rodex_s;
+static struct inter_rodex_interface inter_rodex_s;
 struct inter_rodex_interface *inter_rodex;
 
 // Loads new mails of this char_id/account_id
@@ -164,7 +164,7 @@ static int inter_rodex_fromsql(int char_id, int account_id, int8 opentype, int64
 
 			if (msg.type & MAIL_TYPE_ITEM) {
 				if (SQL_ERROR == SQL->StmtExecute(stmt_items)
-				 || SQL_ERROR == SQL->StmtBindColumn(stmt_items, 0,  SQLDT_SHORT,  &it.nameid,          sizeof it.nameid,      NULL, NULL)
+				 || SQL_ERROR == SQL->StmtBindColumn(stmt_items, 0,  SQLDT_INT,    &it.nameid,          sizeof it.nameid,      NULL, NULL)
 				 || SQL_ERROR == SQL->StmtBindColumn(stmt_items, 1,  SQLDT_SHORT,  &it.amount,          sizeof it.amount,      NULL, NULL)
 				 || SQL_ERROR == SQL->StmtBindColumn(stmt_items, 2,  SQLDT_UINT,   &it.equip,           sizeof it.equip,       NULL, NULL)
 				 || SQL_ERROR == SQL->StmtBindColumn(stmt_items, 3,  SQLDT_CHAR,   &it.identify,        sizeof it.identify,    NULL, NULL)
@@ -177,7 +177,7 @@ static int inter_rodex_fromsql(int char_id, int account_id, int8 opentype, int64
 					SqlStmt_ShowDebug(stmt_items);
 				}
 				for (i = 0; i < MAX_SLOTS; i++) {
-					if (SQL_ERROR == SQL->StmtBindColumn(stmt_items, 9 + i, SQLDT_SHORT, &it.card[i], sizeof it.card[i], NULL, NULL))
+					if (SQL_ERROR == SQL->StmtBindColumn(stmt_items, 9 + i, SQLDT_INT, &it.card[i], sizeof it.card[i], NULL, NULL))
 						SqlStmt_ShowDebug(stmt_items);
 				}
 				for (i = 0; i < MAX_ITEM_OPTIONS; i++) {
@@ -298,7 +298,7 @@ static bool inter_rodex_checkname(const char *name, int *target_char_id, short *
 
 /// Stores a single message in the database.
 /// Returns the message's ID if successful (or 0 if it fails).
-int64 inter_rodex_savemessage(struct rodex_message* msg)
+static int64 inter_rodex_savemessage(struct rodex_message *msg)
 {
 	char sender_name[NAME_LENGTH * 2 + 1];
 	char receiver_name[NAME_LENGTH * 2 + 1];
@@ -347,110 +347,12 @@ int64 inter_rodex_savemessage(struct rodex_message* msg)
 }
 
 /*==========================================
- * Inbox Request
- *------------------------------------------*/
-void mapif_rodex_sendinbox(int fd, int char_id, int8 opentype, int8 flag, int count, int64 mail_id, struct rodex_maillist *mails)
-{
-	int per_packet = (UINT16_MAX - 24) / sizeof(struct rodex_message);
-	int sent = 0;
-	bool is_first = true;
-	nullpo_retv(mails);
-	Assert_retv(char_id > 0);
-	Assert_retv(count >= 0);
-	Assert_retv(mail_id >= 0);
-
-	do {
-		int i = 24, j, size, limit;
-		int to_send = count - sent;
-		bool is_last = true;
-
-		if (to_send <= per_packet) {
-			size = to_send * sizeof(struct rodex_message) + 24;
-			limit = to_send;
-			is_last = true;
-		} else {
-			limit = min(to_send, per_packet);
-			if (limit != to_send) {
-				is_last = false;
-			}
-			size = limit * sizeof(struct rodex_message) + 24;
-		}
-
-		WFIFOHEAD(fd, size);
-		WFIFOW(fd, 0) = 0x3895;
-		WFIFOW(fd, 2) = size;
-		WFIFOL(fd, 4) = char_id;
-		WFIFOB(fd, 8) = opentype;
-		WFIFOB(fd, 9) = flag;
-		WFIFOB(fd, 10) = is_last;
-		WFIFOB(fd, 11) = is_first;
-		WFIFOL(fd, 12) = limit;
-		WFIFOQ(fd, 16) = mail_id;
-		for (j = 0; j < limit; ++j, ++sent, i += sizeof(struct rodex_message)) {
-			memcpy(WFIFOP(fd, i), &VECTOR_INDEX(*mails, sent), sizeof(struct rodex_message));
-		}
-		WFIFOSET(fd, size);
-
-		is_first = false;
-	} while (sent < count);
-}
-
-void mapif_parse_rodex_requestinbox(int fd)
-{
-	int count;
-	int char_id = RFIFOL(fd,2);
-	int account_id = RFIFOL(fd, 6);
-	int8 flag = RFIFOB(fd, 10);
-	int8 opentype = RFIFOB(fd, 11);
-	int64 mail_id = RFIFOQ(fd, 12);
-	struct rodex_maillist mails = { 0 };
-
-	VECTOR_INIT(mails);
-	if (flag == 0)
-		count = inter_rodex->fromsql(char_id, account_id, opentype, 0, &mails);
-	else
-		count = inter_rodex->fromsql(char_id, account_id, opentype, mail_id, &mails);
-	mapif->rodex_sendinbox(fd, char_id, opentype, flag, count, mail_id, &mails);
-	VECTOR_CLEAR(mails);
-}
-
-/*==========================================
-* Checks if there are new mails
-*------------------------------------------*/
-void mapif_rodex_sendhasnew(int fd, int char_id, bool has_new)
-{
-	Assert_retv(char_id > 0);
-
-	WFIFOHEAD(fd, 7);
-	WFIFOW(fd, 0) = 0x3896;
-	WFIFOL(fd, 2) = char_id;
-	WFIFOB(fd, 6) = has_new;
-	WFIFOSET(fd, 7);
-}
-
-void mapif_parse_rodex_checkhasnew(int fd)
-{
-	int char_id = RFIFOL(fd, 2);
-	int account_id = RFIFOL(fd, 6);
-	bool has_new;
-
-	Assert_retv(account_id >= START_ACCOUNT_NUM && account_id <= END_ACCOUNT_NUM);
-	Assert_retv(char_id >= START_CHAR_NUM);
-
-	has_new = inter_rodex->hasnew(char_id, account_id);
-	mapif->rodex_sendhasnew(fd, char_id, has_new);
-}
-
-/*==========================================
  * Update/Delete mail
  *------------------------------------------*/
-void mapif_parse_rodex_updatemail(int fd)
+static bool inter_rodex_updatemail(int64 mail_id, int8 flag)
 {
-	int64 mail_id = RFIFOL(fd, 2);
-	int8 flag = RFIFOB(fd, 10);
-
-	Assert_retv(mail_id > 0);
-	Assert_retv(flag >= 0 && flag <= 4);
+	Assert_retr(false, mail_id > 0);
+	Assert_retr(false, flag >= 0 && flag <= 4);
 
 	switch (flag) {
 	case 0: // Read
@@ -481,78 +383,16 @@ void mapif_parse_rodex_updatemail(int fd)
 		if (SQL_ERROR == SQL->Query(inter->sql_handle, "UPDATE `%s` SET `sender_read` = 1 WHERE `mail_id` = '%"PRId64"'", rodex_db, mail_id))
 			Sql_ShowDebug(inter->sql_handle);
 		break;
+	default:
+		return false;
 	}
-}
-
-/*==========================================
- * Send Mail
- *------------------------------------------*/
-void mapif_rodex_send(int fd, int sender_id, int receiver_id, int receiver_accountid, bool result)
-{
-	Assert_retv(sender_id >= 0);
-	Assert_retv(receiver_id + receiver_accountid > 0);
-
-	WFIFOHEAD(fd,15);
-	WFIFOW(fd,0) = 0x3897;
-	WFIFOL(fd,2) = sender_id;
-	WFIFOL(fd,6) = receiver_id;
-	WFIFOL(fd,10) = receiver_accountid;
-	WFIFOB(fd,14) = result;
-	WFIFOSET(fd,15);
-}
-
-void mapif_parse_rodex_send(int fd)
-{
-	struct rodex_message msg = { 0 };
-
-	if (RFIFOW(fd,2) != 4 + sizeof(struct rodex_message))
-		return;
-
-	memcpy(&msg, RFIFOP(fd,4), sizeof(struct rodex_message));
-	if (msg.receiver_id > 0 || msg.receiver_accountid > 0)
-		msg.id = inter_rodex->savemessage(&msg);
-
-	mapif->rodex_send(fd, msg.sender_id, msg.receiver_id, msg.receiver_accountid, msg.id > 0 ? true : false);
-}
-
-/*------------------------------------------
- * Check Player
- *------------------------------------------*/
-void mapif_rodex_checkname(int fd, int reqchar_id, int target_char_id, short target_class, int target_level, char *name)
-{
-	nullpo_retv(name);
-	Assert_retv(reqchar_id > 0);
-	Assert_retv(target_char_id >= 0);
-
-	WFIFOHEAD(fd, 16 + NAME_LENGTH);
-	WFIFOW(fd, 0) = 0x3898;
-	WFIFOL(fd, 2) = reqchar_id;
-	WFIFOL(fd, 6) = target_char_id;
-	WFIFOW(fd, 10) = target_class;
-	WFIFOL(fd, 12) = target_level;
-	safestrncpy(WFIFOP(fd, 16), name, NAME_LENGTH);
-	WFIFOSET(fd, 16 + NAME_LENGTH);
-}
-
-void mapif_parse_rodex_checkname(int fd)
-{
-	int reqchar_id = RFIFOL(fd, 2);
-	char name[NAME_LENGTH];
-	int target_char_id, target_level;
-	short target_class;
-
-	safestrncpy(name, RFIFOP(fd, 6), NAME_LENGTH);
-
-	if (inter_rodex->checkname(name, &target_char_id, &target_class, &target_level) == true)
-		mapif->rodex_checkname(fd, reqchar_id, target_char_id, target_class, target_level, name);
-	else
-		mapif->rodex_checkname(fd, reqchar_id, 0, 0, 0, name);
+	return true;
 }
 
 /*==========================================
  * Packets From Map Server
  *------------------------------------------*/
-int inter_rodex_parse_frommap(int fd)
+static int inter_rodex_parse_frommap(int fd)
 {
 	switch(RFIFOW(fd,0))
 	{
@@ -567,12 +407,12 @@ int inter_rodex_parse_frommap(int fd)
 	return 1;
 }
 
-int inter_rodex_sql_init(void)
+static int inter_rodex_sql_init(void)
 {
 	return 1;
 }
 
-void inter_rodex_sql_final(void)
+static void inter_rodex_sql_final(void)
 {
 	return;
 }
@@ -588,4 +428,5 @@ void inter_rodex_defaults(void)
 	inter_rodex->fromsql = inter_rodex_fromsql;
 	inter_rodex->hasnew = inter_rodex_hasnew;
 	inter_rodex->checkname = inter_rodex_checkname;
+	inter_rodex->updatemail = inter_rodex_updatemail;
 }

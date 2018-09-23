@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -459,12 +459,6 @@ typedef char bool;
 /** Static assertion (only on compilers that support it) */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 // C11 version
-#define STATIC_ASSERT(ex, msg) _Static_assert(ex, msg)
-#elif __has_feature(c_static_assert)
-// Clang support (as per http://clang.llvm.org/docs/LanguageExtensions.html)
-#define STATIC_ASSERT(ex, msg) _Static_assert(ex, msg)
-#elif defined(__GNUC__) && GCC_VERSION >= 40700
-// GCC >= 4.7 is known to support it
 #define STATIC_ASSERT(ex, msg) _Static_assert(ex, msg)
 #elif defined(_MSC_VER)
 // MSVC doesn't support it, but it accepts the C++ style version

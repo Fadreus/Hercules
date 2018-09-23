@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -30,13 +30,19 @@
 #define MAX_PET_DB       300
 #define MAX_PETLOOT_SIZE 30
 
+/** Pet Evolution [Dastgir/Hercules] */
+struct pet_evolve_data {
+	int petEggId;
+	VECTOR_DECL(struct itemlist_entry) items;
+};
+
 struct s_pet_db {
 	short class_;
 	char name[NAME_LENGTH],jname[NAME_LENGTH];
-	short itemID;
-	short EggID;
-	short AcceID;
-	short FoodID;
+	int itemID;
+	int EggID;
+	int AcceID;
+	int FoodID;
 	int fullness;
 	int hungry_delay;
 	int r_hungry;
@@ -50,8 +56,12 @@ struct s_pet_db {
 	int attack_rate;
 	int defence_attack_rate;
 	int change_target_rate;
+	int autofeed;
 	struct script_code *equip_script;
 	struct script_code *pet_script;
+
+	/* Pet Evolution */
+	VECTOR_DECL(struct pet_evolve_data) evolve_data;
 };
 
 enum { PET_CLASS,PET_CATCH,PET_EGG,PET_EQUIP,PET_FOOD };
@@ -127,6 +137,7 @@ struct pet_interface {
 	struct s_pet_db db[MAX_PET_DB];
 	struct eri *item_drop_ers; //For loot drops delay structures.
 	struct eri *item_drop_list_ers;
+
 	/* */
 	int (*init) (bool minimal);
 	int (*final) (void);
@@ -146,7 +157,7 @@ struct pet_interface {
 	int (*data_init) (struct map_session_data *sd, struct s_pet *petinfo);
 	int (*birth_process) (struct map_session_data *sd, struct s_pet *petinfo);
 	int (*recv_petdata) (int account_id, struct s_pet *p, int flag);
-	int (*select_egg) (struct map_session_data *sd, short egg_index);
+	int (*select_egg) (struct map_session_data *sd, int egg_index);
 	int (*catch_process1) (struct map_session_data *sd, int target_class);
 	int (*catch_process2) (struct map_session_data *sd, int target_id);
 	bool (*get_egg) (int account_id, short pet_class, int pet_id );
@@ -172,6 +183,10 @@ struct pet_interface {
 	int (*read_db_sub) (struct config_setting_t *it, int n, const char *source);
 	bool (*read_db_sub_intimacy) (int idx, struct config_setting_t *t);
 	void (*read_db_clear) (void);
+
+	/* Pet Evolution [Dastgir/Hercules] */
+	void (*read_db_sub_evolution) (struct config_setting_t *t, int n);
+
 };
 
 #ifdef HERCULES_CORE

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -34,10 +34,10 @@
 #include <time.h>
 #include <string.h>
 
-struct mail_interface mail_s;
+static struct mail_interface mail_s;
 struct mail_interface *mail;
 
-void mail_clear(struct map_session_data *sd)
+static void mail_clear(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 	sd->mail.nameid = 0;
@@ -48,7 +48,7 @@ void mail_clear(struct map_session_data *sd)
 	return;
 }
 
-int mail_removeitem(struct map_session_data *sd, short flag)
+static int mail_removeitem(struct map_session_data *sd, short flag)
 {
 	nullpo_ret(sd);
 
@@ -66,7 +66,7 @@ int mail_removeitem(struct map_session_data *sd, short flag)
 	return 1;
 }
 
-int mail_removezeny(struct map_session_data *sd, short flag)
+static int mail_removezeny(struct map_session_data *sd, short flag)
 {
 	nullpo_ret(sd);
 
@@ -79,7 +79,8 @@ int mail_removezeny(struct map_session_data *sd, short flag)
 	return 1;
 }
 
-unsigned char mail_setitem(struct map_session_data *sd, int idx, int amount) {
+static unsigned char mail_setitem(struct map_session_data *sd, int idx, int amount)
+{
 
 	nullpo_retr(1, sd);
 	if( pc_istrading(sd) )
@@ -116,7 +117,7 @@ unsigned char mail_setitem(struct map_session_data *sd, int idx, int amount) {
 	}
 }
 
-bool mail_setattachment(struct map_session_data *sd, struct mail_message *msg)
+static bool mail_setattachment(struct map_session_data *sd, struct mail_message *msg)
 {
 	int n;
 
@@ -156,7 +157,7 @@ bool mail_setattachment(struct map_session_data *sd, struct mail_message *msg)
 	return true;
 }
 
-void mail_getattachment(struct map_session_data* sd, int zeny, struct item* item)
+static void mail_getattachment(struct map_session_data *sd, int zeny, struct item *item)
 {
 	nullpo_retv(sd);
 	nullpo_retv(item);
@@ -172,7 +173,7 @@ void mail_getattachment(struct map_session_data* sd, int zeny, struct item* item
 	}
 }
 
-int mail_openmail(struct map_session_data *sd)
+static int mail_openmail(struct map_session_data *sd)
 {
 	nullpo_ret(sd);
 
@@ -184,7 +185,7 @@ int mail_openmail(struct map_session_data *sd)
 	return 1;
 }
 
-void mail_deliveryfail(struct map_session_data *sd, struct mail_message *msg)
+static void mail_deliveryfail(struct map_session_data *sd, struct mail_message *msg)
 {
 	nullpo_retv(sd);
 	nullpo_retv(msg);
@@ -204,7 +205,8 @@ void mail_deliveryfail(struct map_session_data *sd, struct mail_message *msg)
 }
 
 // This function only check if the mail operations are valid
-bool mail_invalid_operation(struct map_session_data *sd) {
+static bool mail_invalid_operation(struct map_session_data *sd)
+{
 	nullpo_retr(false, sd);
 	if( !map->list[sd->bl.m].flag.town && !pc->can_use_command(sd, "@mail") ) {
 		ShowWarning("clif->parse_Mail: char '%s' trying to do invalid mail operations.\n", sd->status.name);

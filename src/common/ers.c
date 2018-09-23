@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -309,7 +309,7 @@ static void ers_obj_destroy(ERS *self)
 	aFree(instance);
 }
 
-void ers_cache_size(ERS *self, unsigned int new_size)
+static void ers_cache_size(ERS *self, unsigned int new_size)
 {
 	struct ers_instance_t *instance = (struct ers_instance_t *)self;
 

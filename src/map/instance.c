@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -30,6 +30,7 @@
 #include "map/npc.h"
 #include "map/party.h"
 #include "map/pc.h"
+#include "map/quest.h"
 #include "common/HPM.h"
 #include "common/cbasetypes.h"
 #include "common/db.h"
@@ -47,11 +48,12 @@
 #include <string.h>
 #include <time.h>
 
-struct instance_interface instance_s;
+static struct instance_interface instance_s;
 struct instance_interface *instance;
 
 /// Checks whether given instance id is valid or not.
-bool instance_is_valid(int instance_id) {
+static bool instance_is_valid(int instance_id)
+{
 	if( instance_id < 0 || instance_id >= instance->instances ) {// out of range
 		return false;
 	}
@@ -69,7 +71,8 @@ bool instance_is_valid(int instance_id) {
  * -4 = already exists | -3 = no free instances | -2 = owner not found | -1 = invalid type
  * On success return instance_id
  *--------------------------------------*/
-int instance_create(int owner_id, const char *name, enum instance_owner_type type) {
+static int instance_create(int owner_id, const char *name, enum instance_owner_type type)
+{
 	struct map_session_data *sd = NULL;
 	unsigned short *icptr = NULL;
 	struct party_data *p = NULL;
@@ -180,7 +183,8 @@ int instance_create(int owner_id, const char *name, enum instance_owner_type typ
  * @retval -3 No more map indices available.
  * @retval -4 Source map is already an instance.
  **/
-int instance_add_map(const char *name, int instance_id, bool usebasename, const char *map_name) {
+static int instance_add_map(const char *name, int instance_id, bool usebasename, const char *map_name)
+{
 	int16 m = map->mapname2mapid(name);
 	int i, im = -1;
 	size_t num_cell, size, j;
@@ -292,10 +296,10 @@ int instance_add_map(const char *name, int instance_id, bool usebasename, const 
 	}
 
 	//Mimic questinfo
-	if( map->list[m].qi_count ) {
-		map->list[im].qi_count = map->list[m].qi_count;
-		CREATE( map->list[im].qi_data, struct questinfo, map->list[im].qi_count );
-		memcpy( map->list[im].qi_data, map->list[m].qi_data, map->list[im].qi_count * sizeof(struct questinfo) );
+	VECTOR_INIT(map->list[im].qi_data);
+	VECTOR_ENSURE(map->list[im].qi_data, VECTOR_LENGTH(map->list[m].qi_data), 1);
+	for (i = 0; i < VECTOR_LENGTH(map->list[m].qi_data); i++) {
+		VECTOR_PUSH(map->list[im].qi_data, VECTOR_INDEX(map->list[m].qi_data, i));
 	}
 
 	map->list[im].m = im;
@@ -317,7 +321,8 @@ int instance_add_map(const char *name, int instance_id, bool usebasename, const 
  * party_id : source party of this instance
  * type : result (0 = map id | 1 = instance id)
  *--------------------------------------*/
-int instance_map2imap(int16 m, int instance_id) {
+static int instance_map2imap(int16 m, int instance_id)
+{
 	int i;
 
 	if( !instance->valid(instance_id) ) {
@@ -331,7 +336,8 @@ int instance_map2imap(int16 m, int instance_id) {
 	return -1;
 }
 
-int instance_mapname2imap(const char *map_name, int instance_id) {
+static int instance_mapname2imap(const char *map_name, int instance_id)
+{
 	int i;
 
 	nullpo_retr(-1, map_name);
@@ -351,7 +357,8 @@ int instance_mapname2imap(const char *map_name, int instance_id) {
  * instance_id : where to search
  * result : mapid of map "m" in this instance
  *--------------------------------------*/
-int instance_mapid2imapid(int16 m, int instance_id) {
+static int instance_mapid2imapid(int16 m, int instance_id)
+{
 	Assert_retr(-1, m >= 0 && m < map->count);
 	if( map->list[m].flag.src4instance == 0 )
 		return m; // not instances found for this map
@@ -369,7 +376,7 @@ int instance_mapid2imapid(int16 m, int instance_id) {
 /*--------------------------------------
  * Used on Init instance. Duplicates each script on source map
  *--------------------------------------*/
-int instance_map_npcsub(struct block_list* bl, va_list args)
+static int instance_map_npcsub(struct block_list *bl, va_list args)
 {
 	struct npc_data *nd = NULL;
 	int16 m = va_arg(args, int); // Destination Map
@@ -384,7 +391,7 @@ int instance_map_npcsub(struct block_list* bl, va_list args)
 	return 1;
 }
 
-int instance_init_npc(struct block_list* bl, va_list args)
+static int instance_init_npc(struct block_list *bl, va_list args)
 {
 	struct npc_data *nd = NULL;
 	struct event_data *ev;
@@ -405,7 +412,8 @@ int instance_init_npc(struct block_list* bl, va_list args)
 /*--------------------------------------
  * Init all map on the instance. Npcs are created here
  *--------------------------------------*/
-void instance_init(int instance_id) {
+static void instance_init(int instance_id)
+{
 	int i;
 
 	if( !instance->valid(instance_id) )
@@ -424,7 +432,8 @@ void instance_init(int instance_id) {
  * Used on instance deleting process.
  * Warps all players on each instance map to its save points.
  *--------------------------------------*/
-int instance_del_load(struct map_session_data* sd, va_list args) {
+static int instance_del_load(struct map_session_data *sd, va_list args)
+{
 	int16 m = va_arg(args,int);
 
 	if( !sd || sd->bl.m != m )
@@ -435,7 +444,8 @@ int instance_del_load(struct map_session_data* sd, va_list args) {
 }
 
 /* for npcs behave differently when being unloaded within a instance */
-int instance_cleanup_sub(struct block_list *bl, va_list ap) {
+static int instance_cleanup_sub(struct block_list *bl, va_list ap)
+{
 	nullpo_ret(bl);
 
 	switch(bl->type) {
@@ -465,7 +475,8 @@ int instance_cleanup_sub(struct block_list *bl, va_list ap) {
 /*--------------------------------------
  * Removes a simple instance map
  *--------------------------------------*/
-void instance_del_map(int16 m) {
+static void instance_del_map(int16 m)
+{
 	int i;
 
 	if( m <= 0 || map->list[m].instance_id == -1 ) {
@@ -507,8 +518,7 @@ void instance_del_map(int16 m) {
 		aFree(map->list[m].zone_mf);
 	}
 
-	if( map->list[m].qi_data )
-		aFree(map->list[m].qi_data);
+	quest->questinfo_vector_clear(m);
 
 	// Remove from instance
 	for( i = 0; i < instance->list[map->list[m].instance_id].num_map; i++ ) {
@@ -537,7 +547,8 @@ void instance_del_map(int16 m) {
 /*--------------------------------------
  * Timer to destroy instance by process or idle
  *--------------------------------------*/
-int instance_destroy_timer(int tid, int64 tick, int id, intptr_t data) {
+static int instance_destroy_timer(int tid, int64 tick, int id, intptr_t data)
+{
 	instance->destroy(id);
 	return 0;
 }
@@ -545,7 +556,8 @@ int instance_destroy_timer(int tid, int64 tick, int id, intptr_t data) {
 /*--------------------------------------
  * Removes a instance, all its maps and npcs.
  *--------------------------------------*/
-void instance_destroy(int instance_id) {
+static void instance_destroy(int instance_id)
+{
 	struct map_session_data *sd = NULL;
 	unsigned short *icptr = NULL;
 	struct party_data *p = NULL;
@@ -636,7 +648,8 @@ void instance_destroy(int instance_id) {
 /*--------------------------------------
  * Checks if there are users in the instance or not to start idle timer
  *--------------------------------------*/
-void instance_check_idle(int instance_id) {
+static void instance_check_idle(int instance_id)
+{
 	bool idle = true;
 	unsigned int now = (unsigned int)time(NULL);
 
@@ -661,7 +674,7 @@ void instance_check_idle(int instance_id) {
 /*--------------------------------------
  * Set instance Timers
  *--------------------------------------*/
-void instance_set_timeout(int instance_id, unsigned int progress_timeout, unsigned int idle_timeout)
+static void instance_set_timeout(int instance_id, unsigned int progress_timeout, unsigned int idle_timeout)
 {
 	unsigned int now = (unsigned int)time(0);
 
@@ -700,7 +713,8 @@ void instance_set_timeout(int instance_id, unsigned int progress_timeout, unsign
 /*--------------------------------------
  * Checks if sd in on a instance and should be kicked from it
  *--------------------------------------*/
-void instance_check_kick(struct map_session_data *sd) {
+static void instance_check_kick(struct map_session_data *sd)
+{
 	int16 m = sd->bl.m;
 
 	nullpo_retv(sd);
@@ -713,7 +727,8 @@ void instance_check_kick(struct map_session_data *sd) {
 	}
 }
 
-void do_reload_instance(void) {
+static void do_reload_instance(void)
+{
 	struct s_mapiterator *iter;
 	struct map_session_data *sd;
 	int i, k;
@@ -743,7 +758,8 @@ void do_reload_instance(void) {
 	mapit->free(iter);
 }
 
-void do_final_instance(void) {
+static void do_final_instance(void)
+{
 	int i;
 
 	for(i = 0; i < instance->instances; i++) {
@@ -757,14 +773,16 @@ void do_final_instance(void) {
 	instance->instances = 0;
 }
 
-void do_init_instance(bool minimal) {
+static void do_init_instance(bool minimal)
+{
 	if (minimal)
 		return;
 
 	timer->add_func_list(instance->destroy_timer, "instance_destroy_timer");
 }
 
-void instance_defaults(void) {
+void instance_defaults(void)
+{
 	instance = &instance_s;
 
 	instance->init = do_init_instance;

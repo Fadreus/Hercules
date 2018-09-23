@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -36,6 +36,10 @@ struct inter_pet_interface {
 	void (*sql_final) (void);
 	int (*delete_) (int pet_id);
 	int (*parse_frommap) (int fd);
+
+	struct s_pet *(*create) (int account_id, int char_id, short pet_class, short pet_lv, int pet_egg_id,
+			int pet_equip, short intimate, short hungry, char rename_flag, char incubate, const char *pet_name);
+	struct s_pet *(*load) (int account_id, int char_id, int pet_id);
 };
 
 #ifdef HERCULES_CORE

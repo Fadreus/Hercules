@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@
 #include <stdio.h>
 #include <string.h>
 
-struct vending_interface vending_s;
+static struct vending_interface vending_s;
 struct vending_interface *vending;
 
 /// Returns an unique vending shop id.
@@ -52,7 +52,7 @@ static inline unsigned int getid(void)
 /*==========================================
  * Close shop
  *------------------------------------------*/
-void vending_closevending(struct map_session_data* sd)
+static void vending_closevending(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 
@@ -66,7 +66,7 @@ void vending_closevending(struct map_session_data* sd)
 /*==========================================
  * Request a shop's item list
  *------------------------------------------*/
-void vending_vendinglistreq(struct map_session_data* sd, unsigned int id)
+static void vending_vendinglistreq(struct map_session_data *sd, unsigned int id)
 {
 	struct map_session_data* vsd;
 	nullpo_retv(sd);
@@ -89,7 +89,7 @@ void vending_vendinglistreq(struct map_session_data* sd, unsigned int id)
 /*==========================================
  * Purchase item(s) from a shop
  *------------------------------------------*/
-void vending_purchasereq(struct map_session_data* sd, int aid, unsigned int uid, const uint8* data, int count)
+static void vending_purchasereq(struct map_session_data *sd, int aid, unsigned int uid, const uint8 *data, int count)
 {
 	int i, j, cursor, w, new_ = 0, blank, vend_list[MAX_VENDING];
 	int64 z;
@@ -245,7 +245,7 @@ void vending_purchasereq(struct map_session_data* sd, int aid, unsigned int uid,
  * Open shop
  * data := {<index>.w <amount>.w <value>.l}[count]
  *------------------------------------------*/
-void vending_openvending(struct map_session_data* sd, const char* message, const uint8* data, int count)
+static void vending_openvending(struct map_session_data *sd, const char *message, const uint8 *data, int count)
 {
 	int i, j;
 	int vending_skill_lvl;
@@ -257,14 +257,14 @@ void vending_openvending(struct map_session_data* sd, const char* message, const
 	vending_skill_lvl = pc->checkskill(sd, MC_VENDING);
 	// skill level and cart check
 	if( !vending_skill_lvl || !pc_iscarton(sd) ) {
-		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0);
+		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0, 0);
 		return;
 	}
 
 	// check number of items in shop
 	if( count < 1 || count > MAX_VENDING || count > 2 + vending_skill_lvl ) {
 		// invalid item count
-		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0);
+		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0, 0);
 		return;
 	}
 
@@ -298,7 +298,7 @@ void vending_openvending(struct map_session_data* sd, const char* message, const
 		clif->message (sd->fd, msg_sd(sd,266)); //"Some of your items cannot be vended and were removed from the shop."
 
 	if( i == 0 ) { // no valid item found
-		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0); // custom reply packet
+		clif->skill_fail(sd, MC_VENDING, USESKILL_FAIL_LEVEL, 0, 0); // custom reply packet
 		return;
 	}
 	sd->state.prevend = sd->state.workinprogress = 0;
@@ -315,7 +315,7 @@ void vending_openvending(struct map_session_data* sd, const char* message, const
 
 
 /// Checks if an item is being sold in given player's vending.
-bool vending_search(struct map_session_data* sd, unsigned short nameid)
+static bool vending_search(struct map_session_data *sd, int nameid)
 {
 	int i;
 
@@ -324,7 +324,7 @@ bool vending_search(struct map_session_data* sd, unsigned short nameid)
 		return false;
 	}
 
-	ARR_FIND( 0, sd->vend_num, i, sd->status.cart[sd->vending[i].index].nameid == (short)nameid );
+	ARR_FIND(0, sd->vend_num, i, sd->status.cart[sd->vending[i].index].nameid == nameid);
 	if( i == sd->vend_num ) { // not found
 		return false;
 	}
@@ -335,7 +335,7 @@ bool vending_search(struct map_session_data* sd, unsigned short nameid)
 
 /// Searches for all items in a vending, that match given ids, price and possible cards.
 /// @return Whether or not the search should be continued.
-bool vending_searchall(struct map_session_data* sd, const struct s_search_store_search* s)
+static bool vending_searchall(struct map_session_data *sd, const struct s_search_store_search *s)
 {
 	int i, c, slot;
 	unsigned int idx, cidx;
@@ -347,7 +347,7 @@ bool vending_searchall(struct map_session_data* sd, const struct s_search_store_
 		return true;
 
 	for( idx = 0; idx < s->item_count; idx++ ) {
-		ARR_FIND( 0, sd->vend_num, i, sd->status.cart[sd->vending[i].index].nameid == (short)s->itemlist[idx] );
+		ARR_FIND(0, sd->vend_num, i, sd->status.cart[sd->vending[i].index].nameid == s->itemlist[idx]);
 		if( i == sd->vend_num ) {// not found
 			continue;
 		}
@@ -380,7 +380,7 @@ bool vending_searchall(struct map_session_data* sd, const struct s_search_store_
 			}
 		}
 
-		if( !searchstore->result(s->search_sd, sd->vender_id, sd->status.account_id, sd->message, it->nameid, sd->vending[i].amount, sd->vending[i].value, it->card, it->refine) )
+		if (!searchstore->result(s->search_sd, sd->vender_id, sd->status.account_id, sd->message, it->nameid, sd->vending[i].amount, sd->vending[i].value, it->card, it->refine, it->option))
 		{// result set full
 			return false;
 		}
@@ -389,12 +389,12 @@ bool vending_searchall(struct map_session_data* sd, const struct s_search_store_
 	return true;
 }
 
-void final(void)
+static void final(void)
 {
 	db_destroy(vending->db);
 }
 
-void init(bool minimal)
+static void init(bool minimal)
 {
 	vending->db = idb_alloc(DB_OPT_BASE);
 	vending->next_id = 0;

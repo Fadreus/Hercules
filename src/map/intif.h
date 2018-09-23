@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -58,8 +58,8 @@ struct intif_interface {
 	int packet_len_table[INTIF_PACKET_LEN_TABLE_SIZE];
 	/* funcs */
 	int (*parse) (int fd);
-	int (*create_pet)(int account_id, int char_id, short pet_type, short pet_lv, short pet_egg_id,
-	                  short pet_equip, short intimate, short hungry, char rename_flag, char incubate, char *pet_name);
+	int (*create_pet)(int account_id, int char_id, short pet_type, short pet_lv, int pet_egg_id,
+	                  int pet_equip, short intimate, short hungry, char rename_flag, char incubate, char *pet_name);
 	int (*broadcast) (const char *mes, int len, int type);
 	int (*broadcast2) (const char *mes, int len, unsigned int fontColor, short fontType, short fontSize, short fontAlign, short fontY);
 	int (*main_message) (struct map_session_data* sd, const char* message);
@@ -68,7 +68,7 @@ struct intif_interface {
 	int (*saveregistry) (struct map_session_data *sd);
 	int (*request_registry) (struct map_session_data *sd, int flag);
 	void (*request_account_storage) (const struct map_session_data *sd);
-	void (*send_account_storage) (const struct map_session_data *sd);
+	void (*send_account_storage) (struct map_session_data *sd);
 	int (*request_guild_storage) (int account_id, int guild_id);
 	int (*send_guild_storage) (int account_id, struct guild_storage *gstor);
 	int (*create_party) (struct party_member *member, const char *name, int item, int item2);
@@ -145,6 +145,9 @@ struct intif_interface {
 	void (*request_accinfo) (int u_fd, int aid, int group_lv, char* query);
 	/* */
 	int (*CheckForCharServer) (void);
+	/* Achievement System [Smokexyz/Hercules] */
+	void(*achievements_request) (struct map_session_data *sd);
+	void(*achievements_save) (struct map_session_data *sd);
 	/* */
 	void (*pWisMessage) (int fd);
 	void (*pWisEnd) (int fd);
@@ -217,6 +220,8 @@ struct intif_interface {
 	void(*pRodexCheckName) (int fd);
 	/* Clan System */
 	void (*pRecvClanMemberAction) (int fd);
+	/* Achievements */
+	void (*pAchievementsLoad) (int fd);
 };
 
 #ifdef HERCULES_CORE

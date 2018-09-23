@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -38,10 +38,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct inter_mercenary_interface inter_mercenary_s;
+static struct inter_mercenary_interface inter_mercenary_s;
 struct inter_mercenary_interface *inter_mercenary;
 
-bool inter_mercenary_owner_fromsql(int char_id, struct mmo_charstatus *status)
+static bool inter_mercenary_owner_fromsql(int char_id, struct mmo_charstatus *status)
 {
 	char* data;
 
@@ -70,7 +70,7 @@ bool inter_mercenary_owner_fromsql(int char_id, struct mmo_charstatus *status)
 	return true;
 }
 
-bool inter_mercenary_owner_tosql(int char_id, struct mmo_charstatus *status)
+static bool inter_mercenary_owner_tosql(int char_id, struct mmo_charstatus *status)
 {
 	nullpo_ret(status);
 	if( SQL_ERROR == SQL->Query(inter->sql_handle, "REPLACE INTO `%s` (`char_id`, `merc_id`, `arch_calls`, `arch_faith`, `spear_calls`, `spear_faith`, `sword_calls`, `sword_faith`) VALUES ('%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
@@ -83,7 +83,7 @@ bool inter_mercenary_owner_tosql(int char_id, struct mmo_charstatus *status)
 	return true;
 }
 
-bool inter_mercenary_owner_delete(int char_id)
+static bool inter_mercenary_owner_delete(int char_id)
 {
 	if( SQL_ERROR == SQL->Query(inter->sql_handle, "DELETE FROM `%s` WHERE `char_id` = '%d'", mercenary_owner_db, char_id) )
 		Sql_ShowDebug(inter->sql_handle);
@@ -104,7 +104,7 @@ bool inter_mercenary_owner_delete(int char_id)
  * @param[in,out] merc The new mercenary's data.
  * @retval false in case of errors.
  */
-bool mapif_mercenary_create(struct s_mercenary *merc)
+static bool inter_mercenary_create(struct s_mercenary *merc)
 {
 	nullpo_retr(false, merc);
 	Assert_retr(false, merc->mercenary_id == 0);
@@ -126,7 +126,7 @@ bool mapif_mercenary_create(struct s_mercenary *merc)
  * @param merc The mercenary's data.
  * @retval false in case of errors.
  */
-bool mapif_mercenary_save(const struct s_mercenary *merc)
+static bool inter_mercenary_save(const struct s_mercenary *merc)
 {
 	nullpo_retr(false, merc);
 	Assert_retr(false, merc->mercenary_id > 0);
@@ -141,7 +141,7 @@ bool mapif_mercenary_save(const struct s_mercenary *merc)
 	return true;
 }
 
-bool mapif_mercenary_load(int merc_id, int char_id, struct s_mercenary *merc)
+static bool inter_mercenary_load(int merc_id, int char_id, struct s_mercenary *merc)
 {
 	char* data;
 
@@ -174,7 +174,7 @@ bool mapif_mercenary_load(int merc_id, int char_id, struct s_mercenary *merc)
 	return true;
 }
 
-bool mapif_mercenary_delete(int merc_id)
+static bool inter_mercenary_delete(int merc_id)
 {
 	if( SQL_ERROR == SQL->Query(inter->sql_handle, "DELETE FROM `%s` WHERE `mer_id` = '%d'", mercenary_db, merc_id) )
 	{
@@ -185,70 +185,12 @@ bool mapif_mercenary_delete(int merc_id)
 	return true;
 }
 
-void mapif_mercenary_send(int fd, struct s_mercenary *merc, unsigned char flag)
-{
-	int size = sizeof(struct s_mercenary) + 5;
-
-	nullpo_retv(merc);
-	WFIFOHEAD(fd,size);
-	WFIFOW(fd,0) = 0x3870;
-	WFIFOW(fd,2) = size;
-	WFIFOB(fd,4) = flag;
-	memcpy(WFIFOP(fd,5),merc,sizeof(struct s_mercenary));
-	WFIFOSET(fd,size);
-}
-
-void mapif_parse_mercenary_create(int fd, const struct s_mercenary *merc)
-{
-	struct s_mercenary merc_;
-	bool result;
-
-	memcpy(&merc_, merc, sizeof(merc_));
-
-	result = mapif->mercenary_create(&merc_);
-	mapif->mercenary_send(fd, &merc_, result);
-}
-
-void mapif_parse_mercenary_load(int fd, int merc_id, int char_id)
-{
-	struct s_mercenary merc;
-	bool result = mapif->mercenary_load(merc_id, char_id, &merc);
-	mapif->mercenary_send(fd, &merc, result);
-}
-
-void mapif_mercenary_deleted(int fd, unsigned char flag)
-{
-	WFIFOHEAD(fd,3);
-	WFIFOW(fd,0) = 0x3871;
-	WFIFOB(fd,2) = flag;
-	WFIFOSET(fd,3);
-}
-
-void mapif_parse_mercenary_delete(int fd, int merc_id)
-{
-	bool result = mapif->mercenary_delete(merc_id);
-	mapif->mercenary_deleted(fd, result);
-}
-
-void mapif_mercenary_saved(int fd, unsigned char flag)
-{
-	WFIFOHEAD(fd,3);
-	WFIFOW(fd,0) = 0x3872;
-	WFIFOB(fd,2) = flag;
-	WFIFOSET(fd,3);
-}
-
-void mapif_parse_mercenary_save(int fd, struct s_mercenary* merc)
-{
-	bool result = mapif->mercenary_save(merc);
-	mapif->mercenary_saved(fd, result);
-}
-
-int inter_mercenary_sql_init(void)
+static int inter_mercenary_sql_init(void)
 {
 	return 0;
 }
-void inter_mercenary_sql_final(void)
+
+static void inter_mercenary_sql_final(void)
 {
 	return;
 }
@@ -256,7 +198,7 @@ void inter_mercenary_sql_final(void)
 /*==========================================
  * Inter Packets
  *------------------------------------------*/
-int inter_mercenary_parse_frommap(int fd)
+static int inter_mercenary_parse_frommap(int fd)
 {
 	unsigned short cmd = RFIFOW(fd,0);
 
@@ -282,4 +224,9 @@ void inter_mercenary_defaults(void)
 	inter_mercenary->sql_init = inter_mercenary_sql_init;
 	inter_mercenary->sql_final = inter_mercenary_sql_final;
 	inter_mercenary->parse_frommap = inter_mercenary_parse_frommap;
+
+	inter_mercenary->create = inter_mercenary_create;
+	inter_mercenary->load = inter_mercenary_load;
+	inter_mercenary->save = inter_mercenary_save;
+	inter_mercenary->delete = inter_mercenary_delete;
 }

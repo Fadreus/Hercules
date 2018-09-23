@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -57,14 +57,14 @@ struct npc_label_list {
 	int pos;
 };
 struct npc_item_list {
-	unsigned short nameid;
+	int nameid;
 	unsigned int value;
 	unsigned int qty;
 };
 struct npc_shop_data {
 	unsigned char type;/* what am i */
 	struct npc_item_list *item;/* list */
-	unsigned short items;/* total */
+	unsigned int items;/* total */
 };
 struct npc_parse;
 struct npc_data {

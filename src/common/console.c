@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2016  Hercules Dev Team
+ * Copyright (C) 2012-2018  Hercules Dev Team
  * Copyright (C)  Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 
 #include "common/cbasetypes.h"
 #include "common/core.h"
+#include "common/mmo.h"
 #include "common/nullpo.h"
 #include "common/showmsg.h"
 #include "common/sysinfo.h"
@@ -53,13 +54,13 @@
 #	endif
 #endif
 
-struct console_interface console_s;
+static struct console_interface console_s;
 struct console_interface *console;
 #ifdef CONSOLE_INPUT
-struct console_input_interface console_input_s;
-struct spin_lock console_ptlock_s;
+static struct console_input_interface console_input_s;
+static struct spin_lock console_ptlock_s;
 
-struct {
+static struct {
 	char queue[CONSOLE_PARSE_SIZE][MAX_CONSOLE_INPUT];
 	unsigned short count;
 } cinput;
@@ -68,7 +69,7 @@ struct {
 /*======================================
  * CORE : Display title
  *--------------------------------------*/
-void display_title(void)
+static void display_title(void)
 {
 	const char *vcstype = sysinfo->vcstype();
 
@@ -93,19 +94,20 @@ void display_title(void)
 	ShowInfo("Compiled with %s\n", sysinfo->compiler());
 	ShowInfo("Compile Flags: %s\n", sysinfo->cflags());
 	ShowInfo("Timer Function Type: %s\n", sysinfo->time());
+	ShowInfo("Packet version: %d " PACKETTYPE "\n", PACKETVER);
 }
 
 /**
  * Shows a license notice as per GNU GPL recommendation.
  */
-void display_gplnotice(void)
+static void display_gplnotice(void)
 {
-	ShowInfo("Hercules, Copyright (C) 2012-2016, Hercules Dev Team and others.\n");
+	ShowInfo("Hercules, Copyright (C) 2012-2018, Hercules Dev Team and others.\n");
 	ShowInfo("Licensed under the GNU General Public License, version 3 or later.\n");
 }
 
 #ifdef CONSOLE_INPUT
-int console_parse_key_pressed(void)
+static int console_parse_key_pressed(void)
 {
 #ifdef WIN32
 	return _kbhit();
@@ -131,15 +133,18 @@ int console_parse_key_pressed(void)
 /**
  * Stops server
  **/
-CPCMD_C(exit, server)
+static CPCMD_C(exit, server)
 {
-	core->runflag = 0;
+	if (core->shutdown_callback != NULL)
+		core->shutdown_callback();
+	else
+		core->runflag = CORE_ST_STOP;
 }
 
 /**
  * Displays ERS-related statistics (Entry Reusage System)
  **/
-CPCMD_C(ers_report, server)
+static CPCMD_C(ers_report, server)
 {
 	ers_report();
 }
@@ -147,7 +152,7 @@ CPCMD_C(ers_report, server)
 /**
  * Displays memory usage
  **/
-CPCMD_C(mem_report, server)
+static CPCMD_C(mem_report, server)
 {
 #ifdef USE_MEMMGR
 	memmgr_report(line?atoi(line):0);
@@ -157,7 +162,7 @@ CPCMD_C(mem_report, server)
 /**
  * Displays command list
  **/
-CPCMD(help)
+static CPCMD(help)
 {
 	int i;
 	for (i = 0; i < VECTOR_LENGTH(console->input->command_list); i++) {
@@ -175,7 +180,7 @@ CPCMD(help)
  * [Ind/Hercules]
  * Displays current malloc usage
  */
-CPCMD_C(malloc_usage, server)
+static CPCMD_C(malloc_usage, server)
 {
 	unsigned int val = (unsigned int)iMalloc->usage();
 	ShowInfo("malloc_usage: %.2f MB\n",(double)(val)/1024);
@@ -185,7 +190,7 @@ CPCMD_C(malloc_usage, server)
  * Skips an sql update
  * Usage: sql update skip UPDATE-FILE.sql
  **/
-CPCMD_C(skip, update)
+static CPCMD_C(skip, update)
 {
 	if( !line ) {
 		ShowDebug("usage example: sql update skip 2013-02-14--16-15.sql\n");
@@ -197,7 +202,7 @@ CPCMD_C(skip, update)
 /**
  * Loads console commands list
  **/
-void console_load_defaults(void)
+static void console_load_defaults(void)
 {
 	/**
 	 * Defines a main category.
@@ -310,7 +315,7 @@ void console_load_defaults(void)
  * @param name The command name.
  * @param func The command callback.
  */
-void console_parse_create(char *name, CParseFunc func)
+static void console_parse_create(char *name, CParseFunc func)
 {
 	int i;
 	char *tok;
@@ -367,7 +372,7 @@ void console_parse_create(char *name, CParseFunc func)
  * @param cmd The command entry.
  * @param depth The current tree depth (for display purposes).
  */
-void console_parse_list_subs(struct CParseEntry *cmd, unsigned char depth)
+static void console_parse_list_subs(struct CParseEntry *cmd, unsigned char depth)
 {
 	int i;
 	char msg[CP_CMD_LENGTH * 2];
@@ -391,7 +396,7 @@ void console_parse_list_subs(struct CParseEntry *cmd, unsigned char depth)
  *
  * @param line The input line.
  */
-void console_parse_sub(char *line)
+static void console_parse_sub(char *line)
 {
 	struct CParseEntry *cmd;
 	char bline[200];
@@ -454,7 +459,7 @@ void console_parse_sub(char *line)
 	ShowError("Is only a category, type '"CL_WHITE"%s help"CL_RESET"' to list its subcommands\n",sublist);
 }
 
-void console_parse(char *line)
+static void console_parse(char *line)
 {
 	int c, i = 0, len = MAX_CONSOLE_INPUT - 1;/* we leave room for the \0 :P */
 
@@ -471,7 +476,7 @@ void console_parse(char *line)
 	line[i++] = '\0';
 }
 
-void *cThread_main(void *x)
+static void *cThread_main(void *x)
 {
 	while( console->input->ptstate ) {/* loopx */
 		if( console->input->key_pressed() ) {
@@ -498,7 +503,7 @@ void *cThread_main(void *x)
 	return NULL;
 }
 
-int console_parse_timer(int tid, int64 tick, int id, intptr_t data)
+static int console_parse_timer(int tid, int64 tick, int id, intptr_t data)
 {
 	int i;
 	EnterSpinLock(console->input->ptlock);
@@ -511,7 +516,7 @@ int console_parse_timer(int tid, int64 tick, int id, intptr_t data)
 	return 0;
 }
 
-void console_parse_final(void)
+static void console_parse_final(void)
 {
 	if( console->input->ptstate ) {
 		InterlockedDecrement(&console->input->ptstate);
@@ -525,7 +530,7 @@ void console_parse_final(void)
 	}
 }
 
-void console_parse_init(void)
+static void console_parse_init(void)
 {
 	cinput.count = 0;
 
@@ -545,13 +550,13 @@ void console_parse_init(void)
 	timer->add_interval(timer->gettick() + 1000, console->input->parse_timer, 0, 0, 500);/* start listening in 1s; re-try every 0.5s */
 }
 
-void console_setSQL(struct Sql *SQL_handle)
+static void console_setSQL(struct Sql *SQL_handle)
 {
 	console->input->SQL = SQL_handle;
 }
 #endif /* CONSOLE_INPUT */
 
-void console_init(void)
+static void console_init(void)
 {
 #ifdef CONSOLE_INPUT
 	VECTOR_INIT(console->input->command_list);
@@ -561,7 +566,7 @@ void console_init(void)
 #endif
 }
 
-void console_final(void)
+static void console_final(void)
 {
 #ifdef CONSOLE_INPUT
 	console->input->parse_final();
