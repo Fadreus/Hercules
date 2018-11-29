@@ -399,7 +399,7 @@ static int pc_banding(struct map_session_data *sd, uint16 skill_lv)
 	for( j = 0; j < i; j++ ) {
 		bsd = map->id2sd(b_sd[j]);
 		if( bsd != NULL ) {
-			status->set_hp(&bsd->bl,hp,0); // Set hp
+			status->set_hp(&bsd->bl, hp, STATUS_HEAL_DEFAULT); // Set hp
 			if( (sc = status->get_sc(&bsd->bl)) != NULL  && sc->data[SC_BANDING] ) {
 				sc->data[SC_BANDING]->val2 = c; // Set the counter. It doesn't count your self.
 				status_calc_bl(&bsd->bl, status->sc2scb_flag(SC_BANDING)); // Set atk and def.
@@ -523,10 +523,9 @@ static int pc_setrestartvalue(struct map_session_data *sd, int type)
 
 	if (type&1) {
 		//Normal resurrection
-		st->hp = 1; //Otherwise status->heal may fail if dead.
-		status->heal(&sd->bl, bst->hp, 0, 1);
+		status->heal(&sd->bl, bst->hp, 0, STATUS_HEAL_FORCED | STATUS_HEAL_ALLOWREVIVE);
 		if( st->sp < bst->sp )
-			status->set_sp(&sd->bl, bst->sp, 1);
+			status->set_sp(&sd->bl, bst->sp, STATUS_HEAL_FORCED);
 	} else { //Just for saving on the char-server (with values as if respawned)
 		sd->status.hp = bst->hp;
 		sd->status.sp = (st->sp < bst->sp) ? bst->sp : st->sp;
@@ -1330,6 +1329,7 @@ static bool pc_authok(struct map_session_data *sd, int login_id2, time_t expirat
 	sd->bg_queue.client_has_bg_data = 0;
 	sd->bg_queue.type = 0;
 
+	VECTOR_INIT(sd->channels);
 	VECTOR_INIT(sd->script_queues);
 	VECTOR_INIT(sd->achievement); // Achievements [Smokexyz/Hercules]
 	VECTOR_INIT(sd->storage.item); // initialize storage item vector.
@@ -2075,7 +2075,7 @@ static int pc_disguise(struct map_session_data *sd, int class)
 		clif->spawn(&sd->bl);
 		if (class == sd->status.class && pc_iscarton(sd)) {
 			//It seems the cart info is lost on undisguise.
-			clif->cartlist(sd);
+			clif->cartList(sd);
 			clif->updatestatus(sd,SP_CARTINFO);
 		}
 		if (sd->chat_id != 0) {
@@ -4402,8 +4402,6 @@ static int pc_insert_card(struct map_session_data *sd, int idx_card, int idx_equ
 static int pc_modifybuyvalue(struct map_session_data *sd, int orig_value)
 {
 	int skill_lv, rate1 = 0, rate2 = 0;
-	if (orig_value <= 0)
-		return 0;
 	if ((skill_lv=pc->checkskill(sd,MC_DISCOUNT)) > 0)   // merchant discount
 		rate1 = 5+skill_lv*2-((skill_lv==10)? 1:0);
 	if ((skill_lv=pc->checkskill(sd,RG_COMPULSION)) > 0) // rogue discount
@@ -4412,8 +4410,9 @@ static int pc_modifybuyvalue(struct map_session_data *sd, int orig_value)
 		rate1 = rate2;
 	if (rate1 != 0)
 		orig_value = apply_percentrate(orig_value, 100-rate1, 100);
-	if (orig_value < 1)
-		orig_value = 1;
+
+	if (orig_value < battle_config.min_item_buy_price)
+		orig_value = battle_config.min_item_buy_price;
 	return orig_value;
 }
 
@@ -4423,14 +4422,13 @@ static int pc_modifybuyvalue(struct map_session_data *sd, int orig_value)
 static int pc_modifysellvalue(struct map_session_data *sd, int orig_value)
 {
 	int skill_lv, rate = 0;
-	if (orig_value <= 0)
-		return 0;
 	if ((skill_lv=pc->checkskill(sd,MC_OVERCHARGE)) > 0) //OverCharge
 		rate = 5+skill_lv*2-((skill_lv==10)? 1:0);
 	if (rate != 0)
 		orig_value = apply_percentrate(orig_value, 100+rate, 100);
-	if (orig_value < 1)
-		orig_value = 1;
+
+	if (orig_value < battle_config.min_item_sell_price)
+		orig_value = battle_config.min_item_sell_price;
 	return orig_value;
 }
 
@@ -4506,14 +4504,15 @@ static int pc_payzeny(struct map_session_data *sd, int zeny, enum e_log_pick_typ
 	sd->status.zeny -= zeny;
 	clif->updatestatus(sd,SP_ZENY);
 
-	achievement->validate_zeny(sd, -zeny); // Achievements [Smokexyz/Hercules]
+	if (zeny > 0) {
+		achievement->validate_zeny(sd, -zeny); // Achievements [Smokexyz/Hercules]
+		logs->zeny(sd, type, tsd ? tsd : sd, -zeny);
 
-	if(!tsd) tsd = sd;
-	logs->zeny(sd, type, tsd, -zeny);
-	if( zeny > 0 && sd->state.showzeny ) {
-		char output[255];
-		sprintf(output, "Removed %dz.", zeny);
-		clif_disp_onlyself(sd, output);
+		if (sd->state.showzeny) {
+			char output[255];
+			sprintf(output, "Removed %dz.", zeny);
+			clif_disp_onlyself(sd, output);
+		}
 	}
 
 	return 0;
@@ -4644,14 +4643,15 @@ static int pc_getzeny(struct map_session_data *sd, int zeny, enum e_log_pick_typ
 	sd->status.zeny += zeny;
 	clif->updatestatus(sd,SP_ZENY);
 
-	achievement->validate_zeny(sd, zeny); // Achievements [Smokexyz/Hercules]
+	if (zeny > 0) {
+		achievement->validate_zeny(sd, zeny); // Achievements [Smokexyz/Hercules]
+		logs->zeny(sd, type, tsd ? tsd : sd, zeny);
 
-	if(!tsd) tsd = sd;
-	logs->zeny(sd, type, tsd, zeny);
-	if( zeny > 0 && sd->state.showzeny ) {
-		char output[255];
-		sprintf(output, "Gained %dz.", zeny);
-		clif_disp_onlyself(sd, output);
+		if (sd->state.showzeny) {
+			char output[255];
+			sprintf(output, "Gained %dz.", zeny);
+			clif_disp_onlyself(sd, output);
+		}
 	}
 
 	return 0;
@@ -4689,7 +4689,7 @@ static int pc_search_inventory(struct map_session_data *sd, int item_id)
  * 6 = ?
  * 7 = stack limitation
  *------------------------------------------*/
-static int pc_additem(struct map_session_data *sd, struct item *item_data, int amount, e_log_pick_type log_type)
+static int pc_additem(struct map_session_data *sd, const struct item *item_data, int amount, e_log_pick_type log_type)
 {
 	struct item_data *data;
 	int i;
@@ -5838,8 +5838,11 @@ static int pc_setpos(struct map_session_data *sd, unsigned short map_index, int 
 			vending->close(sd);
 		}
 
-		if (map->list[sd->bl.m].channel) {
-			channel->leave(map->list[sd->bl.m].channel,sd);
+		if (sd->mapindex != 0) {
+			// Only if the character is already on a map
+			if (map->list[sd->bl.m].channel) {
+				channel->leave(map->list[sd->bl.m].channel,sd);
+			}
 		}
 	}
 
@@ -8827,7 +8830,7 @@ static int pc_itemheal(struct map_session_data *sd, int itemid, int hp, int sp)
 		}
 	}
 
-	return status->heal(&sd->bl, hp, sp, 1);
+	return status->heal(&sd->bl, hp, sp, STATUS_HEAL_FORCED);
 }
 
 /*==========================================
@@ -9198,7 +9201,7 @@ static int pc_setoption(struct map_session_data *sd, int type)
 
 #ifndef NEW_CARTS
 	if( type&OPTION_CART && !( p_type&OPTION_CART ) ) { //Cart On
-		clif->cartlist(sd);
+		clif->cartList(sd);
 		clif->updatestatus(sd, SP_CARTINFO);
 		if(pc->checkskill(sd, MC_PUSHCART) < 10)
 			status_calc_pc(sd,SCO_NONE); //Apply speed penalty.
@@ -9305,7 +9308,7 @@ static int pc_setcart(struct map_session_data *sd, int type)
 			break;
 		default:/* everything else is an allowed ID so we can move on */
 			if( !sd->sc.data[SC_PUSH_CART] ) /* first time, so fill cart data */
-				clif->cartlist(sd);
+				clif->cartList(sd);
 			clif->updatestatus(sd, SP_CARTINFO);
 			sc_start(NULL,&sd->bl, SC_PUSH_CART, 100, type, 0);
 			clif->sc_load(&sd->bl, sd->bl.id, AREA, SI_ON_PUSH_CART, type, 0, 0);
@@ -10878,7 +10881,7 @@ static void pc_regen(struct map_session_data *sd, unsigned int diff_tick)
 	}
 
 	if (hp > 0 || sp > 0)
-		status->heal(&sd->bl, hp, sp, 0);
+		status->heal(&sd->bl, hp, sp, STATUS_HEAL_DEFAULT);
 
 	return;
 }

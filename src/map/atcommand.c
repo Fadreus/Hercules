@@ -62,6 +62,7 @@
 #include "common/memmgr.h"
 #include "common/mmo.h" // MAX_CARTS
 #include "common/nullpo.h"
+#include "common/packets.h"
 #include "common/random.h"
 #include "common/showmsg.h"
 #include "common/socket.h"
@@ -262,12 +263,15 @@ ACMD(send)
 
 		if (len) {
 			// show packet length
-			safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,904), type, clif->packet(type)->len); // Packet 0x%x length: %d
+			Assert_retr(false, type <= MAX_PACKET_DB && type >= MIN_PACKET_DB);
+			len = packets->db[type];
+			safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,904), type, len); // Packet 0x%x length: %d
 			clif->message(fd, atcmd_output);
 			return true;
 		}
 
-		len = clif->packet(type)->len;
+		Assert_retr(false, type <= MAX_PACKET_DB && type >= MIN_PACKET_DB);
+		len = packets->db[type];
 
 		if (len == -1) {
 			// dynamic packet
@@ -415,7 +419,7 @@ ACMD(send)
 			SKIP_VALUE(message);
 		}
 
-		if (clif->packet(type)->len == -1) { // send dynamic packet
+		if (packets->db[type] == -1) { // send dynamic packet
 			WFIFOW(sd->fd,2)=TOW(off);
 			WFIFOSET(sd->fd,off);
 		} else {// send static packet
@@ -1131,7 +1135,7 @@ ACMD(heal)
 	}
 
 	if ( hp > 0 && sp >= 0 ) {
-		if(!status->heal(&sd->bl, hp, sp, 0))
+		if (status->heal(&sd->bl, hp, sp, STATUS_HEAL_DEFAULT) == 0)
 			clif->message(fd, msg_fd(fd,157)); // HP and SP are already with the good value.
 		else
 			clif->message(fd, msg_fd(fd,17)); // HP, SP recovered.
@@ -1148,7 +1152,7 @@ ACMD(heal)
 	//Opposing signs.
 	if ( hp ) {
 		if (hp > 0)
-			status->heal(&sd->bl, hp, 0, 0);
+			status->heal(&sd->bl, hp, 0, STATUS_HEAL_DEFAULT);
 		else {
 			status->damage(NULL, &sd->bl, -hp, 0, 0, 0);
 			clif->damage(&sd->bl,&sd->bl, 0, 0, -hp, 0, BDT_ENDURE, 0);
@@ -1157,7 +1161,7 @@ ACMD(heal)
 
 	if ( sp ) {
 		if (sp > 0)
-			status->heal(&sd->bl, 0, sp, 0);
+			status->heal(&sd->bl, 0, sp, STATUS_HEAL_DEFAULT);
 		else
 			status->damage(NULL, &sd->bl, 0, -sp, 0, 0);
 	}
@@ -1776,18 +1780,7 @@ ACMD(bodystyle)
 
 	memset(atcmd_output, '\0', sizeof(atcmd_output));
 
-	if ((sd->job & MAPID_THIRDMASK) != MAPID_GUILLOTINE_CROSS
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_GENETIC
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_MECHANIC
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_ROYAL_GUARD
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_ARCH_BISHOP
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_RANGER
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_WARLOCK
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_SHADOW_CHASER
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_MINSTRELWANDERER
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_SORCERER
-	 && (sd->job & MAPID_THIRDMASK) != MAPID_SURA
-	 ) {
+	if (!pc->has_second_costume(sd)) {
 		clif->message(fd, msg_fd(fd, 35)); // This job has no alternate body styles.
 		return false;
 	}
@@ -4297,7 +4290,7 @@ ACMD(repairall)
 
 	if (count > 0) {
 		clif->misceffect(&sd->bl, 3);
-		clif->equiplist(sd);
+		clif->equipList(sd);
 		clif->message(fd, msg_fd(fd,107)); // All items have been repaired.
 	} else {
 		clif->message(fd, msg_fd(fd,108)); // No item need to be repaired.
@@ -9003,9 +8996,7 @@ static void atcommand_channel_help(int fd, const char *command, bool can_create)
 	clif->message(fd, msg_fd(fd,1428));// - binds global chat to <channel name>, making anything you type in global be sent to the channel
 	safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1429),command);// -- %s unbind
 	clif->message(fd, atcmd_output);
-	clif->message(fd, msg_fd(fd,1430));// - unbinds your global chat from its attached channel (if binded)
-	safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1429),command);// -- %s unbind
-	clif->message(fd, atcmd_output);
+	clif->message(fd, msg_fd(fd,1430));// - unbinds your global chat from its attached channel (if bound)
 	if( can_create ) {
 		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1456),command);// -- %s ban <channel name> <character name>
 		clif->message(fd, atcmd_output);
@@ -9030,7 +9021,6 @@ ACMD(channel)
 {
 	struct channel_data *chan;
 	char subcmd[HCS_NAME_LENGTH], sub1[HCS_NAME_LENGTH], sub2[HCS_NAME_LENGTH], sub3[HCS_NAME_LENGTH];
-	unsigned char k = 0;
 	sub1[0] = sub2[0] = sub3[0] = '\0';
 
 	if (!*message || sscanf(message, "%19s %19s %19s %19s", subcmd, sub1, sub2, sub3) < 1) {
@@ -9067,7 +9057,7 @@ ACMD(channel)
 	} else if (strcmpi(subcmd,"list") == 0) {
 		// sub1 = list type; sub2 = unused; sub3 = unused
 		if (sub1[0] != '\0' && strcmpi(sub1,"colors") == 0) {
-			for (k = 0; k < channel->config->colors_count; k++) {
+			for (int k = 0; k < channel->config->colors_count; k++) {
 				safesnprintf(atcmd_output, sizeof(atcmd_output), "[ %s list colors ] : %s", command, channel->config->colors_name[k]);
 
 				clif->messagecolor_self(fd, channel->config->colors[k], atcmd_output);
@@ -9096,6 +9086,7 @@ ACMD(channel)
 		}
 	} else if (strcmpi(subcmd,"setcolor") == 0) {
 		// sub1 = channel name; sub2 = color; sub3 = unused
+		int k;
 		if (sub1[0] != '#') {
 			clif->message(fd, msg_fd(fd,1405));// Channel name must start with a '#'
 			return false;
@@ -9113,10 +9104,7 @@ ACMD(channel)
 			return false;
 		}
 
-		for (k = 0; k < channel->config->colors_count; k++) {
-			if (strcmpi(sub2, channel->config->colors_name[k]) == 0)
-				break;
-		}
+		ARR_FIND(0, channel->config->colors_count, k, strcmpi(sub2, channel->config->colors_name[k]) == 0);
 		if (k == channel->config->colors_count) {
 			safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1411), sub2);// Unknown color '%s'
 			clif->message(fd, atcmd_output);
@@ -9127,51 +9115,45 @@ ACMD(channel)
 		clif->message(fd, atcmd_output);
 	} else if (strcmpi(subcmd,"leave") == 0) {
 		// sub1 = channel name; sub2 = unused; sub3 = unused
+		int k;
 		if (sub1[0] != '#') {
 			clif->message(fd, msg_fd(fd,1405));// Channel name must start with a '#'
 			return false;
 		}
-		for (k = 0; k < sd->channel_count; k++) {
-			if (strcmpi(sub1+1,sd->channels[k]->name) == 0)
-				break;
-		}
-		if (k == sd->channel_count) {
+		ARR_FIND(0, VECTOR_LENGTH(sd->channels), k, strcmpi(sub1 + 1, VECTOR_INDEX(sd->channels, k)->name) == 0);
+		if (k == VECTOR_LENGTH(sd->channels)) {
 			safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1425),sub1);// You're not part of the '%s' channel
 			clif->message(fd, atcmd_output);
 			return false;
 		}
-		if (sd->channels[k]->type == HCS_TYPE_ALLY) {
-			do {
-				for (k = 0; k < sd->channel_count; k++) {
-					if (sd->channels[k]->type == HCS_TYPE_ALLY) {
-						channel->leave(sd->channels[k],sd);
-						break;
-					}
+		if (VECTOR_INDEX(sd->channels, k)->type == HCS_TYPE_ALLY) {
+			for (k = VECTOR_LENGTH(sd->channels) - 1; k >= 0; k--) {
+				// Loop downward to avoid issues when channel->leave() compacts the array
+				if (VECTOR_INDEX(sd->channels, k)->type == HCS_TYPE_ALLY) {
+					channel->leave(VECTOR_INDEX(sd->channels, k), sd);
 				}
-			} while (k != sd->channel_count);
+			}
 		} else {
-			channel->leave(sd->channels[k],sd);
+			channel->leave(VECTOR_INDEX(sd->channels, k), sd);
 		}
 		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1426),sub1); // You've left the '%s' channel
 		clif->message(fd, atcmd_output);
 	} else if (strcmpi(subcmd,"bindto") == 0) {
 		// sub1 = channel name; sub2 = unused; sub3 = unused
+		int k;
 		if (sub1[0] != '#') {
 			clif->message(fd, msg_fd(fd,1405));// Channel name must start with a '#'
 			return false;
 		}
 
-		for (k = 0; k < sd->channel_count; k++) {
-			if (strcmpi(sub1+1,sd->channels[k]->name) == 0)
-				break;
-		}
-		if (k == sd->channel_count) {
+		ARR_FIND(0, VECTOR_LENGTH(sd->channels), k, strcmpi(sub1 + 1, VECTOR_INDEX(sd->channels, k)->name) == 0);
+		if (k == VECTOR_LENGTH(sd->channels)) {
 			safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1425),sub1);// You're not part of the '%s' channel
 			clif->message(fd, atcmd_output);
 			return false;
 		}
 
-		sd->gcbind = sd->channels[k];
+		sd->gcbind = VECTOR_INDEX(sd->channels, k);
 		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1431),sub1); // Your global chat is now bound to the '%s' channel
 		clif->message(fd, atcmd_output);
 	} else if (strcmpi(subcmd,"unbind") == 0) {
@@ -9343,6 +9325,7 @@ ACMD(channel)
 		dbi_destroy(iter);
 	} else if (strcmpi(subcmd,"setopt") == 0) {
 		// sub1 = channel name; sub2 = option name; sub3 = value
+		int k;
 		const char* opt_str[3] = {
 			"None",
 			"JoinAnnounce",
@@ -9398,8 +9381,8 @@ ACMD(channel)
 		} else {
 			int v = atoi(sub3);
 			if (k == HCS_OPT_MSG_DELAY) {
-				if (v < 0 || v > 10) {
-					safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1451), v, opt_str[k]);// value '%d' for option '%s' is out of range (limit is 0-10)
+				if (v < 0 || v > channel->config->channel_opt_msg_delay) {
+					safesnprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd, 1451), v, opt_str[k], channel->config->channel_opt_msg_delay);// value '%d' for option '%s' is out of range (limit is 0-%d)
 					clif->message(fd, atcmd_output);
 					return false;
 				}
@@ -9810,6 +9793,24 @@ ACMD(reloadclans)
 	return true;
 }
 
+// show camera window or change camera parameters
+ACMD(camerainfo)
+{
+	if (*message == '\0') {
+		clif->camera_showWindow(sd);
+		return true;
+	}
+	float range = 0;
+	float rotation = 0;
+	float latitude = 0;
+	if (sscanf(message, "%15f %15f %15f", &range, &rotation, &latitude) < 3) {
+		clif->message(fd, msg_fd(fd, 452));  // usage @camerainfo range rotation latitude
+		return false;
+	}
+	clif->camera_change(sd, range, rotation, latitude, SELF);
+	return true;
+}
+
 /**
  * Fills the reference of available commands in atcommand DBMap
  **/
@@ -10092,6 +10093,7 @@ static void atcommand_basecommands(void)
 		ACMD_DEF(leaveclan),
 		ACMD_DEF(reloadclans),
 		ACMD_DEF(setzone),
+		ACMD_DEF(camerainfo),
 	};
 	int i;
 

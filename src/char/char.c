@@ -139,6 +139,7 @@ char char_name_letters[1024] = ""; // list of letters/symbols allowed (or not) i
 static int char_del_level = 0; ///< From which level you can delete character [Lupus]
 static int char_del_delay = 86400;
 static bool char_aegis_delete = false; ///< Verify if char is in guild/party or char and reacts as Aegis does (disallow deletion), @see chr->delete2_req.
+static bool char_aegis_rename = false; // whether or not the player can be renamed while in party/guild
 
 static int max_connect_user = -1;
 static int gm_allow_group = -1;
@@ -1514,6 +1515,14 @@ static int char_rename_char_sql(struct char_session_data *sd, int char_id)
 	if( char_dat.rename == 0 )
 		return 1;
 
+	if (char_aegis_rename) {
+		if (char_dat.guild_id > 0) {
+			return 5; // MSG_FAILED_RENAME_BELONGS_TO_GUILD
+		} else if (char_dat.party_id > 0) {
+			return 6; // MSG_FAILED_RENAME_BELONGS_TO_PARTY
+		}
+	}
+
 	SQL->EscapeStringLen(inter->sql_handle, esc_name, sd->new_name, strnlen(sd->new_name, NAME_LENGTH));
 
 	// check if the char exist
@@ -1539,9 +1548,20 @@ static int char_rename_char_sql(struct char_session_data *sd, int char_id)
 	// log change
 	if (chr->enable_logs) {
 		if (SQL_ERROR == SQL->Query(inter->sql_handle,
-					"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
-					"VALUES (NOW(), '%s', '%d', '%d', '%d', '%s', '0', '0', '0', '0', '0', '0', '0', '0')",
-					charlog_db, "change char name", sd->account_id, char_dat.char_id, char_dat.slot, esc_name))
+					"INSERT INTO `%s` ("
+					" `time`, `char_msg`, `account_id`, `char_id`, `char_num`, `class`, `name`,"
+					" `str`, `agi`, `vit`, `int`, `dex`, `luk`,"
+					" `hair`, `hair_color`"
+					") VALUES ("
+					" NOW(), 'change char name', '%d', '%d', '%d', '%d', '%s',"
+					" '%d', '%d', '%d', '%d', '%d', '%d',"
+					" '%d', '%d'"
+					")",
+					charlog_db,
+					sd->account_id, char_dat.char_id, char_dat.slot, char_dat.class, esc_name,
+					char_dat.str, char_dat.agi, char_dat.vit, char_dat.int_, char_dat.dex, char_dat.luk,
+					char_dat.hair, char_dat.hair_color
+					))
 			Sql_ShowDebug(inter->sql_handle);
 	}
 
@@ -2132,17 +2152,20 @@ static void char_mmo_char_send_ban_list(int fd, struct char_session_data *sd)
 //----------------------------------------
 static void char_mmo_char_send_slots_info(int fd, struct char_session_data *sd)
 {
+// also probably supported client 2013-02-15aRagexe but not 2013-02-15bRagexe [4144]
+#if PACKETVER_MAIN_NUM >= 20130612 || PACKETVER_RE_NUM >= 20130115 || defined(PACKETVER_ZERO)
 	nullpo_retv(sd);
-	WFIFOHEAD(fd,29);
-	WFIFOW(fd,0) = 0x82d;
-	WFIFOW(fd,2) = 29;
-	WFIFOB(fd,4) = sd->char_slots;
-	WFIFOB(fd,5) = MAX_CHARS - sd->char_slots;
-	WFIFOB(fd,6) = 0;
-	WFIFOB(fd,7) = sd->char_slots;
-	WFIFOB(fd,8) = sd->char_slots;
-	memset(WFIFOP(fd,9), 0, 20); // unused bytes
-	WFIFOSET(fd,29);
+	WFIFOHEAD(fd, 29);
+	WFIFOW(fd, 0) = 0x82d;
+	WFIFOW(fd, 2) = 29;
+	WFIFOB(fd, 4) = sd->char_slots;
+	WFIFOB(fd, 5) = MAX_CHARS - sd->char_slots;
+	WFIFOB(fd, 6) = 0;
+	WFIFOB(fd, 7) = sd->char_slots;
+	WFIFOB(fd, 8) = sd->char_slots;
+	memset(WFIFOP(fd, 9), 0, 20); // unused bytes
+	WFIFOSET(fd, 29);
+#endif
 }
 //----------------------------------------
 // Function to send characters to a player
@@ -2409,12 +2432,8 @@ static void char_parse_fromlogin_account_data(int fd)
 			chr->auth_error(i, 0);
 		} else {
 			// send characters to player
-	#if PACKETVER >= 20130000
 			chr->mmo_char_send_slots_info(i, sd);
 			chr->mmo_char_send_characters(i, sd);
-	#else
-			chr->mmo_char_send_characters(i, sd);
-	#endif
 	#if PACKETVER >= 20060819
 			chr->mmo_char_send_ban_list(i, sd);
 	#endif
@@ -4345,9 +4364,9 @@ static void char_delete2_cancel(int fd, struct char_session_data *sd)
 
 static void char_send_account_id(int fd, int account_id)
 {
-	WFIFOHEAD(fd,4);
-	WFIFOL(fd,0) = account_id;
-	WFIFOSET(fd,4);
+	WFIFOHEAD(fd, 4);
+	WFIFOL(fd, 0) = account_id;
+	WFIFOSET2(fd, 4);
 }
 
 static void char_parse_char_connect(int fd, struct char_session_data *sd, uint32 ipl)
@@ -4558,8 +4577,19 @@ static void char_parse_char_select(int fd, struct char_session_data *sd, uint32 
 		// FIXME: Why are we re-escaping the name if it was already escaped in rename/make_new_char? [Panikon]
 		SQL->EscapeStringLen(inter->sql_handle, esc_name, char_dat.name, strnlen(char_dat.name, NAME_LENGTH));
 		if (SQL_ERROR == SQL->Query(inter->sql_handle,
-					"INSERT INTO `%s`(`time`, `account_id`, `char_id`, `char_num`, `name`) VALUES (NOW(), '%d', '%d', '%d', '%s')",
-					charlog_db, sd->account_id, cd->char_id, slot, esc_name))
+					"INSERT INTO `%s`("
+					" `time`, `char_msg`, `account_id`, `char_id`, `char_num`, `class`, `name`,"
+					" `str`, `agi`, `vit`, `int`, `dex`, `luk`,"
+					" `hair`, `hair_color`"
+					") VALUES ("
+					" NOW(), 'char select', '%d', '%d', '%d', '%d', '%s',"
+					" '%d', '%d', '%d', '%d', '%d', '%d',"
+					" '%d', '%d')",
+					charlog_db,
+					sd->account_id, cd->char_id, slot, char_dat.class, esc_name,
+					char_dat.str, char_dat.agi, char_dat.vit, char_dat.int_, char_dat.dex, char_dat.luk,
+					char_dat.hair, char_dat.hair_color
+					))
 			Sql_ShowDebug(inter->sql_handle);
 	}
 	ShowInfo("Selected char: (Account %d: %d - %s)\n", sd->account_id, slot, char_dat.name);
@@ -4900,10 +4930,10 @@ static void char_parse_char_delete2_cancel(int fd, struct char_session_data *sd)
 // 3 - error
 static void char_login_map_server_ack(int fd, uint8 flag)
 {
-	WFIFOHEAD(fd,3);
-	WFIFOW(fd,0) = 0x2af9;
-	WFIFOB(fd,2) = flag;
-	WFIFOSET(fd,3);
+	WFIFOHEAD(fd, 3);
+	WFIFOW(fd, 0) = 0x2af9;
+	WFIFOB(fd, 2) = flag;
+	WFIFOSET2(fd, 3);
 }
 
 static void char_parse_char_login_map_server(int fd, uint32 ipl)
@@ -4930,6 +4960,7 @@ static void char_parse_char_login_map_server(int fd, uint32 ipl)
 		chr->server[i].users = 0;
 		sockt->session[fd]->func_parse = chr->parse_frommap;
 		sockt->session[fd]->flag.server = 1;
+		sockt->session[fd]->flag.validate = 0;
 		sockt->realloc_fifo(fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 		chr->mapif_init(fd);
 	}
@@ -5299,6 +5330,7 @@ static int char_check_connect_login_server(int tid, int64 tick, int id, intptr_t
 
 	sockt->session[chr->login_fd]->func_parse = chr->parse_fromlogin;
 	sockt->session[chr->login_fd]->flag.server = 1;
+	sockt->session[chr->login_fd]->flag.validate = 0;
 	sockt->realloc_fifo(chr->login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 
 	loginif->connect_to_server();
@@ -5848,6 +5880,7 @@ static bool char_config_read_player_name(const char *filename, const struct conf
 	libconfig->setting_lookup_mutable_string(setting, "name_letters", char_name_letters, sizeof(char_name_letters));
 	libconfig->setting_lookup_int(setting, "name_option", &char_name_option);
 	libconfig->setting_lookup_bool_real(setting, "name_ignoring_case", &name_ignoring_case);
+	libconfig->setting_lookup_bool_real(setting, "use_aegis_rename", &char_aegis_rename);
 
 	return true;
 }
@@ -6290,6 +6323,7 @@ int do_init(int argc, char **argv)
 		Sql_ShowDebug(inter->sql_handle);
 
 	sockt->set_defaultparse(chr->parse_char);
+	sockt->validate = true;
 
 	if ((chr->char_fd = sockt->make_listen_bind(bind_ip,chr->port)) == -1) {
 		ShowFatalError("Failed to bind to port '"CL_WHITE"%d"CL_RESET"'\n",chr->port);

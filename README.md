@@ -7,6 +7,8 @@ Build Status:
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/3892/badge.svg)](https://scan.coverity.com/projects/herculesws-hercules)
 [![GitLab Build Status](https://gitlab.com/HerculesWS/Hercules/badges/master/build.svg)](https://gitlab.com/HerculesWS/Hercules/commits/master)
 [![Coverage Report](https://gitlab.com/HerculesWS/Hercules/badges/master/coverage.svg)](https://gitlab.com/HerculesWS/Hercules/commits/master)
+[![Code Quality: Cpp](https://img.shields.io/lgtm/grade/cpp/g/HerculesWS/Hercules.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/HerculesWS/Hercules/context:cpp)
+[![Total Alerts](https://img.shields.io/lgtm/alerts/g/HerculesWS/Hercules.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/HerculesWS/Hercules/alerts)
 
 Issues and pull requests:
 [![Open Issues](https://img.shields.io/github/issues-raw/HerculesWS/Hercules.svg?label=Open%20Issues)](https://github.com/HerculesWS/Hercules/issues)
@@ -27,17 +29,17 @@ Project Info:
 
 Table of Contents
 ---------
-* 1 What is Hercules?
-* 2 Prerequisites
-* 3 Installation
-* 4 Troubleshooting
-* 5 Helpful Links
-* 6 More Documentation
+1. What is Hercules?
+2. Prerequisites
+3. Installation
+4. Troubleshooting
+5. Helpful Links
+6. More Documentation
 
 What is Hercules?
 -----------------
 Hercules is a collaborative software development project revolving around the
-creation of a robust Massively Multiplayer Online Role Playing Game (MMORPG)
+creation of a robust Massively Multiplayer Online Role-Playing Game (MMORPG)
 server package. Written in C, the program is very versatile and provides NPCs,
 warps and modifications. The project is jointly managed by a group of
 volunteers located around the world as well as a tremendous community providing
@@ -62,7 +64,7 @@ Platforms](https://github.com/HerculesWS/Hercules/wiki/Supported-Platforms) wiki
   - git
   - gcc or clang (version 4.5 or newer, recommended 5.0 or newer)
   - GNU make
-  - mysql (`mysql-server`) or mariadb
+  - MySQL (`mysql-server`) or MariaDB
   - libmysqlclient (`mysql-devel`)
   - zlib (`zlib-devel`)
   - libpcre (`pcre-devel`)
@@ -135,7 +137,7 @@ Troubleshooting
 ---------------
 
 If you're having problems with starting your server, the first thing you should
-do is check what's happening on your consoles. More often that not, all support
+do is check what's happening on your consoles. More often than not, all support
 issues can be solved simply by looking at the error messages given.
 
 Examples:
@@ -216,7 +218,7 @@ the weather.  For an in-depth explanation, please see /doc/atcommands.txt
 The Hercules emulator has a permission system that enables certain groups of
 players to perform certain actions, or have access to certain visual
 enhancements or in-game activity. To see what permissions are available, they
-are detailed in /doc/permissions.txt
+are detailed in /doc/permissions.md
 
 ### Others
 There are more files in the /doc/ directory that will help you to create scripts

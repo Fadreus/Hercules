@@ -789,6 +789,12 @@ struct questinfo_qreq {
 	int state;
 };
 
+struct questinfo_itemreq {
+	int nameid;
+	int min;
+	int max;
+};
+
 struct questinfo {
 	struct npc_data *nd;
 	unsigned short icon;
@@ -805,10 +811,11 @@ struct questinfo {
 		int min;
 		int max;
 	} job_level;
-	VECTOR_DECL(struct item) items;
+	VECTOR_DECL(struct questinfo_itemreq) items;
 	struct s_homunculus homunculus;
 	int homunculus_type;
 	VECTOR_DECL(struct questinfo_qreq) quest_requirement;
+	int mercenary_class;
 };
 
 
@@ -1213,6 +1220,7 @@ END_ZEROED_BLOCK;
 	/* funcs */
 	void (*zone_init) (void);
 	void (*zone_remove) (int m);
+	void (*zone_remove_all) (int m);
 	void (*zone_apply) (int m, struct map_zone_data *zone, const char* start, const char* buffer, const char* filepath);
 	void (*zone_change) (int m, struct map_zone_data *zone, const char* start, const char* buffer, const char* filepath);
 	void (*zone_change2) (int m, struct map_zone_data *zone);
@@ -1286,6 +1294,7 @@ END_ZEROED_BLOCK;
 	int (*foreachinpath) (int (*func)(struct block_list*,va_list), int16 m, int16 x0, int16 y0, int16 x1, int16 y1, int16 range, int length, int type, ...);
 	int (*vforeachinmap) (int (*func)(struct block_list*,va_list), int16 m, int type, va_list args);
 	int (*foreachinmap) (int (*func)(struct block_list*,va_list), int16 m, int type, ...);
+	int (*forcountinmap) (int (*func)(struct block_list*,va_list), int16 m, int count, int type, ...);
 	int (*vforeachininstance)(int (*func)(struct block_list*,va_list), int16 instance_id, int type, va_list ap);
 	int (*foreachininstance)(int (*func)(struct block_list*,va_list), int16 instance_id, int type,...);
 

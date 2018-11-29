@@ -635,6 +635,18 @@ static int map_foreachinmap(int (*func)(struct block_list*, va_list), int16 m, i
 	return returnCount;
 }
 
+static int map_forcountinmap(int (*func)(struct block_list*, va_list), int16 m, int count, int type, ...)
+{
+	int returnCount;
+	va_list ap;
+
+	va_start(ap, type);
+	returnCount = map->vforcountinarea(func, m, 0, 0, map->list[m].bxs, map->list[m].bys, count, type, ap);
+	va_end(ap);
+
+	return returnCount;
+}
+
 /**
  * Applies func to every block_list object of bl_type type on all maps
  * of instance instance_id.
@@ -3695,7 +3707,7 @@ static void map_zonedb_reload(void)
 {
 	// first, reset maps to their initial zones:
 	for (int i = 0; i < map->count; i++) {
-		map->zone_remove(i);
+		map->zone_remove_all(i);
 
 		if (battle_config.pk_mode) {
 			map->list[i].flag.pvp = 1;
@@ -4668,6 +4680,27 @@ static void map_zone_remove(int m)
 		}
 
 		npc->parse_mapflag(map->list[m].name,empty,flag,params,empty,empty,empty, NULL);
+		aFree(map->list[m].zone_mf[k]);
+		map->list[m].zone_mf[k] = NULL;
+	}
+
+	aFree(map->list[m].zone_mf);
+	map->list[m].zone_mf = NULL;
+	map->list[m].zone_mf_count = 0;
+}
+// this one removes every flag, even if they were previously turned on before
+// the current zone was applied
+static void map_zone_remove_all(int m)
+{
+	Assert_retv(m >= 0 && m < map->count);
+
+	for (unsigned short k = 0; k < map->list[m].zone_mf_count; k++) {
+		char flag[MAP_ZONE_MAPFLAG_LENGTH];
+
+		memcpy(flag, map->list[m].zone_mf[k], MAP_ZONE_MAPFLAG_LENGTH);
+		strtok(flag, "\t");
+
+		npc->parse_mapflag(map->list[m].name, "", flag, "off", "", "", "", NULL);
 		aFree(map->list[m].zone_mf[k]);
 		map->list[m].zone_mf[k] = NULL;
 	}
@@ -6828,6 +6861,7 @@ void map_defaults(void)
 	/* funcs */
 	map->zone_init = map_zone_init;
 	map->zone_remove = map_zone_remove;
+	map->zone_remove_all = map_zone_remove_all;
 	map->zone_apply = map_zone_apply;
 	map->zone_change = map_zone_change;
 	map->zone_change2 = map_zone_change2;
@@ -6901,6 +6935,7 @@ void map_defaults(void)
 	map->foreachinpath = map_foreachinpath;
 	map->vforeachinmap = map_vforeachinmap;
 	map->foreachinmap = map_foreachinmap;
+	map->forcountinmap = map_forcountinmap;
 	map->vforeachininstance = map_vforeachininstance;
 	map->foreachininstance = map_foreachininstance;
 

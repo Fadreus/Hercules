@@ -3316,95 +3316,28 @@ static void set_reg_npcscope_str(struct script_state *st, struct reg_db *n, int6
 
 static void set_reg_pc_ref_str(struct script_state *st, struct reg_db *n, int64 num, const char *name, const char *str)
 {
-	struct script_reg_str *p = NULL;
-	unsigned int index = script_getvaridx(num);
+	struct DBIterator *iter = db_iterator(map->pc_db);
 
-	nullpo_retv(n);
-
-	if ((p = i64db_get(n->vars, num)) != NULL) {
-		if (str[0]) {
-			if (p->value) {
-				aFree(p->value);
-			} else if (index) {
-				script->array_update(n, num, false);
-			}
-			p->value = aStrdup(str);
-		} else {
-			p->value = NULL;
-			if (index) {
-				script->array_update(n, num, true);
-			}
-		}
-
-		if (!pc->reg_load) {
-			p->flag.update = 1;
-		}
-	} else if (str[0]) {
-		struct DBData prev;
-		if (index) {
-			script->array_update(n, num, false);
-		}
-
-		p = ers_alloc(pc->str_reg_ers, struct script_reg_str);
-		p->value = aStrdup(str);
-
-		if (!pc->reg_load) {
-			p->flag.update = 1;
-		}
-		p->flag.type = 1;
-
-		if(n->vars->put(n->vars, DB->i642key(num), DB->ptr2data(p), &prev)) {
-			p = DB->data2ptr(&prev);
-			if (p->value) {
-				aFree(p->value);
-			}
-			ers_free(pc->str_reg_ers, p);
+	for (struct map_session_data *sd = dbi_first(iter); dbi_exists(iter); sd = dbi_next(iter)) {
+		if (sd != NULL && n == &sd->regs) {
+			pc->setregistry_str(sd, num, str);
+			break;
 		}
 	}
+	dbi_destroy(iter);
 }
 
 static void set_reg_pc_ref_num(struct script_state *st, struct reg_db *n, int64 num, const char *name, int val)
 {
-	struct script_reg_num *p = NULL;
-	unsigned int index = script_getvaridx(num);
+	struct DBIterator *iter = db_iterator(map->pc_db);
 
-	nullpo_retv(n);
-
-	if ((p = i64db_get(n->vars, num)) != NULL) {
-		if (val) {
-			if (!p->value && index) {
-				script->array_update(n, num, false);
-			}
-			p->value = val;
-		} else {
-			p->value = 0;
-			if (index) {
-				script->array_update(n, num, true);
-			}
-		}
-
-		if (!pc->reg_load) {
-			p->flag.update = 1;
-		}
-	} else if (val) {
-		struct DBData prev;
-		if (index) {
-			script->array_update(n, num, false);
-		}
-
-		p = ers_alloc(pc->num_reg_ers, struct script_reg_num);
-		p->value = val;
-
-		if (!pc->reg_load) {
-			p->flag.update = 1;
-		}
-		p->flag.type = 1;
-
-		if(n->vars->put(n->vars, DB->i642key(num), DB->ptr2data(p), &prev)) {
-			p = DB->data2ptr(&prev);
-			ers_free(pc->num_reg_ers, p);
+	for (struct map_session_data *sd = dbi_first(iter); dbi_exists(iter); sd = dbi_next(iter)) {
+		if (sd != NULL && n == &sd->regs) {
+			pc->setregistry(sd, num, val);
+			break;
 		}
 	}
+	dbi_destroy(iter);
 }
 
 static void set_reg_npcscope_num(struct script_state *st, struct reg_db *n, int64 num, const char *name, int val)
@@ -5965,10 +5898,14 @@ static bool script_sprintf_helper(struct script_state *st, int start, struct Str
 static BUILDIN(mes)
 {
 	struct map_session_data *sd = script->rid2sd(st);
+
 	if (sd == NULL)
 		return true;
 
-	clif->scriptmes(sd, st->oid, script_getstr(st, 2));
+	if (script_hasdata(st, 2))
+		clif->scriptmes(sd, st->oid, script_getstr(st, 2));
+	else
+		clif->scriptmes(sd, st->oid, "");
 
 	return true;
 }
@@ -6162,11 +6099,11 @@ static BUILDIN(menu)
 		sd->state.menu_or_input = 1;
 
 		/* menus beyond this length crash the client (see bugreport:6402) */
-		if( StrBuf->Length(&buf) >= 2047 ) {
+		if( StrBuf->Length(&buf) >= MAX_MENU_LENGTH - 1 ) {
 			struct npc_data * nd = map->id2nd(st->oid);
 			char* menu;
-			CREATE(menu, char, 2048);
-			safestrncpy(menu, StrBuf->Value(&buf), 2047);
+			CREATE(menu, char, MAX_MENU_LENGTH);
+			safestrncpy(menu, StrBuf->Value(&buf), MAX_MENU_LENGTH - 1);
 			ShowWarning("NPC Menu too long! (source:%s / length:%d)\n",nd?nd->name:"Unknown",StrBuf->Length(&buf));
 			clif->scriptmenu(sd, st->oid, menu);
 			aFree(menu);
@@ -6175,13 +6112,13 @@ static BUILDIN(menu)
 
 		StrBuf->Destroy(&buf);
 
-		if( sd->npc_menu >= 0xff )
+		if( sd->npc_menu >= MAX_MENU_OPTIONS )
 		{// client supports only up to 254 entries; 0 is not used and 255 is reserved for cancel; excess entries are displayed but cause 'uint8' overflow
-			ShowWarning("buildin_menu: Too many options specified (current=%d, max=254).\n", sd->npc_menu);
+			ShowWarning("buildin_menu: Too many options specified (current=%d, max=%d).\n", sd->npc_menu, MAX_MENU_OPTIONS - 1);
 			script->reportsrc(st);
 		}
 	}
-	else if( sd->npc_menu == 0xff )
+	else if( sd->npc_menu == MAX_MENU_OPTIONS )
 	{// Cancel was pressed
 		sd->state.menu_or_input = 0;
 		st->state = END;
@@ -6263,11 +6200,11 @@ static BUILDIN(select)
 		sd->state.menu_or_input = 1;
 
 		/* menus beyond this length crash the client (see bugreport:6402) */
-		if( StrBuf->Length(&buf) >= 2047 ) {
+		if( StrBuf->Length(&buf) >= MAX_MENU_LENGTH - 1 ) {
 			struct npc_data * nd = map->id2nd(st->oid);
 			char* menu;
-			CREATE(menu, char, 2048);
-			safestrncpy(menu, StrBuf->Value(&buf), 2047);
+			CREATE(menu, char, MAX_MENU_LENGTH);
+			safestrncpy(menu, StrBuf->Value(&buf), MAX_MENU_LENGTH - 1);
 			ShowWarning("NPC Menu too long! (source:%s / length:%d)\n",nd?nd->name:"Unknown",StrBuf->Length(&buf));
 			clif->scriptmenu(sd, st->oid, menu);
 			aFree(menu);
@@ -6275,13 +6212,20 @@ static BUILDIN(select)
 			clif->scriptmenu(sd, st->oid, StrBuf->Value(&buf));
 		StrBuf->Destroy(&buf);
 
-		if( sd->npc_menu >= 0xff ) {
-			ShowWarning("buildin_select: Too many options specified (current=%d, max=254).\n", sd->npc_menu);
+		if( sd->npc_menu >= MAX_MENU_OPTIONS ) {
+			ShowWarning("buildin_select: Too many options specified (current=%d, max=%d).\n", sd->npc_menu, MAX_MENU_OPTIONS - 1);
 			script->reportsrc(st);
 		}
-	} else if( sd->npc_menu == 0xff ) {// Cancel was pressed
+	} else if(sd->npc_menu == MAX_MENU_OPTIONS) { // Cancel was pressed
 		sd->state.menu_or_input = 0;
-		st->state = END;
+
+		if (strncmp(get_buildin_name(st), "prompt", 6) == 0) {
+			pc->setreg(sd, script->add_variable("@menu"), MAX_MENU_OPTIONS);
+			script_pushint(st, MAX_MENU_OPTIONS); // XXX: we should really be pushing -1 instead
+			st->state = RUN;
+		} else {
+			st->state = END;
+		}
 	} else {// return selected option
 		int menu = 0;
 
@@ -6292,90 +6236,7 @@ static BUILDIN(select)
 			if( sd->npc_menu <= 0 )
 				break;// entry found
 		}
-		pc->setreg(sd, script->add_variable("@menu"), menu);
-		script_pushint(st, menu);
-		st->state = RUN;
-	}
-	return true;
-}
-
-/// Displays a menu with options and returns the selected option.
-/// Behaves like 'menu' without the target labels, except when cancel is
-/// pressed.
-/// When cancel is pressed, the script continues and 255 is returned.
-///
-/// prompt(<option_text>{,<option_text>,...}) -> <selected_option>
-///
-/// @see menu
-static BUILDIN(prompt)
-{
-	int i;
-	const char *text;
-	struct map_session_data *sd = script->rid2sd(st);
-	if (sd == NULL)
-		return true;
-
-#ifdef SECURE_NPCTIMEOUT
-	sd->npc_idle_type = NPCT_MENU;
-#endif
-
-	if( sd->state.menu_or_input == 0 )
-	{
-		struct StringBuf buf;
-
-		StrBuf->Init(&buf);
-		sd->npc_menu = 0;
-		for( i = 2; i <= script_lastdata(st); ++i )
-		{
-			text = script_getstr(st, i);
-			if( sd->npc_menu > 0 )
-				StrBuf->AppendStr(&buf, ":");
-			StrBuf->AppendStr(&buf, text);
-			sd->npc_menu += script->menu_countoptions(text, 0, NULL);
-		}
-
-		st->state = RERUNLINE;
-		sd->state.menu_or_input = 1;
-
-		/* menus beyond this length crash the client (see bugreport:6402) */
-		if( StrBuf->Length(&buf) >= 2047 ) {
-			struct npc_data * nd = map->id2nd(st->oid);
-			char* menu;
-			CREATE(menu, char, 2048);
-			safestrncpy(menu, StrBuf->Value(&buf), 2047);
-			ShowWarning("NPC Menu too long! (source:%s / length:%d)\n",nd?nd->name:"Unknown",StrBuf->Length(&buf));
-			clif->scriptmenu(sd, st->oid, menu);
-			aFree(menu);
-		} else
-			clif->scriptmenu(sd, st->oid, StrBuf->Value(&buf));
-		StrBuf->Destroy(&buf);
-
-		if( sd->npc_menu >= 0xff )
-		{
-			ShowWarning("buildin_prompt: Too many options specified (current=%d, max=254).\n", sd->npc_menu);
-			script->reportsrc(st);
-		}
-	}
-	else if( sd->npc_menu == 0xff )
-	{// Cancel was pressed
-		sd->state.menu_or_input = 0;
-		pc->setreg(sd, script->add_variable("@menu"), 0xff);
-		script_pushint(st, 0xff);
-		st->state = RUN;
-	}
-	else
-	{// return selected option
-		int menu = 0;
-
-		sd->state.menu_or_input = 0;
-		for( i = 2; i <= script_lastdata(st); ++i )
-		{
-			text = script_getstr(st, i);
-			sd->npc_menu -= script->menu_countoptions(text, sd->npc_menu, &menu);
-			if( sd->npc_menu <= 0 )
-				break;// entry found
-		}
-		pc->setreg(sd, script->add_variable("@menu"), menu);
+		pc->setreg(sd, script->add_variable("@menu"), menu); // TODO: throw a deprecation warning for scripts using @menu
 		script_pushint(st, menu);
 		st->state = RUN;
 	}
@@ -6994,7 +6855,7 @@ static BUILDIN(heal)
 
 	hp=script_getnum(st,2);
 	sp=script_getnum(st,3);
-	status->heal(&sd->bl, hp, sp, 1);
+	status->heal(&sd->bl, hp, sp, STATUS_HEAL_FORCED);
 	return true;
 }
 /*==========================================
@@ -8837,32 +8698,23 @@ static BUILDIN(getcharid)
 
 	return true;
 }
+
 /*==========================================
  * returns the GID of an NPC
  *------------------------------------------*/
 static BUILDIN(getnpcid)
 {
-	int num = script_getnum(st,2);
-	struct npc_data* nd = NULL;
-
-	if( script_hasdata(st,3) )
-	{// unique npc name
-		if( ( nd = npc->name2id(script_getstr(st,3)) ) == NULL )
-		{
-			ShowError("buildin_getnpcid: No such NPC '%s'.\n", script_getstr(st,3));
-			script_pushint(st,0);
-			return false;
+	if (script_hasdata(st, 2)) {
+		if (script_isinttype(st, 2)) {
+			// Deprecate old form - getnpcid(<type>{, <"npc name">})
+			ShowWarning("buildin_getnpcid: Use of type is deprecated. Format - getnpcid({<\"npc name\">})\n");
+			script_pushint(st, 0);
+		} else {
+			struct npc_data *nd = npc->name2id(script_getstr(st, 2));
+			script_pushint(st, (nd != NULL) ? nd->bl.id : 0);
 		}
-	}
-
-	switch (num) {
-		case 0:
-			script_pushint(st,nd ? nd->bl.id : st->oid);
-			break;
-		default:
-			ShowError("buildin_getnpcid: invalid parameter (%d).\n", num);
-			script_pushint(st,0);
-			return false;
+	} else {
+		script_pushint(st, st->oid);
 	}
 
 	return true;
@@ -9361,7 +9213,7 @@ static BUILDIN(repair)
 			if(num==repaircounter) {
 				sd->status.inventory[i].attribute |= ATTR_BROKEN;
 				sd->status.inventory[i].attribute ^= ATTR_BROKEN;
-				clif->equiplist(sd);
+				clif->equipList(sd);
 				clif->produce_effect(sd, 0, sd->status.inventory[i].nameid);
 				clif->misceffect(&sd->bl, 3);
 				break;
@@ -9398,7 +9250,7 @@ static BUILDIN(repairall)
 	if(repaircounter)
 	{
 		clif->misceffect(&sd->bl, 3);
-		clif->equiplist(sd);
+		clif->equipList(sd);
 	}
 
 	return true;
@@ -11439,7 +11291,7 @@ static int buildin_getunits_sub(struct block_list *bl, va_list ap)
 		(const void *)h64BPTRSIZE(bl->id), ref);
 
 	(*count)++;
-	return 0;
+	return 1;
 }
 
 static int buildin_getunits_sub_pc(struct map_session_data *sd, va_list ap)
@@ -11511,18 +11363,10 @@ static BUILDIN(getunits)
 			int16 x2 = script_getnum(st, 8);
 			int16 y2 = script_getnum(st, 9);
 
-			// FIXME: map_foreachinarea does NOT stop iterating when the callback
-			//        function returns -1. we still limit the array size, but
-			//        this doesn't break the loop. We need a foreach function
-			//        that behaves like map_foreachiddb, but for areas
-			map->foreachinarea(buildin_getunits_sub, m, x1, y1, x2, y2, type,
+			map->forcountinarea(buildin_getunits_sub, m, x1, y1, x2, y2, limit, type,
 				st, sd, id, start, &count, limit, name, ref, type);
 		} else {
-			// FIXME: map_foreachinmap does NOT stop iterating when the callback
-			//        function returns -1. we still limit the array size, but
-			//        this doesn't break the loop. We need a foreach function
-			//        that behaves like map_foreachiddb, but for maps
-			map->foreachinmap(buildin_getunits_sub, m, type,
+			map->forcountinmap(buildin_getunits_sub, m, limit, type,
 				st, sd, id, start, &count, limit, name, ref, type);
 		}
 	} else {
@@ -12331,7 +12175,9 @@ static BUILDIN(sc_end)
 		}
 
 		//This should help status_change_end force disabling the SC in case it has no limit.
-		sce->val1 = sce->val2 = sce->val3 = sce->val4 = 0;
+		if (type != SC_BERSERK)
+			sce->val1 = 0; // SC_BERSERK requires skill_lv that's stored in sce->val1 when being removed [KirieZ]
+		sce->val2 = sce->val3 = sce->val4 = 0;
 		status_change_end(bl, (sc_type)type, INVALID_TIMER);
 	}
 	else
@@ -14476,6 +14322,9 @@ static BUILDIN(getiteminfo)
 	case ITEMINFO_VIEWSPRITE:
 		script_pushint(st, it->view_sprite);
 		break;
+	case ITEMINFO_TRADE:
+		script_pushint(st, it->flag.trade_restriction);
+		break;
 	default:
 		ShowError("buildin_getiteminfo: Invalid item type %d.\n", n);
 		script_pushint(st,-1);
@@ -14741,6 +14590,9 @@ static BUILDIN(setiteminfo)
 		break;
 	case ITEMINFO_VIEWSPRITE:
 		it->view_sprite = value;
+		break;
+	case ITEMINFO_TRADE:
+		it->flag.trade_restriction = value;
 		break;
 	default:
 		ShowError("buildin_setiteminfo: invalid type %d.\n", n);
@@ -15420,6 +15272,50 @@ static BUILDIN(specialeffect2)
 
 	if (sd != NULL)
 		clif->specialeffect(&sd->bl, type, target);
+
+	return true;
+}
+
+static BUILDIN(removespecialeffect)
+{
+	struct block_list *bl = NULL;
+	int type = script_getnum(st, 2);
+	enum send_target target = AREA;
+
+	if (script_hasdata(st, 3)) {
+		target = script_getnum(st, 3);
+	}
+
+	if (script_hasdata(st, 4)) {
+		if (script_isstringtype(st, 4)) {
+			struct npc_data *nd = npc->name2id(script_getstr(st, 4));
+			if (nd != NULL) {
+				bl = &nd->bl;
+			}
+		} else {
+			bl = map->id2bl(script_getnum(st, 4));
+		}
+	} else {
+		bl = map->id2bl(st->oid);
+	}
+
+	if (bl == NULL) {
+		return true;
+	}
+
+	if (target == SELF) {
+		struct map_session_data *sd;
+		if (script_hasdata(st, 5)) {
+			sd = map->id2sd(script_getnum(st, 5));
+		} else {
+			sd = script->rid2sd(st);
+		}
+		if (sd != NULL) {
+			clif->removeSpecialEffect_single(bl, type, &sd->bl);
+		}
+	} else {
+		clif->removeSpecialEffect(bl, type, target);
+	}
 
 	return true;
 }
@@ -16812,6 +16708,63 @@ static BUILDIN(getdatatype)
 	return true;
 }
 
+static BUILDIN(data_to_string)
+{
+	if (script_hasdata(st, 2)) {
+		struct script_data *data = script_getdata(st, 2);
+
+		if (data_isstring(data)) {
+			script_pushcopy(st, 2);
+		} else if (data_isint(data)) {
+			char *str = NULL;
+
+			CREATE(str, char, 20);
+			safesnprintf(str, 20, "%"PRId64"", data->u.num);
+			script_pushstr(st, str);
+		} else if (data_islabel(data)) {
+			const char *str = "";
+
+			// XXX: because all we have is the label pos we can't be sure which
+			//      one is the correct label if more than one has the same pos.
+			//      We might want to store both the pos and str_data index in
+			//      data->u.num, similar to how C_NAME stores both the array
+			//      index and str_data index in u.num with bitmasking. This
+			//      would also avoid the awkward for() loops as we could
+			//      directly access the string with script->get_str().
+
+			if (st->oid) {
+				struct npc_data *nd = map->id2nd(st->oid);
+
+				for (int i = 0; i < nd->u.scr.label_list_num; ++i) {
+					if (nd->u.scr.label_list[i].pos == data->u.num) {
+						str = nd->u.scr.label_list[i].name;
+						break;
+					}
+				}
+			} else {
+				for (int i = LABEL_START; script->str_data[i].next != 0; i = script->str_data[i].next) {
+					if (script->str_data[i].label == data->u.num) {
+						str = script->get_str(i);
+						break;
+					}
+				}
+			}
+
+			script_pushconststr(st, str);
+		} else if (data_isreference(data)) {
+			script_pushstrcopy(st, reference_getname(data));
+		} else {
+			ShowWarning("script:data_to_string: unknown data type!\n");
+			script->reportdata(data);
+			script_pushconststr(st, "");
+		}
+	} else {
+		script_pushconststr(st, ""); // NIL
+	}
+
+	return true;
+}
+
 //=======================================================
 // chr <int>
 //-------------------------------------------------------
@@ -17866,7 +17819,9 @@ static BUILDIN(getd)
 
 	id = script->add_variable(varname);
 
-	if (script->str_data[id].type != C_NAME) {
+	if (script->str_data[id].type != C_NAME && // variable
+		script->str_data[id].type != C_PARAM && // param
+		script->str_data[id].type != C_INT) { // constant
 		ShowError("script:getd: `%s` is already used by something that is not a variable.\n", varname);
 		st->state = END;
 		return false;
@@ -18826,7 +18781,7 @@ static BUILDIN(setunitdata)
 			md->level = val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			clif->charnameack(0, &md->bl);
 			break;
 		case UDT_MAXHP:
@@ -18834,7 +18789,7 @@ static BUILDIN(setunitdata)
 			clif->charnameack(0, &md->bl);
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			md->status.max_sp = (unsigned int) val;
@@ -18995,13 +18950,13 @@ static BUILDIN(setunitdata)
 			hd->homunculus.level = (short) val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXHP:
 			hd->homunculus.max_hp = val;
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			hd->homunculus.max_sp = val;
@@ -19134,13 +19089,13 @@ static BUILDIN(setunitdata)
 			pd->pet.level = (short) val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXHP:
 			pd->status.max_hp = (unsigned int) val;
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			pd->status.max_sp = (unsigned int) val;
@@ -19268,13 +19223,13 @@ static BUILDIN(setunitdata)
 			mc->base_status.size = (unsigned char) val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXHP:
 			mc->base_status.max_hp = (unsigned int) val;
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			mc->base_status.max_sp = (unsigned int) val;
@@ -19402,13 +19357,13 @@ static BUILDIN(setunitdata)
 			ed->base_status.size = (unsigned char) val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXHP:
 			ed->base_status.max_hp = (unsigned int) val;
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			ed->base_status.max_sp = (unsigned int) val;
@@ -19534,13 +19489,13 @@ static BUILDIN(setunitdata)
 			nd->level = (unsigned short) val;
 			break;
 		case UDT_HP:
-			status->set_hp(bl, (unsigned int) val, 0);
+			status->set_hp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXHP:
 			nd->status.max_hp = (unsigned int) val;
 			break;
 		case UDT_SP:
-			status->set_sp(bl, (unsigned int) val, 0);
+			status->set_sp(bl, (unsigned int) val, STATUS_HEAL_DEFAULT);
 			break;
 		case UDT_MAXSP:
 			nd->status.max_sp = (unsigned int) val;
@@ -20694,7 +20649,7 @@ static BUILDIN(getvariableofpc)
 	}
 
 	if (!sd->regs.vars)
-		sd->regs.vars = i64db_alloc(DB_OPT_RELEASE_DATA);
+		sd->regs.vars = i64db_alloc(DB_OPT_BASE);
 
 	script->push_val(st->stack, C_NAME, reference_getuid(data), &sd->regs);
 	return true;
@@ -20851,7 +20806,7 @@ static BUILDIN(mercenary_heal)
 	hp = script_getnum(st,2);
 	sp = script_getnum(st,3);
 
-	status->heal(&sd->md->bl, hp, sp, 0);
+	status->heal(&sd->md->bl, hp, sp, STATUS_HEAL_DEFAULT);
 	return true;
 }
 
@@ -21114,17 +21069,26 @@ static BUILDIN(setquestinfo)
 	}
 	case QINFO_ITEM:
 	{
-		struct item item = { 0 };
+		struct questinfo_itemreq item = { 0 };
 
 		item.nameid = script_getnum(st, 3);
-		item.amount = script_getnum(st, 4);
+		item.min = script_hasdata(st, 4) ? script_getnum(st, 4) : 0;
+		item.max = script_hasdata(st, 5) ? script_getnum(st, 5) : 0;
 
 		if (itemdb->exists(item.nameid) == NULL) {
 			ShowWarning("buildin_setquestinfo: non existing item (%d) have been given.\n", item.nameid);
 			return false;
 		}
-		if (item.amount <= 0 || item.amount > MAX_AMOUNT) {
-			ShowWarning("buildin_setquestinfo: given amount (%d) must be bigger than 0 and smaller than %d.\n", item.amount, MAX_AMOUNT + 1);
+		if (item.min > item.max) {
+			ShowWarning("buildin_setquestinfo: minimal amount (%d) is bigger than the maximal amount (%d).\n", item.min, item.max);
+			return false;
+		}
+		if (item.min < 0 || item.min > MAX_AMOUNT) {
+			ShowWarning("buildin_setquestinfo: given amount (%d) must be bigger than or equal to 0 and smaller than %d.\n", item.min, MAX_AMOUNT + 1);
+			return false;
+		}
+		if (item.max < 0 || item.max > MAX_AMOUNT) {
+			ShowWarning("buildin_setquestinfo: given amount (%d) must be bigger than or equal to 0 and smaller than %d.\n", item.max, MAX_AMOUNT + 1);
 			return false;
 		}
 		if (VECTOR_LENGTH(qi->items) == 0)
@@ -21175,6 +21139,17 @@ static BUILDIN(setquestinfo)
 			VECTOR_INIT(qi->quest_requirement);
 		VECTOR_ENSURE(qi->quest_requirement, 1, 1);
 		VECTOR_PUSH(qi->quest_requirement, quest_req);
+		break;
+	}
+	case QINFO_MERCENARY_CLASS:
+	{
+		int mer_class = script_getnum(st, 3);
+
+		if (!mercenary->class(mer_class)) {
+			ShowWarning("buildin_setquestinfo: invalid mercenary class given (%d).\n", mer_class);
+			return false;
+		}
+		qi->mercenary_class = mer_class;
 		break;
 	}
 	default:
@@ -21330,18 +21305,7 @@ static BUILDIN(showevent)
 		}
 	}
 
-#if PACKETVER >= 20170315
-	if (icon < 0 || (icon > 10 && icon != 9999))
-		icon = 9999;
-#elif PACKETVER >= 20120410
-	if (icon < 0 || (icon > 8 && icon != 9999) || icon == 7)
-		icon = 9999; // Default to nothing if icon id is invalid.
-#else
-	if (icon < 0 || icon > 7)
-		icon = 0;
-	else
-		icon = icon + 1;
-#endif
+	icon = quest->questinfo_validate_icon(icon);
 
 	clif->quest_show_event(sd, &nd->bl, icon, color);
 	return true;
@@ -24790,6 +24754,42 @@ static BUILDIN(msgtable2)
 	return true;
 }
 
+// show/hide camera info
+static BUILDIN(camerainfo)
+{
+	struct map_session_data *sd = script_rid2sd(st);
+	if (sd == NULL)
+		return false;
+
+	clif->camera_showWindow(sd);
+	return true;
+}
+
+// allow change some camera parameters
+static BUILDIN(changecamera)
+{
+	struct map_session_data *sd = script_rid2sd(st);
+	if (sd == NULL)
+		return false;
+
+	enum send_target target = SELF;
+	if (script_hasdata(st, 5)) {
+		target = script_getnum(st, 5);
+	}
+	clif->camera_change(sd, (float)script_getnum(st, 2), (float)script_getnum(st, 3), (float)script_getnum(st, 4), target);
+	return true;
+}
+
+// update preview window to given item
+static BUILDIN(itempreview)
+{
+	struct map_session_data *sd = script_rid2sd(st);
+	if (sd == NULL)
+		return false;
+	clif->item_preview(sd, script_getnum(st, 2));
+	return true;
+}
+
 /**
  * Adds a built-in script function.
  *
@@ -24951,14 +24951,14 @@ static void script_parse_builtin(void)
 		BUILDIN_DEF(__setr,"rv?"),
 
 		// NPC interaction
-		BUILDIN_DEF(mes,"s"),
-		BUILDIN_DEF(mesf,"s*"),
+		BUILDIN_DEF(mes, "?"),
+		BUILDIN_DEF(mesf, "s*"),
 		BUILDIN_DEF(next,""),
 		BUILDIN_DEF(close,""),
 		BUILDIN_DEF(close2,""),
 		BUILDIN_DEF(menu,"sl*"),
 		BUILDIN_DEF(select,"s*"), //for future jA script compatibility
-		BUILDIN_DEF(prompt,"s*"),
+		BUILDIN_DEF2(select, "prompt", "s*"),
 		//
 		BUILDIN_DEF(goto,"l"),
 		BUILDIN_DEF(callsub,"l*"),
@@ -25007,7 +25007,7 @@ static void script_parse_builtin(void)
 		BUILDIN_DEF(readparam,"i?"),
 		BUILDIN_DEF(setparam,"ii?"),
 		BUILDIN_DEF(getcharid,"i?"),
-		BUILDIN_DEF(getnpcid,"i?"),
+		BUILDIN_DEF(getnpcid, "?"),
 		BUILDIN_DEF(getpartyname,"i"),
 		BUILDIN_DEF(getpartymember,"i?"),
 		BUILDIN_DEF(getpartyleader,"i?"),
@@ -25186,6 +25186,7 @@ static void script_parse_builtin(void)
 		BUILDIN_DEF(skilleffect,"vi"), // skill effect [Celest]
 		BUILDIN_DEF(npcskilleffect,"viii"), // npc skill effect [Valaris]
 		BUILDIN_DEF(specialeffect,"i???"), // npc skill effect [Valaris]
+		BUILDIN_DEF(removespecialeffect,"i???"),
 		BUILDIN_DEF_DEPRECATED(specialeffect2,"i??"), // skill effect on players[Valaris]
 		BUILDIN_DEF(nude,""), // nude command [Valaris]
 		BUILDIN_DEF(mapwarp,"ssii??"), // Added by RoVeRT
@@ -25238,6 +25239,8 @@ static void script_parse_builtin(void)
 		BUILDIN_DEF(charat,"si"),
 		BUILDIN_DEF(isstr,"v"),
 		BUILDIN_DEF(getdatatype, "?"),
+		BUILDIN_DEF(data_to_string, "?"),
+		BUILDIN_DEF2(getd, "string_to_data", "?"),
 		BUILDIN_DEF(chr,"i"),
 		BUILDIN_DEF(ord,"s"),
 		BUILDIN_DEF(setchar,"ssi"),
@@ -25447,7 +25450,7 @@ static void script_parse_builtin(void)
 
 		//Quest Log System [Inkfish]
 		BUILDIN_DEF(questinfo, "i?"),
-		BUILDIN_DEF(setquestinfo, "i??"),
+		BUILDIN_DEF(setquestinfo, "i???"),
 		BUILDIN_DEF(setquest, "i?"),
 		BUILDIN_DEF(erasequest, "i?"),
 		BUILDIN_DEF(completequest, "i?"),
@@ -25519,6 +25522,12 @@ static void script_parse_builtin(void)
 
 		// -- HatEffect
 		BUILDIN_DEF(hateffect, "ii"),
+
+		// camera
+		BUILDIN_DEF(camerainfo, ""),
+		BUILDIN_DEF(changecamera, "iii?"),
+
+		BUILDIN_DEF(itempreview, "i"),
 	};
 	int i, len = ARRAYLENGTH(BUILDIN);
 	RECREATE(script->buildin, char *, script->buildin_count + len); // Pre-alloc to speed up
@@ -25565,6 +25574,8 @@ static void script_hardcoded_constants(void)
 	script->set_constant("MAX_BG_MEMBERS",MAX_BG_MEMBERS,false, false);
 	script->set_constant("MAX_CHAT_USERS",MAX_CHAT_USERS,false, false);
 	script->set_constant("MAX_REFINE",MAX_REFINE,false, false);
+	script->set_constant("MAX_MENU_OPTIONS", MAX_MENU_OPTIONS, false, false);
+	script->set_constant("MAX_MENU_LENGTH", MAX_MENU_LENGTH, false, false);
 
 	script->constdb_comment("status options");
 	script->set_constant("Option_Nothing",OPTION_NOTHING,false, false);
@@ -25834,6 +25845,7 @@ static void script_hardcoded_constants(void)
 	script->set_constant("ITEMINFO_VIEWID", ITEMINFO_VIEWID, false, false);
 	script->set_constant("ITEMINFO_MATK", ITEMINFO_MATK, false, false);
 	script->set_constant("ITEMINFO_VIEWSPRITE", ITEMINFO_VIEWSPRITE, false, false);
+	script->set_constant("ITEMINFO_TRADE", ITEMINFO_TRADE, false, false);
 
 	script->constdb_comment("monster skill states");
 	script->set_constant("MSS_ANY", MSS_ANY, false, false);
@@ -25917,12 +25929,27 @@ static void script_hardcoded_constants(void)
 	script->set_constant("QINFO_HOMUN_LEVEL", QINFO_HOMUN_LEVEL, false, false);
 	script->set_constant("QINFO_HOMUN_TYPE", QINFO_HOMUN_TYPE, false, false);
 	script->set_constant("QINFO_QUEST", QINFO_QUEST, false, false);
+	script->set_constant("QINFO_MERCENARY_CLASS", QINFO_MERCENARY_CLASS, false, false);
 
 	script->constdb_comment("function types");
 	script->set_constant("FUNCTION_IS_COMMAND", FUNCTION_IS_COMMAND, false, false);
 	script->set_constant("FUNCTION_IS_GLOBAL", FUNCTION_IS_GLOBAL, false, false);
 	script->set_constant("FUNCTION_IS_LOCAL", FUNCTION_IS_LOCAL, false, false);
 	script->set_constant("FUNCTION_IS_LABEL", FUNCTION_IS_LABEL, false, false);
+
+	script->constdb_comment("item trade restrictions");
+	script->set_constant("ITR_NONE", ITR_NONE, false, false);
+	script->set_constant("ITR_NODROP", ITR_NODROP, false, false);
+	script->set_constant("ITR_NOTRADE", ITR_NOTRADE, false, false);
+	script->set_constant("ITR_PARTNEROVERRIDE", ITR_PARTNEROVERRIDE, false, false);
+	script->set_constant("ITR_NOSELLTONPC", ITR_NOSELLTONPC, false, false);
+	script->set_constant("ITR_NOCART", ITR_NOCART, false, false);
+	script->set_constant("ITR_NOSTORAGE", ITR_NOSTORAGE, false, false);
+	script->set_constant("ITR_NOGSTORAGE", ITR_NOGSTORAGE, false, false);
+	script->set_constant("ITR_NOMAIL", ITR_NOMAIL, false, false);
+	script->set_constant("ITR_NOAUCTION", ITR_NOAUCTION, false, false);
+	script->set_constant("ITR_ALL", ITR_ALL, false, false);
+
 
 	script->constdb_comment("Renewal");
 #ifdef RENEWAL

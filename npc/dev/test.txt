@@ -651,6 +651,12 @@ function	script	HerculesSelfTestHelper	{
 	setd(".@x", getd(".@y"));
 	callsub(OnCheck, "setd getd", .@x, .@y);
 
+	// getd types
+	callsub(OnCheck, "Getdatatype (getd: param)",          getdatatype(getd("Hp")), DATATYPE_INT | DATATYPE_PARAM);
+	callsub(OnCheck, "Getdatatype (getd: const)",          getdatatype(getd("DATATYPE_CONST")), DATATYPE_INT | DATATYPE_CONST);
+	callsub(OnCheck, "Getdatatype (getd: numeric var)",    getdatatype(getd(".@foo")), DATATYPE_INT | DATATYPE_VAR);
+	callsub(OnCheck, "Getdatatype (getd: string var)",     getdatatype(getd(".@foo$")), DATATYPE_STR | DATATYPE_VAR);
+
 	// getvariableofnpc
 	.x = 2;
 	set getvariableofnpc(.x, "TestVarOfAnotherNPC"), 1;
@@ -768,6 +774,16 @@ function	script	HerculesSelfTestHelper	{
 	callsub(OnCheck, "Getdatatype (getarg default value)", callsub(OnTestGetdatatypeDefault), DATATYPE_INT);
 	callsub(OnCheck, "Getdatatype (getarg integer value)", callsub(OnTestGetdatatype, 5), DATATYPE_INT);
 	callsub(OnCheck, "Getdatatype (getarg string)",        callsub(OnTestGetdatatype, "foo"), DATATYPE_STR | DATATYPE_CONST);
+
+	callsub(OnCheck, "data_to_string (NIL)",              data_to_string(), "");
+	callsub(OnCheck, "data_to_string (empty string)",     data_to_string(""), "");
+	callsub(OnCheck, "data_to_string (string)",           data_to_string("foo"), "foo");
+	callsub(OnCheck, "data_to_string (integer)",          data_to_string(5), "5");
+	callsub(OnCheck, "data_to_string (parameter)",        data_to_string(Hp), "Hp");
+	callsub(OnCheck, "data_to_string (constant)",         data_to_string(DATATYPE_CONST), "DATATYPE_CONST");
+	callsub(OnCheck, "data_to_string (label)",            data_to_string(OnTestGetdatatype), "OnTestGetdatatype");
+	callsub(OnCheck, "data_to_string (string variable)",  data_to_string(.@x$), ".@x$");
+	callsub(OnCheck, "data_to_string (integer variable)", data_to_string(.@x), ".@x");
 
 	if (.errors) {
 		debugmes "Script engine self-test   [ \033[0;31mFAILED\033[0m ]";

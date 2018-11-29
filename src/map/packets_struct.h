@@ -25,11 +25,14 @@
 
 #include "common/cbasetypes.h"
 #include "common/mmo.h"
+#include "common/packetsstatic_len.h"
 
 // Packet DB
-#define MIN_PACKET_DB 0x0064
-#define MAX_PACKET_DB 0x0F00
 #define MAX_PACKET_POS 20
+
+#define DEFINE_PACKET_HEADER(name, id) \
+	STATIC_ASSERT(sizeof(struct PACKET_##name) == PACKET_LEN_##id, "Wrong size PACKET_"#name); \
+	enum { HEADER_##name = id };
 
 /**
  *
@@ -198,7 +201,9 @@ enum packet_headers {
 #else
 	dropflooritemType = 0x9e,
 #endif
-#if PACKETVER >= 20120925
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	inventorylistnormalType = 0xb09,
+#elif PACKETVER >= 20120925
 	inventorylistnormalType = 0x991,
 #elif PACKETVER >= 20080102
 	inventorylistnormalType = 0x2e8,
@@ -207,7 +212,9 @@ enum packet_headers {
 #else
 	inventorylistnormalType = 0xa3,
 #endif
-#if PACKETVER >= 20150226
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	inventorylistequipType = 0xb0a,
+#elif PACKETVER >= 20150226
 	inventorylistequipType = 0xa0d,
 #elif PACKETVER >= 20120925
 	inventorylistequipType = 0x992,
@@ -218,27 +225,33 @@ enum packet_headers {
 #else
 	inventorylistequipType = 0xa4,
 #endif
-#if PACKETVER >= 20120925
-	storagelistnormalType = 0x995,
-#elif PACKETVER >= 20080102
-	storagelistnormalType = 0x2ea,
-#elif PACKETVER >= 20071002
-	storagelistnormalType = 0x295,
-#else
-	storagelistnormalType = 0xa5,
-#endif
-#if PACKETVER >= 20150226
-	storagelistequipType = 0xa10,
+#if PACKETVER_RE_NUM >= 20180829 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	storageListNormalType = 0xb09,
 #elif PACKETVER >= 20120925
-	storagelistequipType = 0x996,
+	storageListNormalType = 0x995,
 #elif PACKETVER >= 20080102
-	storagelistequipType = 0x2d1,
+	storageListNormalType = 0x2ea,
 #elif PACKETVER >= 20071002
-	storagelistequipType = 0x296,
+	storageListNormalType = 0x295,
 #else
-	storagelistequipType = 0xa6,
+	storageListNormalType = 0xa5,
 #endif
-#if PACKETVER >= 20120925
+#if PACKETVER_RE_NUM >= 20180829 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	storageListEquipType = 0xb0a,
+#elif PACKETVER >= 20150226
+	storageListEquipType = 0xa10,
+#elif PACKETVER >= 20120925
+	storageListEquipType = 0x996,
+#elif PACKETVER >= 20080102
+	storageListEquipType = 0x2d1,
+#elif PACKETVER >= 20071002
+	storageListEquipType = 0x296,
+#else
+	storageListEquipType = 0xa6,
+#endif
+#if PACKETVER_RE_NUM >= 20180829 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	cartlistnormalType = 0xb09,
+#elif PACKETVER >= 20120925
 	cartlistnormalType = 0x993,
 #elif PACKETVER >= 20080102
 	cartlistnormalType = 0x2e9,
@@ -247,7 +260,9 @@ enum packet_headers {
 #else
 	cartlistnormalType = 0x123,
 #endif
-#if PACKETVER >= 20150226
+#if PACKETVER_RE_NUM >= 20180829 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	cartlistequipType = 0xb0a,
+#elif PACKETVER >= 20150226
 	cartlistequipType = 0xa0f,
 #elif PACKETVER >= 20120925
 	cartlistequipType = 0x994,
@@ -312,7 +327,9 @@ enum packet_headers {
 	achievementUpdateType = 0xa24,
 	achievementRewardAckType = 0xa26,
 #endif // PACKETVER >= 20141016
-#if PACKETVER >= 20150513  // [4144] 0x09f8 handling in client from 2014-10-29aRagexe and 2014-03-26cRagexeRE
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	questListType = 0xaff, ///< ZC_ALL_QUEST_LIST4
+#elif PACKETVER >= 20150513  // [4144] 0x09f8 handling in client from 2014-10-29aRagexe and 2014-03-26cRagexeRE
 	questListType = 0x9f8, ///< ZC_ALL_QUEST_LIST3
 #elif PACKETVER >= 20141022
 	questListType = 0x97a, ///< ZC_ALL_QUEST_LIST2
@@ -366,12 +383,16 @@ enum packet_headers {
 	clanLeave = 0x0989, ///< ZC_ACK_CLAN_LEAVE
 	clanMessage = 0x098E, ///< ZC_NOTIFY_CLAN_CHAT
 #endif
-#if PACKETVER >= 20150513 // [4144] 0x09f9 handled in client from 2014-10-29aRagexe and 2014-03-26cRagexeRE
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	questAddType = 0xb0c,
+#elif PACKETVER >= 20150513 // [4144] 0x09f9 handled in client from 2014-10-29aRagexe and 2014-03-26cRagexeRE
 	questAddType = 0x9f9,
 #else
 	questAddType = 0x2b3,
 #endif // PACKETVER < 20150513
-#if PACKETVER >= 20150513
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	questUpdateType = 0xafe,
+#elif PACKETVER >= 20150513
 	questUpdateType = 0x9fa,
 #else
 	questUpdateType = 0x2b5,
@@ -432,6 +453,11 @@ enum packet_headers {
 	guildLeave = 0xa83,
 #else
 	guildLeave = 0x15a,
+#endif
+#if PACKETVER_RE_NUM >= 20181031
+	autoSpellList = 0xafb,
+#else
+	autoSpellList = 0x1cd,
 #endif
 };
 
@@ -1162,28 +1188,63 @@ struct packet_roulette_itemrecv_ack {
 struct packet_itemlist_normal {
 	int16 PacketType;
 	int16 PacketLength;
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
 	struct NORMALITEM_INFO list[MAX_ITEMLIST];
 } __attribute__((packed));
 
 struct packet_itemlist_equip {
 	int16 PacketType;
 	int16 PacketLength;
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
 	struct EQUIPITEM_INFO list[MAX_ITEMLIST];
 } __attribute__((packed));
 
-struct packet_storelist_normal {
+struct ZC_STORE_ITEMLIST_NORMAL {
 	int16 PacketType;
 	int16 PacketLength;
-#if PACKETVER >= 20120925
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
+#if PACKETVER >= 20120925 && PACKETVER_RE_NUM < 20180829 && PACKETVER_ZERO_NUM < 20180919 && PACKETVER_MAIN_NUM < 20181002
 	char name[NAME_LENGTH];
 #endif
 	struct NORMALITEM_INFO list[MAX_ITEMLIST];
 } __attribute__((packed));
 
-struct packet_storelist_equip {
+struct ZC_INVENTORY_START {
+	int16 packetType;
+#if PACKETVER_RE_NUM >= 20180919 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	int16 packetLength;
+#endif
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
+#if PACKETVER_RE_NUM >= 20180919 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	char name[];
+#else
+	char name[NAME_LENGTH];
+#endif
+} __attribute__((packed));
+
+struct ZC_INVENTORY_END {
+	int16 packetType;
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
+	char flag;
+} __attribute__((packed));
+
+struct ZC_STORE_ITEMLIST_EQUIP {
 	int16 PacketType;
 	int16 PacketLength;
-#if PACKETVER >= 20120925
+#if PACKETVER_RE_NUM >= 20180912 || PACKETVER_ZERO_NUM >= 20180919 || PACKETVER_MAIN_NUM >= 20181002
+	uint8 invType;
+#endif
+#if PACKETVER >= 20120925 && PACKETVER_RE_NUM < 20180829 && PACKETVER_ZERO_NUM < 20180919 && PACKETVER_MAIN_NUM < 20181002
 	char name[NAME_LENGTH];
 #endif
 	struct EQUIPITEM_INFO list[MAX_ITEMLIST];
@@ -1402,7 +1463,11 @@ struct packet_hotkey {
  * MISSION_HUNT_INFO_EX (PACKETVER >= 20150513)
  */
 struct packet_mission_info_sub {
-#if PACKETVER >= 20150513
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	uint32 huntIdent;
+	uint32 huntIdent2;
+	uint32 mobType;
+#elif PACKETVER >= 20150513
 	uint32 huntIdent;
 	uint32 mobType;
 #endif
@@ -1772,7 +1837,11 @@ struct PACKET_ZC_NOTIFY_CLAN_CHAT {
  * PACKET_ZC_MISSION_HUNT_EX (PACKETVER >= 20150513)
  */
 struct packet_quest_hunt_sub {
-#if PACKETVER >= 20150513
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	uint32 huntIdent;
+	uint32 huntIdent2;
+	uint32 mobType;
+#elif PACKETVER >= 20150513
 	uint32 huntIdent;
 	uint32 mobType;
 #endif
@@ -1806,7 +1875,10 @@ struct packet_quest_add_header {
  */
 struct packet_quest_update_hunt {
 	uint32 questID;
-#if PACKETVER >= 20150513
+#if PACKETVER_ZERO_NUM >= 20181010 || PACKETVER >= 20181017
+	uint32 huntIdent;
+	uint32 huntIdent2;
+#elif PACKETVER >= 20150513
 	uint32 huntIdent;
 #else
 	uint32 mob_id;
@@ -1859,7 +1931,9 @@ struct PACKET_ZC_FORMATSTRING_MSG_COLOR {
 	uint16 PacketType;
 	uint16 PacketLength;
 	uint16 messageId;
+#if PACKETVER >= 20160406
 	uint32 color;
+#endif
 	char messageString[];
 } __attribute__((packed));
 
@@ -2227,8 +2301,13 @@ struct PACKET_ZC_PROPERTY_HOMUN {
 	uint16 mdef;
 	uint16 flee;
 	uint16 amotion;
+#if PACKETVER < 20150513
+	uint16 hp;
+	uint16 maxHp;
+#else
 	uint32 hp;
 	uint32 maxHp;
+#endif
 	uint16 sp;
 	uint16 maxSp;
 	uint32 exp;
@@ -2675,7 +2754,7 @@ struct packet_achievement_update {
 
 struct packet_achievement_reward_ack {
 	uint16 packet_id;
-	uint8 received;
+	uint8 failed;
 	uint32 ach_id;
 } __attribute__((packed));
 
@@ -2783,6 +2862,66 @@ struct PACKET_ZC_ACK_LEAVE_GUILD2 {
 	uint32 GID;
 	char reason[40];
 } __attribute__((packed));
+
+struct PACKET_CZ_MEMORIALDUNGEON_COMMAND {
+	int16 packetType;
+	int32 command;
+} __attribute__((packed));
+
+struct PACKET_ZC_REMOVE_EFFECT {
+	int16 packetType;
+	uint32 aid;
+	uint32 effectId;
+} __attribute__((packed));
+
+struct PACKET_ZC_CAMERA_INFO {
+	int16 packetType;
+	int8 action;
+	float range;
+	float rotation;
+	float latitude;
+} __attribute__((packed));
+
+#if PACKETVER_RE_NUM >= 20181031
+#define PACKET_ZC_AUTOSPELLLIST PACKET_ZC_AUTOSPELLLIST2
+#else
+#define PACKET_ZC_AUTOSPELLLIST PACKET_ZC_AUTOSPELLLIST1
+#endif
+
+struct PACKET_ZC_AUTOSPELLLIST1 {
+	int16 packetType;
+	int skills[7];
+} __attribute__((packed));
+
+struct PACKET_ZC_AUTOSPELLLIST2 {
+	int16 packetType;
+	int16 packetLength;
+	int skills[];
+} __attribute__((packed));
+
+#if PACKETVER_MAIN_NUM >= 20170726 || PACKETVER_RE_NUM >= 20170621 || defined(PACKETVER_ZERO)
+#if PACKETVER_MAIN_NUM >= 20181017 || PACKETVER_RE_NUM >= 20181017 || PACKETVER_ZERO_NUM >= 20181024
+struct PACKET_ZC_ITEM_PREVIEW {
+	int16 packetType;
+	int16 index;
+	int8 isDamaged;
+	int16 refiningLevel;
+	struct EQUIPSLOTINFO slot;
+	struct ItemOptions option_data[MAX_ITEM_OPTIONS];
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(ZC_ITEM_PREVIEW, 0x0b13);
+#else  // PACKETVER_MAIN_NUM >= 20181017 || PACKETVER_RE_NUM >= 20181017 || PACKETVER_ZERO_NUM >= 20181024
+
+struct PACKET_ZC_ITEM_PREVIEW {
+	int16 packetType;
+	int16 index;
+	int16 refiningLevel;
+	struct EQUIPSLOTINFO slot;
+	struct ItemOptions option_data[MAX_ITEM_OPTIONS];
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(ZC_ITEM_PREVIEW, 0x0ab9);
+#endif  // PACKETVER_MAIN_NUM >= 20181017 || PACKETVER_RE_NUM >= 20181017 || PACKETVER_ZERO_NUM >= 20181024
+#endif  // PACKETVER_MAIN_NUM >= 20170726 || PACKETVER_RE_NUM >= 20170621 || defined(PACKETVER_ZERO)
 
 #if !defined(sun) && (!defined(__NETBSD__) || __NetBSD_Version__ >= 600000000) // NetBSD 5 and Solaris don't like pragma pack but accept the packed attribute
 #pragma pack(pop)

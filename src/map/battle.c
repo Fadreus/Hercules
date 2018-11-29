@@ -1365,24 +1365,28 @@ static int64 battle_calc_defense(int attack_type, struct block_list *src, struct
 #endif
 			}
 
-			if( battle_config.vit_penalty_type && battle_config.vit_penalty_target&target->type ) {
-				unsigned char target_count; //256 max targets should be a sane max
-				target_count = unit->counttargeted(target);
-				if(target_count >= battle_config.vit_penalty_count) {
-					if(battle_config.vit_penalty_type == 1) {
-						if( !tsc || !tsc->data[SC_STEELBODY] )
-							def1 = (def1 * (100 - (target_count - (battle_config.vit_penalty_count - 1))*battle_config.vit_penalty_num))/100;
-						def2 = (def2 * (100 - (target_count - (battle_config.vit_penalty_count - 1))*battle_config.vit_penalty_num))/100;
-					} else { //Assume type 2
-						if( !tsc || !tsc->data[SC_STEELBODY] )
-							def1 -= (target_count - (battle_config.vit_penalty_count - 1))*battle_config.vit_penalty_num;
-						def2 -= (target_count - (battle_config.vit_penalty_count - 1))*battle_config.vit_penalty_num;
+			if (battle_config.vit_penalty_type != 0 && (battle_config.vit_penalty_target & target->type) != 0) {
+				int target_count = unit->counttargeted(target);
+				if (target_count >= battle_config.vit_penalty_count) {
+					int penalty = (target_count - (battle_config.vit_penalty_count - 1)) * battle_config.vit_penalty_num;
+					if (battle_config.vit_penalty_type == 1) {
+						if (tsc == NULL || tsc->data[SC_STEELBODY] == NULL)
+							def1 = def1 * (100 - penalty) / 100;
+						def2 = def2 * (100 - penalty) / 100;
+					} else { // Assume type 2
+						if (tsc == NULL || tsc->data[SC_STEELBODY] == NULL)
+							def1 -= penalty;
+						def2 -= penalty;
 					}
 				}
 #ifndef RENEWAL
-				if(skill_id == AM_ACIDTERROR) def1 = 0; //Acid Terror ignores only armor defense. [Skotlex]
+				if (skill_id == AM_ACIDTERROR)
+					def1 = 0; // Acid Terror ignores only armor defense. [Skotlex]
 #endif
-				if(def2 < 1) def2 = 1;
+				if (def1 < 0)
+					def1 = 0;
+				if (def2 < 1)
+					def2 = 1;
 			}
 			//Vitality reduction from rodatazone: http://rodatazone.simgaming.net/mechanics/substats.php#def
 			if (tsd) {
@@ -2872,7 +2876,7 @@ static int64 battle_calc_damage(struct block_list *src, struct block_list *bl, s
 		if( sc->data[SC__MAELSTROM] && (flag&BF_MAGIC) && skill_id && (skill->get_inf(skill_id)&INF_GROUND_SKILL) ) {
 			// {(Maelstrom Skill LevelxAbsorbed Skill Level)+(Caster's Job/5)}/2
 			int sp = (sc->data[SC__MAELSTROM]->val1 * skill_lv + (t_sd ? t_sd->status.job_level / 5 : 0)) / 2;
-			status->heal(bl, 0, sp, 3);
+			status->heal(bl, 0, sp, STATUS_HEAL_FORCED | STATUS_HEAL_SHOWEFFECT);
 			d->dmg_lv = ATK_BLOCK;
 			return 0;
 		}
@@ -3243,7 +3247,7 @@ static int64 battle_calc_damage(struct block_list *src, struct block_list *bl, s
 		//(since battle_drain is strictly for players currently)
 		if ((sce=sc->data[SC_HAMI_BLOODLUST]) && flag&BF_WEAPON && damage > 0 &&
 			rnd()%100 < sce->val3)
-			status->heal(src, damage*sce->val4/100, 0, 3);
+			status->heal(src, damage*sce->val4/100, 0, STATUS_HEAL_FORCED | STATUS_HEAL_SHOWEFFECT);
 
 		if( (sce = sc->data[SC_FORCEOFVANGUARD]) && flag&BF_WEAPON
 			&& rnd()%100 < sce->val2 && sc->fv_counter <= sce->val3 )
@@ -4224,16 +4228,16 @@ static struct Damage battle_calc_misc_attack(struct block_list *src, struct bloc
 				hitrate = 80; //Default hitrate
 #endif
 
-			if(battle_config.agi_penalty_type && battle_config.agi_penalty_target&target->type) {
-				unsigned char attacker_count; //256 max targets should be a sane max
-				attacker_count = unit->counttargeted(target);
-				if(attacker_count >= battle_config.agi_penalty_count)
-				{
+			if (battle_config.agi_penalty_type != 0 && (battle_config.agi_penalty_target & target->type) != 0) {
+				int attacker_count = unit->counttargeted(target);
+				if (attacker_count >= battle_config.agi_penalty_count) {
+					int penalty = (attacker_count - (battle_config.agi_penalty_count - 1)) * battle_config.agi_penalty_num;
 					if (battle_config.agi_penalty_type == 1)
-						flee = (flee * (100 - (attacker_count - (battle_config.agi_penalty_count - 1))*battle_config.agi_penalty_num))/100;
+						flee = flee * (100 - penalty) / 100;
 					else // assume type 2: absolute reduction
-						flee -= (attacker_count - (battle_config.agi_penalty_count - 1))*battle_config.agi_penalty_num;
-					if(flee < 1) flee = 1;
+						flee -= penalty;
+					if (flee < 1)
+						flee = 1;
 				}
 			}
 
@@ -4339,6 +4343,8 @@ static struct Damage battle_calc_misc_attack(struct block_list *src, struct bloc
 			}
 		break;
 	}
+	
+	battle->reflect_trap(target, src, &md, skill_id);
 
 	return md;
 }
@@ -4749,15 +4755,16 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 		short hitrate = 80; //Default hitrate
 #endif
 
-		if(battle_config.agi_penalty_type && battle_config.agi_penalty_target&target->type) {
-			unsigned char attacker_count; //256 max targets should be a sane max
-			attacker_count = unit->counttargeted(target);
-			if(attacker_count >= battle_config.agi_penalty_count) {
+		if (battle_config.agi_penalty_type != 0 && (battle_config.agi_penalty_target & target->type) != 0) {
+			int attacker_count = unit->counttargeted(target);
+			if (attacker_count >= battle_config.agi_penalty_count) {
+				int penalty = (attacker_count - (battle_config.agi_penalty_count - 1)) * battle_config.agi_penalty_num;
 				if (battle_config.agi_penalty_type == 1)
-					flee = (flee * (100 - (attacker_count - (battle_config.agi_penalty_count - 1))*battle_config.agi_penalty_num))/100;
-				else //asume type 2: absolute reduction
-					flee -= (attacker_count - (battle_config.agi_penalty_count - 1))*battle_config.agi_penalty_num;
-				if(flee < 1) flee = 1;
+					flee = flee * (100 - penalty) / 100;
+				else // asume type 2: absolute reduction
+					flee -= penalty;
+				if (flee < 1)
+					flee = 1;
 			}
 		}
 
@@ -6008,6 +6015,37 @@ static void battle_reflect_damage(struct block_list *target, struct block_list *
 #undef NORMALIZE_RDAMAGE
 }
 
+/**
+ * Reflects damage from certain traps, if battle_config.trap_reflect is true.
+ * @param target : Player who triggered the trap
+ * @param src : Player who set the trap
+ * @param md : Trap damage structure
+ * @param skill_id : Trap skill ID
+ */
+static void battle_reflect_trap(struct block_list *target, struct block_list *src, struct Damage *md, uint16 skill_id)
+{
+	if (battle_config.trap_reflect == true) {
+		if (src != target) { // Don't reflect your own damage
+			switch (skill_id) {
+			case HT_CLAYMORETRAP:
+			case HT_LANDMINE:
+			case HT_FREEZINGTRAP:
+			case HT_BLASTMINE:
+			// Needs official info
+			//case RA_CLUSTERBOMB:
+			//case RA_FIRINGTRAP:
+			//case RA_ICEBOUNDTRAP:
+			//case GN_THORNS_TRAP:
+			//case KO_MAKIBISHI:
+			case MA_LANDMINE:
+			case MA_FREEZINGTRAP:
+				battle->reflect_damage(target, src, md, skill_id);
+				break;
+			}
+		}
+	}
+}
+
 static void battle_drain(struct map_session_data *sd, struct block_list *tbl, int64 rdamage, int64 ldamage, int race, int boss)
 {
 	struct weapon_data *wd;
@@ -6061,7 +6099,7 @@ static void battle_drain(struct map_session_data *sd, struct block_list *tbl, in
 
 	if (!thp && !tsp) return;
 
-	status->heal(&sd->bl, thp, tsp, battle_config.show_hp_sp_drain ? 3 : 1);
+	status->heal(&sd->bl, thp, tsp, STATUS_HEAL_FORCED | (battle_config.show_hp_sp_drain ? STATUS_HEAL_SHOWEFFECT : STATUS_HEAL_DEFAULT));
 
 	if (rhp || rsp)
 		status_zap(tbl, rhp, rsp);
@@ -7325,6 +7363,7 @@ static const struct battle_data {
 	 * Hercules
 	 **/
 	{ "skill_trap_type",                    &battle_config.skill_trap_type,                 0,      0,      1,              },
+	{ "trap_reflect",                       &battle_config.trap_reflect,                    1,      0,      1,              },
 	{ "item_restricted_consumption_type",   &battle_config.item_restricted_consumption_type,1,      0,      1,              },
 	{ "unequip_restricted_equipment",       &battle_config.unequip_restricted_equipment,    0,      0,      3,              },
 	{ "max_walk_path",                      &battle_config.max_walk_path,                   17,     1,      MAX_WALKPATH,   },
@@ -7371,6 +7410,9 @@ static const struct battle_data {
 	{ "storage_use_item",                   &battle_config.storage_use_item,                0,      0,      1,              },
 	{ "features/enable_attendance_system",  &battle_config.feature_enable_attendance_system,1,      0,      1,              },
 	{ "features/feature_attendance_endtime",&battle_config.feature_attendance_endtime,      1,      0,      99999999,       },
+	{ "min_item_buy_price",                 &battle_config.min_item_buy_price,              1,      0,      INT_MAX,        },
+	{ "min_item_sell_price",                &battle_config.min_item_sell_price,             0,      0,      INT_MAX,        },
+	{ "display_fake_hp_when_dead",          &battle_config.display_fake_hp_when_dead,       1,      0,      1,              },
 };
 
 static bool battle_set_value_sub(int index, int value)
@@ -7614,6 +7656,7 @@ void battle_defaults(void)
 	battle->delay_damage = battle_delay_damage;
 	battle->drain = battle_drain;
 	battle->reflect_damage = battle_reflect_damage;
+	battle->reflect_trap = battle_reflect_trap;
 	battle->attr_ratio = battle_attr_ratio;
 	battle->attr_fix = battle_attr_fix;
 	battle->calc_cardfix = battle_calc_cardfix;

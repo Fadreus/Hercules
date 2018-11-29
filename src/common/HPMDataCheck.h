@@ -256,6 +256,11 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 	#else
 		#define COMMON_NULLPO_H
 	#endif // COMMON_NULLPO_H
+	#ifdef COMMON_PACKETS_H
+		{ "packets_interface", sizeof(struct packets_interface), SERVER_TYPE_ALL },
+	#else
+		#define COMMON_PACKETS_H
+	#endif // COMMON_PACKETS_H
 	#ifdef COMMON_RANDOM_H
 		{ "rnd_interface", sizeof(struct rnd_interface), SERVER_TYPE_ALL },
 	#else
@@ -557,6 +562,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "mapflag_skill_adjust", sizeof(struct mapflag_skill_adjust), SERVER_TYPE_MAP },
 		{ "mapit_interface", sizeof(struct mapit_interface), SERVER_TYPE_MAP },
 		{ "questinfo", sizeof(struct questinfo), SERVER_TYPE_MAP },
+		{ "questinfo_itemreq", sizeof(struct questinfo_itemreq), SERVER_TYPE_MAP },
 		{ "questinfo_qreq", sizeof(struct questinfo_qreq), SERVER_TYPE_MAP },
 		{ "spawn_data", sizeof(struct spawn_data), SERVER_TYPE_MAP },
 	#else
@@ -606,6 +612,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "NORMALITEM_INFO", sizeof(struct NORMALITEM_INFO), SERVER_TYPE_MAP },
 		{ "PACKET_CZ_ADD_ITEM_TO_MAIL", sizeof(struct PACKET_CZ_ADD_ITEM_TO_MAIL), SERVER_TYPE_MAP },
 		{ "PACKET_CZ_CHECKNAME", sizeof(struct PACKET_CZ_CHECKNAME), SERVER_TYPE_MAP },
+		{ "PACKET_CZ_MEMORIALDUNGEON_COMMAND", sizeof(struct PACKET_CZ_MEMORIALDUNGEON_COMMAND), SERVER_TYPE_MAP },
 		{ "PACKET_CZ_OPEN_UI", sizeof(struct PACKET_CZ_OPEN_UI), SERVER_TYPE_MAP },
 		{ "PACKET_CZ_PC_BUY_CASH_POINT_ITEM", sizeof(struct PACKET_CZ_PC_BUY_CASH_POINT_ITEM), SERVER_TYPE_MAP },
 		{ "PACKET_CZ_PC_BUY_CASH_POINT_ITEM_sub", sizeof(struct PACKET_CZ_PC_BUY_CASH_POINT_ITEM_sub), SERVER_TYPE_MAP },
@@ -658,6 +665,9 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_ADD_ITEM_TO_MAIL", sizeof(struct PACKET_ZC_ADD_ITEM_TO_MAIL), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ADD_ITEM_TO_STORE", sizeof(struct PACKET_ZC_ADD_ITEM_TO_STORE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ADD_MEMBER_TO_GROUP", sizeof(struct PACKET_ZC_ADD_MEMBER_TO_GROUP), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_AUTOSPELLLIST1", sizeof(struct PACKET_ZC_AUTOSPELLLIST1), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_AUTOSPELLLIST2", sizeof(struct PACKET_ZC_AUTOSPELLLIST2), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_CAMERA_INFO", sizeof(struct PACKET_ZC_CAMERA_INFO), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_CASH_ITEM_DELETE", sizeof(struct PACKET_ZC_CASH_ITEM_DELETE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_CASH_TIME_COUNTER", sizeof(struct PACKET_ZC_CASH_TIME_COUNTER), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_CHECKNAME", sizeof(struct PACKET_ZC_CHECKNAME), SERVER_TYPE_MAP },
@@ -705,6 +715,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_PRIVATE_AIRSHIP_RESPONSE", sizeof(struct PACKET_ZC_PRIVATE_AIRSHIP_RESPONSE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_PROPERTY_HOMUN", sizeof(struct PACKET_ZC_PROPERTY_HOMUN), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_READ_MAIL", sizeof(struct PACKET_ZC_READ_MAIL), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_REMOVE_EFFECT", sizeof(struct PACKET_ZC_REMOVE_EFFECT), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_REPAIRITEMLIST", sizeof(struct PACKET_ZC_REPAIRITEMLIST), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_REPAIRITEMLIST_sub", sizeof(struct PACKET_ZC_REPAIRITEMLIST_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SEARCH_STORE_INFO_ACK", sizeof(struct PACKET_ZC_SEARCH_STORE_INFO_ACK), SERVER_TYPE_MAP },
@@ -718,7 +729,11 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_WARPLIST", sizeof(struct PACKET_ZC_WARPLIST), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_WARPLIST_sub", sizeof(struct PACKET_ZC_WARPLIST_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_WRITE_MAIL_RESULT", sizeof(struct PACKET_ZC_WRITE_MAIL_RESULT), SERVER_TYPE_MAP },
+		{ "ZC_INVENTORY_END", sizeof(struct ZC_INVENTORY_END), SERVER_TYPE_MAP },
+		{ "ZC_INVENTORY_START", sizeof(struct ZC_INVENTORY_START), SERVER_TYPE_MAP },
 		{ "ZC_PROGRESS_ACTOR", sizeof(struct ZC_PROGRESS_ACTOR), SERVER_TYPE_MAP },
+		{ "ZC_STORE_ITEMLIST_EQUIP", sizeof(struct ZC_STORE_ITEMLIST_EQUIP), SERVER_TYPE_MAP },
+		{ "ZC_STORE_ITEMLIST_NORMAL", sizeof(struct ZC_STORE_ITEMLIST_NORMAL), SERVER_TYPE_MAP },
 		{ "ach_list_info", sizeof(struct ach_list_info), SERVER_TYPE_MAP },
 		{ "mail_item", sizeof(struct mail_item), SERVER_TYPE_MAP },
 		{ "maillistinfo", sizeof(struct maillistinfo), SERVER_TYPE_MAP },
@@ -789,8 +804,6 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "packet_status_change", sizeof(struct packet_status_change), SERVER_TYPE_MAP },
 		{ "packet_status_change2", sizeof(struct packet_status_change2), SERVER_TYPE_MAP },
 		{ "packet_status_change_end", sizeof(struct packet_status_change_end), SERVER_TYPE_MAP },
-		{ "packet_storelist_equip", sizeof(struct packet_storelist_equip), SERVER_TYPE_MAP },
-		{ "packet_storelist_normal", sizeof(struct packet_storelist_normal), SERVER_TYPE_MAP },
 		{ "packet_unequipitem_ack", sizeof(struct packet_unequipitem_ack), SERVER_TYPE_MAP },
 		{ "packet_unit_walking", sizeof(struct packet_unit_walking), SERVER_TYPE_MAP },
 		{ "packet_viewequip_ack", sizeof(struct packet_viewequip_ack), SERVER_TYPE_MAP },
