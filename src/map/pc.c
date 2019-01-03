@@ -568,7 +568,7 @@ static void pc_rental_expire(struct map_session_data *sd, int i)
 	int nameid;
 
 	nullpo_retv(sd);
-	Assert_retv(i >= 0 && i < MAX_INVENTORY);
+	Assert_retv(i >= 0 && i < sd->status.inventorySize);
 	nameid = sd->status.inventory[i].nameid;
 
 	/* Soon to be dropped, we got plans to integrate it with item db */
@@ -637,11 +637,11 @@ static void pc_rental_expire(struct map_session_data *sd, int i)
 }
 static void pc_inventory_rentals(struct map_session_data *sd)
 {
-	int i, c = 0;
+	int c = 0;
 	int64 expire_tick, next_tick = INT64_MAX;
 
 	nullpo_retv(sd);
-	for( i = 0; i < MAX_INVENTORY; i++ )
+	for (int i = 0; i < sd->status.inventorySize; i++ )
 	{ // Check for Rentals on Inventory
 		if( sd->status.inventory[i].nameid == 0 )
 			continue; // Nothing here
@@ -782,7 +782,7 @@ static int pc_equippoint(struct map_session_data *sd, int n)
 	int ep = 0;
 
 	nullpo_ret(sd);
-	Assert_ret(n >= 0 && n < MAX_INVENTORY);
+	Assert_ret(n >= 0 && n < sd->status.inventorySize);
 
 	if(!sd->inventory_data[n])
 		return 0;
@@ -838,11 +838,9 @@ static int pc_item_equippoint(struct map_session_data *sd, struct item_data *id)
 
 static int pc_setinventorydata(struct map_session_data *sd)
 {
-	int i;
-
 	nullpo_ret(sd);
 
-	for (i = 0; i < MAX_INVENTORY; i++) {
+	for (int i = 0; i < sd->status.inventorySize; i++) {
 		int id = sd->status.inventory[i].nameid;
 		sd->inventory_data[i] = id?itemdb->search(id):NULL;
 	}
@@ -902,7 +900,7 @@ static int pc_setequipindex(struct map_session_data *sd)
 	for(i=0;i<EQI_MAX;i++)
 		sd->equip_index[i] = -1;
 
-	for(i=0;i<MAX_INVENTORY;i++) {
+	for (i = 0; i < sd->status.inventorySize; i++) {
 		if(sd->status.inventory[i].nameid <= 0)
 			continue;
 		if(sd->status.inventory[i].equip) {
@@ -1073,6 +1071,7 @@ static int pc_isequip(struct map_session_data *sd, int n)
 	struct item_data *item;
 
 	nullpo_ret(sd);
+	Assert_ret(n >= 0 && n < sd->status.inventorySize);
 
 	item = sd->inventory_data[n];
 
@@ -1379,6 +1378,7 @@ static bool pc_authok(struct map_session_data *sd, int login_id2, time_t expirat
 		pc->setpos(sd,sd->status.last_point.map,0,0,CLR_OUTSIGHT);
 	}
 
+	clif->inventoryExpansionInfo(sd);
 	clif->overweight_percent(sd);
 	clif->authok(sd);
 
@@ -2221,11 +2221,12 @@ static int pc_bonus_addeff_onskill(struct s_addeffectonskill *effect, int max, e
 	return 1;
 }
 
-static int pc_bonus_item_drop(struct s_add_drop *drop, const short max, short id, short group, int race_mask, int rate)
+static int pc_bonus_item_drop(struct s_add_drop *drop, const short max, int id, bool is_group, int race_mask, int rate)
 {
 	int i;
 
 	nullpo_ret(drop);
+	Assert_ret(is_group || id > 0);
 	//Apply config rate adjustment settings.
 	if (rate >= 0) { //Absolute drop.
 		if (battle_config.item_rate_adddrop != 100)
@@ -2240,17 +2241,14 @@ static int pc_bonus_item_drop(struct s_add_drop *drop, const short max, short id
 		if (rate > -1)
 			rate = -1;
 	}
-	for(i = 0; i < max && (drop[i].id || drop[i].group); i++) {
-		if (((id && drop[i].id == id) || (group && drop[i].group == group))
-		 && race_mask != RCMASK_NONE
-		) {
+	for (i = 0; i < max && (drop[i].id != 0 || drop[i].is_group); i++) {
+		if (drop[i].id == id && race_mask != RCMASK_NONE) {
 			drop[i].race |= race_mask;
 			if (drop[i].rate > 0 && rate > 0) {
 				//Both are absolute rates.
 				if (drop[i].rate < rate)
 					drop[i].rate = rate;
-			} else
-			if(drop[i].rate < 0 && rate < 0) {
+			} else if (drop[i].rate < 0 && rate < 0) {
 				//Both are relative rates.
 				if (drop[i].rate > rate)
 					drop[i].rate = rate;
@@ -2264,7 +2262,7 @@ static int pc_bonus_item_drop(struct s_add_drop *drop, const short max, short id
 		return 0;
 	}
 	drop[i].id = id;
-	drop[i].group = group;
+	drop[i].is_group = is_group;
 	drop[i].race |= race_mask;
 	drop[i].rate = rate;
 	return 1;
@@ -3111,7 +3109,7 @@ static int pc_bonus(struct map_session_data *sd, int type, int val)
 	#endif
 		case SP_ADD_MONSTER_DROP_CHAINITEM:
 			if (sd->state.lr_flag != 2)
-				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), 0, val, map->race_id2mask(RC_ALL), 10000);
+				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), val, true, map->race_id2mask(RC_ALL), 10000);
 		break;
 		case SP_ADDMAXWEIGHT:
 			if (sd->state.lr_flag != 2)
@@ -3686,7 +3684,7 @@ static int pc_bonus2(struct map_session_data *sd, int type, int type2, int val)
 			break;
 		case SP_ADD_MONSTER_DROP_ITEM:
 			if (sd->state.lr_flag != 2)
-				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, 0, map->race_id2mask(RC_ALL), val);
+				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, false, map->race_id2mask(RC_ALL), val);
 			break;
 		case SP_SP_LOSS_RATE:
 			if(sd->state.lr_flag != 2) {
@@ -3892,7 +3890,7 @@ static int pc_bonus2(struct map_session_data *sd, int type, int type2, int val)
 				break;
 			}
 			if (sd->state.lr_flag != 2)
-				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), 0, type2, race_mask, 10000);
+				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, true, race_mask, 10000);
 		}
 			break;
 #ifdef RENEWAL
@@ -3932,12 +3930,12 @@ static int pc_bonus3(struct map_session_data *sd, int type, int type2, int type3
 				break;
 			}
 			if (sd->state.lr_flag != 2)
-				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, 0, race_mask, val);
+				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, false, race_mask, val);
 		}
 			break;
 		case SP_ADD_CLASS_DROP_ITEM:
 			if(sd->state.lr_flag != 2)
-				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, 0, -type3, val);
+				pc->bonus_item_drop(sd->add_drop, ARRAYLENGTH(sd->add_drop), type2, false, -type3, val);
 			break;
 		case SP_AUTOSPELL:
 			if(sd->state.lr_flag != 2)
@@ -4308,7 +4306,7 @@ static bool pc_can_insert_card_into(struct map_session_data *sd, int idx_card, i
 
 	nullpo_ret(sd);
 
-	if (idx_equip < 0 || idx_equip >= MAX_INVENTORY || sd->inventory_data[idx_equip] == NULL)
+	if (idx_equip < 0 || idx_equip >= sd->status.inventorySize || sd->inventory_data[idx_equip] == NULL)
 		return false; //Invalid item index.
 	if (sd->status.inventory[idx_equip].nameid <= 0 || sd->status.inventory[idx_equip].amount < 1)
 		return false; // target item missing
@@ -4342,7 +4340,7 @@ static bool pc_can_insert_card(struct map_session_data *sd, int idx_card)
 {
 	nullpo_ret(sd);
 
-	if (idx_card < 0 || idx_card >= MAX_INVENTORY || sd->inventory_data[idx_card] == NULL)
+	if (idx_card < 0 || idx_card >= sd->status.inventorySize || sd->inventory_data[idx_card] == NULL)
 		return false; //Invalid card index.
 	if (sd->status.inventory[idx_card].nameid <= 0 || sd->status.inventory[idx_card].amount < 1)
 		return false; // target card missing
@@ -4438,7 +4436,6 @@ static int pc_modifysellvalue(struct map_session_data *sd, int orig_value)
  *------------------------------------------*/
 static int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
 {
-	int i;
 	struct item_data* data;
 
 	nullpo_ret(sd);
@@ -4454,7 +4451,7 @@ static int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
 	if( data->stack.inventory && amount > data->stack.amount )
 		return ADDITEM_OVERAMOUNT;
 
-	for(i=0;i<MAX_INVENTORY;i++){
+	for(int i = 0; i < sd->status.inventorySize; i++) {
 		// FIXME: This does not consider the checked item's cards, thus could check a wrong slot for stackability.
 		if(sd->status.inventory[i].nameid==nameid){
 			if( amount > MAX_AMOUNT - sd->status.inventory[i].amount || ( data->stack.inventory && amount > data->stack.amount - sd->status.inventory[i].amount ) )
@@ -4472,11 +4469,10 @@ static int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
  *------------------------------------------*/
 static int pc_inventoryblank(struct map_session_data *sd)
 {
-	int i,b;
-
 	nullpo_ret(sd);
+	int b = 0;
 
-	for(i=0,b=0;i<MAX_INVENTORY;i++){
+	for (int i = 0; i < sd->status.inventorySize; i++) {
 		if(sd->status.inventory[i].nameid==0)
 			b++;
 	}
@@ -4673,8 +4669,8 @@ static int pc_search_inventory(struct map_session_data *sd, int item_id)
 	int i;
 	nullpo_retr(INDEX_NOT_FOUND, sd);
 
-	ARR_FIND( 0, MAX_INVENTORY, i, sd->status.inventory[i].nameid == item_id && (sd->status.inventory[i].amount > 0 || item_id == 0) );
-	return ( i < MAX_INVENTORY ) ? i : INDEX_NOT_FOUND;
+	ARR_FIND(0, sd->status.inventorySize, i, sd->status.inventory[i].nameid == item_id && (sd->status.inventory[i].amount > 0 || item_id == 0));
+	return (i < sd->status.inventorySize) ? i : INDEX_NOT_FOUND;
 }
 
 /*==========================================
@@ -4736,11 +4732,11 @@ static int pc_additem(struct map_session_data *sd, const struct item *item_data,
 		}
 	}
 
-	i = MAX_INVENTORY;
+	i = sd->status.inventorySize;
 
 	// Stackable | Non Rental
 	if( itemdb->isstackable2(data) && item_data->expire_time == 0 ) {
-		for( i = 0; i < MAX_INVENTORY; i++ ) {
+		for (i = 0; i < sd->status.inventorySize; i++) {
 			if( sd->status.inventory[i].nameid == item_data->nameid &&
 			    sd->status.inventory[i].bound == item_data->bound &&
 			    sd->status.inventory[i].expire_time == 0 &&
@@ -4755,7 +4751,7 @@ static int pc_additem(struct map_session_data *sd, const struct item *item_data,
 		}
 	}
 
-	if ( i >= MAX_INVENTORY ) {
+	if (i >= sd->status.inventorySize) {
 		i = pc->search_inventory(sd,0);
 		if (i == INDEX_NOT_FOUND)
 			return 4;
@@ -4815,7 +4811,7 @@ static int pc_additem(struct map_session_data *sd, const struct item *item_data,
 static int pc_delitem(struct map_session_data *sd, int n, int amount, int type, short reason, e_log_pick_type log_type)
 {
 	nullpo_retr(1, sd);
-	Assert_retr(1, n >= 0 && n < MAX_INVENTORY);
+	Assert_retr(1, n >= 0 && n < sd->status.inventorySize);
 
 	if(sd->status.inventory[n].nameid==0 || amount <= 0 || sd->status.inventory[n].amount<amount || sd->inventory_data[n] == NULL)
 		return 1;
@@ -4849,7 +4845,7 @@ static int pc_dropitem(struct map_session_data *sd, int n, int amount)
 {
 	nullpo_retr(1, sd);
 
-	if(n < 0 || n >= MAX_INVENTORY)
+	if(n < 0 || n >= sd->status.inventorySize)
 		return 0;
 
 	if(amount <= 0)
@@ -4960,7 +4956,7 @@ static int pc_isUseitem(struct map_session_data *sd, int n)
 	int nameid;
 
 	nullpo_ret(sd);
-	Assert_ret(n >= 0 && n < MAX_INVENTORY);
+	Assert_ret(n >= 0 && n < sd->status.inventorySize);
 
 	item = sd->inventory_data[n];
 	nameid = sd->status.inventory[n].nameid;
@@ -5196,7 +5192,7 @@ static int pc_useitem(struct map_session_data *sd, int n)
 	bool removeItem = false;
 
 	nullpo_ret(sd);
-	Assert_ret(n >= 0 && n < MAX_INVENTORY);
+	Assert_ret(n >= 0 && n < sd->status.inventorySize);
 
 	if (sd->npc_id || sd->state.workinprogress & 1) {
 #if PACKETVER >= 20110308
@@ -5323,6 +5319,10 @@ static int pc_useitem(struct map_session_data *sd, int n)
 	if(sd->catch_target_class != -1) //Abort pet catching.
 		sd->catch_target_class = -1;
 
+	// Removes abracadabra/randomize spell flag for delayed consume items or item doesn't get consumed
+	if (sd->inventory_data[n]->flag.delay_consume)
+		sd->state.abra_flag = 0;
+
 	amount = sd->status.inventory[n].amount;
 	//Check if the item is to be consumed immediately [Skotlex]
 	if (sd->inventory_data[n]->flag.delay_consume || sd->inventory_data[n]->flag.keepafteruse)
@@ -5433,7 +5433,7 @@ static int pc_cart_delitem(struct map_session_data *sd, int n, int amount, int t
 {
 	struct item_data * data;
 	nullpo_retr(1, sd);
-	Assert_retr(1, n >= 0 && n < MAX_INVENTORY);
+	Assert_retr(1, n >= 0 && n < MAX_CART);
 
 	if( sd->status.cart[n].nameid == 0 || sd->status.cart[n].amount < amount || !(data = itemdb->exists(sd->status.cart[n].nameid)) )
 		return 1;
@@ -5467,7 +5467,7 @@ static int pc_putitemtocart(struct map_session_data *sd, int idx, int amount)
 
 	nullpo_ret(sd);
 
-	if (idx < 0 || idx >= MAX_INVENTORY) //Invalid index check [Skotlex]
+	if (idx < 0 || idx >= sd->status.inventorySize) //Invalid index check [Skotlex]
 		return 1;
 
 	item_data = &sd->status.inventory[idx];
@@ -5537,7 +5537,7 @@ static void pc_bound_clear(struct map_session_data *sd, enum e_item_bound_type t
 		/* both restricted to inventory */
 		case IBT_PARTY:
 		case IBT_CHARACTER:
-			for( i = 0; i < MAX_INVENTORY; i++ ){
+			for (i = 0; i < sd->status.inventorySize; i++ ) {
 				if( sd->status.inventory[i].bound == type ) {
 					pc->delitem(sd, i, sd->status.inventory[i].amount, 0, DELITEM_SKILLUSE, LOG_TYPE_OTHER); // FIXME: is this the correct reason flag?
 				}
@@ -5549,7 +5549,7 @@ static void pc_bound_clear(struct map_session_data *sd, enum e_item_bound_type t
 		case IBT_GUILD: {
 				struct guild_storage *gstor = idb_get(gstorage->db,sd->status.guild_id);
 
-				for( i = 0; i < MAX_INVENTORY; i++ ){
+				for (i = 0; i < sd->status.inventorySize; i++ ) {
 					if(sd->status.inventory[i].bound == type) {
 						if( gstor )
 							gstorage->additem(sd,gstor,&sd->status.inventory[i],sd->status.inventory[i].amount);
@@ -5706,7 +5706,7 @@ static int pc_steal_coin(struct map_session_data *sd, struct block_list *target,
  * 1 - Invalid map index.
  * 2 - Map not in this map-server, and failed to locate alternate map-server.
  *------------------------------------------*/
-static int pc_setpos(struct map_session_data *sd, unsigned short map_index, int x, int y, clr_type clrtype)
+static int pc_setpos(struct map_session_data *sd, unsigned short map_index, int x, int y, enum clr_type clrtype)
 {
 	int16 m;
 
@@ -5946,7 +5946,7 @@ static int pc_setpos(struct map_session_data *sd, unsigned short map_index, int 
  *   0 = fail or FIXME success (from pc->setpos)
  *   x(1|2) = fail
  *------------------------------------------*/
-static int pc_randomwarp(struct map_session_data *sd, clr_type type)
+static int pc_randomwarp(struct map_session_data *sd, enum clr_type type)
 {
 	int x,y,i=0;
 	int16 m;
@@ -7945,7 +7945,7 @@ static int pc_skillheal2_bonus(struct map_session_data *sd, uint16 skill_id)
 	return bonus;
 }
 
-static void pc_respawn(struct map_session_data *sd, clr_type clrtype)
+static void pc_respawn(struct map_session_data *sd, enum clr_type clrtype)
 {
 	if( !pc_isdead(sd) )
 		return; // not applicable
@@ -8290,15 +8290,15 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 			if(id == 0)
 				continue;
 			if(id == -1){
-				int eq_num=0,eq_n[MAX_INVENTORY],k;
+				int eq_num = 0, eq_n[MAX_INVENTORY], k;
 				memset(eq_n,0,sizeof(eq_n));
-				for(i=0;i<MAX_INVENTORY;i++){
+				for(i = 0; i < sd->status.inventorySize; i++) {
 					if( (type == 1 && !sd->status.inventory[i].equip)
 						|| (type == 2 && sd->status.inventory[i].equip)
 						||  type == 3)
 					{
-						ARR_FIND( 0, MAX_INVENTORY, k, eq_n[k] <= 0 );
-						if( k < MAX_INVENTORY )
+						ARR_FIND(0, sd->status.inventorySize, k, eq_n[k] <= 0);
+						if (k < sd->status.inventorySize)
 							eq_n[k] = i;
 
 						eq_num++;
@@ -8314,7 +8314,7 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 				}
 			}
 			else if(id > 0){
-				for(i=0;i<MAX_INVENTORY;i++){
+				for( i = 0; i < sd->status.inventorySize; i++) {
 					if(sd->status.inventory[i].nameid == id
 						&& rnd()%10000 < per
 						&& ((type == 1 && !sd->status.inventory[i].equip)
@@ -10145,7 +10145,7 @@ static int pc_equipitem(struct map_session_data *sd, int n, int req_pos)
 
 	nullpo_ret(sd);
 
-	if( n < 0 || n >= MAX_INVENTORY ) {
+	if (n < 0 || n >= sd->status.inventorySize) {
 		clif->equipitemack(sd,0,0,EIA_FAIL);
 		return 0;
 	}
@@ -10353,7 +10353,7 @@ static int pc_unequipitem(struct map_session_data *sd, int n, int flag)
 
 	nullpo_ret(sd);
 
-	if (n < 0 || n >= MAX_INVENTORY) {
+	if (n < 0 || n >= sd->status.inventorySize) {
 		clif->unequipitemack(sd, 0, 0, UIA_FAIL);
 		return 0;
 	}
@@ -10505,7 +10505,7 @@ static int pc_checkitem(struct map_session_data *sd)
 		int id = 0;
 
 		if (sd->itemcheck & PCCHECKITEM_INVENTORY) {
-			for (i = 0; i < MAX_INVENTORY; i++) {
+			for (i = 0; i < sd->status.inventorySize; i++) {
 				if ((id = sd->status.inventory[i].nameid) == 0)
 					continue;
 
@@ -10585,7 +10585,7 @@ static int pc_checkitem(struct map_session_data *sd)
 		}
 	}
 
-	for (i = 0; i < MAX_INVENTORY; i++) {
+	for (i = 0; i < sd->status.inventorySize; i++) {
 
 		if (sd->status.inventory[i].nameid == 0)
 			continue;
@@ -10759,11 +10759,14 @@ static int pc_divorce(struct map_session_data *sd)
 	// Both players online, lets do the divorce manually
 	sd->status.partner_id = 0;
 	p_sd->status.partner_id = 0;
-	for( i = 0; i < MAX_INVENTORY; i++ )
+	for (i = 0; i < sd->status.inventorySize; i++)
 	{
-		if( sd->status.inventory[i].nameid == WEDDING_RING_M || sd->status.inventory[i].nameid == WEDDING_RING_F )
+		if (sd->status.inventory[i].nameid == WEDDING_RING_M || sd->status.inventory[i].nameid == WEDDING_RING_F)
 			pc->delitem(sd, i, 1, 0, DELITEM_NORMAL, LOG_TYPE_DIVORCE);
-		if( p_sd->status.inventory[i].nameid == WEDDING_RING_M || p_sd->status.inventory[i].nameid == WEDDING_RING_F )
+	}
+	for (i = 0; i < p_sd->status.inventorySize; i++)
+	{
+		if (p_sd->status.inventory[i].nameid == WEDDING_RING_M || p_sd->status.inventory[i].nameid == WEDDING_RING_F)
 			pc->delitem(p_sd, i, 1, 0, DELITEM_NORMAL, LOG_TYPE_DIVORCE);
 	}
 
@@ -12337,6 +12340,23 @@ static bool pc_has_second_costume(struct map_session_data *sd)
 	return false;
 }
 
+static bool pc_expandInventory(struct map_session_data *sd, int adjustSize)
+{
+	nullpo_retr(false, sd);
+	const int invSize = sd->status.inventorySize;
+	if (adjustSize > MAX_INVENTORY || invSize + adjustSize <= FIXED_INVENTORY_SIZE || invSize + adjustSize > MAX_INVENTORY) {
+		clif->inventoryExpandResult(sd, EXPAND_INVENTORY_RESULT_MAX_SIZE);
+		return false;
+	}
+	if (pc_isdead(sd) || sd->state.vending || sd->state.buyingstore || sd->chat_id != 0 || sd->state.trading || sd->state.storage_flag || sd->state.prevend) {
+		clif->inventoryExpandResult(sd, EXPAND_INVENTORY_RESULT_OTHER_WORK);
+		return false;
+	}
+	sd->status.inventorySize += adjustSize;
+	clif->inventoryExpansionInfo(sd);
+	return true;
+}
+
 static void do_final_pc(void)
 {
 
@@ -12739,4 +12759,5 @@ void pc_defaults(void)
 
 	pc->isDeathPenaltyJob = pc_isDeathPenaltyJob;
 	pc->has_second_costume = pc_has_second_costume;
+	pc->expandInventory = pc_expandInventory;
 }

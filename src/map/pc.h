@@ -151,8 +151,8 @@ struct s_addeffectonskill {
 	unsigned char target;
 };
 struct s_add_drop {
+	bool is_group;
 	int id;
-	short group;
 	int race, rate;
 };
 struct s_autobonus {
@@ -905,7 +905,7 @@ END_ZEROED_BLOCK; /* End */
 
 	int (*setrestartvalue) (struct map_session_data *sd,int type);
 	int (*makesavestatus) (struct map_session_data *sd);
-	void (*respawn) (struct map_session_data* sd, clr_type clrtype);
+	void (*respawn) (struct map_session_data* sd, enum clr_type clrtype);
 	int (*setnewpc) (struct map_session_data *sd, int account_id, int char_id, int login_id1, unsigned int client_tick, int sex, int fd);
 	bool (*authok) (struct map_session_data *sd, int login_id2, time_t expiration_time, int group_id, const struct mmo_charstatus *st, bool changing_mapservers);
 	void (*authfail) (struct map_session_data *sd);
@@ -927,9 +927,9 @@ END_ZEROED_BLOCK; /* End */
 	int (*calc_skilltree_normalize_job) (struct map_session_data *sd);
 	int (*clean_skilltree) (struct map_session_data *sd);
 
-	int (*setpos) (struct map_session_data* sd, unsigned short map_index, int x, int y, clr_type clrtype);
+	int (*setpos) (struct map_session_data* sd, unsigned short map_index, int x, int y, enum clr_type clrtype);
 	int (*setsavepoint) (struct map_session_data *sd, short map_index, int x, int y);
-	int (*randomwarp) (struct map_session_data *sd,clr_type type);
+	int (*randomwarp) (struct map_session_data *sd, enum clr_type type);
 	int (*memo) (struct map_session_data* sd, int pos);
 
 	int (*checkadditem) (struct map_session_data *sd,int nameid,int amount);
@@ -1124,7 +1124,7 @@ END_ZEROED_BLOCK; /* End */
 	int (*bonus_autospell_onskill) (struct s_autospell *spell, int max, short src_skill, short id, short lv, short rate, int card_id);
 	int (*bonus_addeff) (struct s_addeffect* effect, int max, enum sc_type id, int16 rate, int16 arrow_rate, uint8 flag, uint16 duration);
 	int (*bonus_addeff_onskill) (struct s_addeffectonskill* effect, int max, enum sc_type id, short rate, short skill_id, unsigned char target);
-	int (*bonus_item_drop) (struct s_add_drop *drop, const short max, short id, short group, int race, int rate);
+	int (*bonus_item_drop) (struct s_add_drop *drop, const short max, int id, bool is_group, int race, int rate);
 	void (*calcexp) (struct map_session_data *sd, uint64 *base_exp, uint64 *job_exp, struct block_list *src);
 	int (*respawn_timer) (int tid, int64 tick, int id, intptr_t data);
 	int (*jobchange_killclone) (struct block_list *bl, va_list ap);
@@ -1185,6 +1185,7 @@ END_ZEROED_BLOCK; /* End */
 	bool (*check_basicskill) (struct map_session_data *sd, int level);
 	bool (*isDeathPenaltyJob) (uint16 job);
 	bool (*has_second_costume) (struct map_session_data *sd);
+	bool (*expandInventory) (struct map_session_data *sd, int adjustSize);
 };
 
 #ifdef HERCULES_CORE
