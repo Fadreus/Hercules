@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2018  Hercules Dev Team
+ * Copyright (C) 2013-2019  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1149,6 +1149,10 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(clif->item_preview, HP_clif_item_preview) },
 	{ HP_POP(clif->enchant_equipment, HP_clif_enchant_equipment) },
 	{ HP_POP(clif->pReqRemainTime, HP_clif_pReqRemainTime) },
+	{ HP_POP(clif->npc_barter_open, HP_clif_npc_barter_open) },
+	{ HP_POP(clif->pNPCBarterClosed, HP_clif_pNPCBarterClosed) },
+	{ HP_POP(clif->pNPCBarterPurchase, HP_clif_pNPCBarterPurchase) },
+	{ HP_POP(clif->pClientVersion, HP_clif_pClientVersion) },
 /* cmdline_interface */
 	{ HP_POP(cmdline->init, HP_cmdline_init) },
 	{ HP_POP(cmdline->final, HP_cmdline_final) },
@@ -1645,6 +1649,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(itemdb->is_item_usable, HP_itemdb_is_item_usable) },
 	{ HP_POP(itemdb->lookup_const, HP_itemdb_lookup_const) },
 	{ HP_POP(itemdb->lookup_const_mask, HP_itemdb_lookup_const_mask) },
+	{ HP_POP(itemdb->addname_sub, HP_itemdb_addname_sub) },
 /* libconfig_interface */
 	{ HP_POP(libconfig->read, HP_libconfig_read) },
 	{ HP_POP(libconfig->write, HP_libconfig_write) },
@@ -2181,11 +2186,16 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(npc->trader_pay, HP_npc_trader_pay) },
 	{ HP_POP(npc->trader_update, HP_npc_trader_update) },
 	{ HP_POP(npc->market_buylist, HP_npc_market_buylist) },
+	{ HP_POP(npc->barter_buylist, HP_npc_barter_buylist) },
 	{ HP_POP(npc->trader_open, HP_npc_trader_open) },
 	{ HP_POP(npc->market_fromsql, HP_npc_market_fromsql) },
 	{ HP_POP(npc->market_tosql, HP_npc_market_tosql) },
 	{ HP_POP(npc->market_delfromsql, HP_npc_market_delfromsql) },
 	{ HP_POP(npc->market_delfromsql_sub, HP_npc_market_delfromsql_sub) },
+	{ HP_POP(npc->barter_fromsql, HP_npc_barter_fromsql) },
+	{ HP_POP(npc->barter_tosql, HP_npc_barter_tosql) },
+	{ HP_POP(npc->barter_delfromsql, HP_npc_barter_delfromsql) },
+	{ HP_POP(npc->barter_delfromsql_sub, HP_npc_barter_delfromsql_sub) },
 	{ HP_POP(npc->db_checkid, HP_npc_db_checkid) },
 	{ HP_POP(npc->refresh, HP_npc_refresh) },
 	{ HP_POP(npc->secure_timeout_timer, HP_npc_secure_timeout_timer) },

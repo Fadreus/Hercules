@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2014-2018  Hercules Dev Team
+ * Copyright (C) 2014-2019  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -458,6 +458,8 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 	#endif // MAP_CLAN_H
 	#ifdef MAP_CLIF_H
 		{ "attendance_entry", sizeof(struct attendance_entry), SERVER_TYPE_MAP },
+		{ "barter_itemlist_entry", sizeof(struct barter_itemlist_entry), SERVER_TYPE_MAP },
+		{ "barteritemlist", sizeof(struct barteritemlist), SERVER_TYPE_MAP },
 		{ "cdelayed_damage", sizeof(struct cdelayed_damage), SERVER_TYPE_MAP },
 		{ "clif_interface", sizeof(struct clif_interface), SERVER_TYPE_MAP },
 		{ "hCSData", sizeof(struct hCSData), SERVER_TYPE_MAP },

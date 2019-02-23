@@ -518,7 +518,7 @@ struct block_list {
 // Mob List Held in memory for Dynamic Mobs [Wizputer]
 // Expanded to specify all mob-related spawn data by [Skotlex]
 struct spawn_data {
-	short class_;                ///< Class, used because a mob can change it's class
+	int class_;                ///< Class, used because a mob can change it's class
 	unsigned short m, x, y;      ///< Spawn information (map, point, spawn-area around point)
 	signed short xs, ys;
 	unsigned short num;          ///< Number of mobs using this structure
@@ -800,7 +800,7 @@ struct questinfo {
 	unsigned short icon;
 	unsigned char color;
 	bool hasJob;
-	unsigned short job;/* perhaps a mapid mask would be most flexible? */
+	unsigned int job;/* perhaps a mapid mask would be most flexible? */
 	bool sex_enabled;
 	int sex;
 	struct {
@@ -1167,6 +1167,7 @@ struct map_interface {
 	char autotrade_merchants_db[32];
 	char autotrade_data_db[32];
 	char npc_market_data_db[32];
+	char npc_barter_data_db[32];
 
 	char default_codepage[32];
 	char default_lang_str[64];

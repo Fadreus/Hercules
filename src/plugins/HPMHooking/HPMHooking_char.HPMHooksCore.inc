@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2018  Hercules Dev Team
+ * Copyright (C) 2013-2019  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,6 +92,8 @@ struct {
 	struct HPMHookPoint *HP_chr_mmo_char_tobuf_post;
 	struct HPMHookPoint *HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_pre;
 	struct HPMHookPoint *HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_post;
+	struct HPMHookPoint *HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_tail_pre;
+	struct HPMHookPoint *HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_tail_post;
 	struct HPMHookPoint *HP_chr_mmo_char_send_ban_list_pre;
 	struct HPMHookPoint *HP_chr_mmo_char_send_ban_list_post;
 	struct HPMHookPoint *HP_chr_mmo_char_send_slots_info_pre;
@@ -1727,6 +1729,8 @@ struct {
 	int HP_chr_mmo_char_tobuf_post;
 	int HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_pre;
 	int HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_post;
+	int HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_tail_pre;
+	int HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_tail_post;
 	int HP_chr_mmo_char_send_ban_list_pre;
 	int HP_chr_mmo_char_send_ban_list_post;
 	int HP_chr_mmo_char_send_slots_info_pre;

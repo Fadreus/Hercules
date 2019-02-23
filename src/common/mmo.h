@@ -166,11 +166,11 @@
 #define MAX_CARTS (MAX_BASE_CARTS + MAX_CARTDECORATION_CARTS)
 
 #ifndef MAX_INVENTORY
-#if PACKETVER_ZERO_NUM >= 20181212
+#if PACKETVER_MAIN_NUM >= 20181219 || PACKETVER_RE_NUM >= 20181219 || PACKETVER_ZERO_NUM >= 20181212
 #define MAX_INVENTORY 200
 #else
 #define MAX_INVENTORY 100
-#endif  // PACKETVER_ZERO_NUM >= 20181212
+#endif  // PACKETVER_MAIN_NUM >= 20181219 || PACKETVER_RE_NUM >= 20181219 || PACKETVER_ZERO_NUM >= 20181212
 #endif  // MAX_INVENTORY
 
 #ifndef FIXED_INVENTORY_SIZE
@@ -590,7 +590,7 @@ struct s_pet {
 	int account_id;
 	int char_id;
 	int pet_id;
-	short class_;
+	int class_;
 	short level;
 	int egg_id;//pet egg id
 	int equip;//pet equip name_id
@@ -606,8 +606,8 @@ struct s_homunculus { //[orn]
 	char name[NAME_LENGTH];
 	int hom_id;
 	int char_id;
-	short class_;
-	short prev_class;
+	int class_;
+	int prev_class;
 	int hp,max_hp,sp,max_sp;
 	unsigned int intimacy;
 	short hunger;
@@ -638,7 +638,7 @@ struct s_homunculus { //[orn]
 struct s_mercenary {
 	int mercenary_id;
 	int char_id;
-	short class_;
+	int class_;
 	int hp, sp;
 	unsigned int kill_count;
 	unsigned int life_time;
@@ -647,7 +647,7 @@ struct s_mercenary {
 struct s_elemental {
 	int elemental_id;
 	int char_id;
-	short class_;
+	int class_;
 	uint32 mode;
 	int hp, sp, max_hp, max_sp, matk, atk, atk2;
 	short hit, flee, amotion, def, mdef;
@@ -690,7 +690,7 @@ struct mmo_charstatus {
 	int zeny;
 	int bank_vault;
 
-	int16 class;
+	int class;
 	int status_point, skill_point;
 	int hp,max_hp,sp,max_sp;
 	unsigned int option;
@@ -805,7 +805,7 @@ struct party_member {
 	int account_id;
 	int char_id;
 	char name[NAME_LENGTH];
-	int16 class;
+	int class;
 	unsigned short map;
 	unsigned short lv;
 	unsigned leader : 1,
@@ -825,7 +825,7 @@ struct map_session_data;
 struct guild_member {
 	int account_id, char_id;
 	short hair,hair_color,gender;
-	int16 class;
+	int class;
 	short lv;
 	uint64 exp;
 	int exp_payper;

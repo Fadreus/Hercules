@@ -149,11 +149,12 @@ struct char_interface {
 	int (*rename_char_sql) (struct char_session_data *sd, int char_id);
 	bool (*name_exists) (const char *name, const char *esc_name);
 	int (*check_char_name) (const char *name, const char *esc_name);
-	int (*make_new_char_sql) (struct char_session_data *sd, const char *name_, int str, int agi, int vit, int int_, int dex, int luk, int slot, int hair_color, int hair_style, short starting_job, uint8 sex);
+	int (*make_new_char_sql) (struct char_session_data *sd, const char *name_, int str, int agi, int vit, int int_, int dex, int luk, int slot, int hair_color, int hair_style, int starting_job, uint8 sex);
 	int (*divorce_char_sql) (int partner_id1, int partner_id2);
 	int (*count_users) (void);
 	int (*mmo_char_tobuf) (uint8* buffer, struct mmo_charstatus* p);
 	void (*send_HC_ACK_CHARINFO_PER_PAGE) (int fd, struct char_session_data *sd);
+	void (*send_HC_ACK_CHARINFO_PER_PAGE_tail) (int fd, struct char_session_data *sd);
 	void (*mmo_char_send_ban_list) (int fd, struct char_session_data *sd);
 	void (*mmo_char_send_slots_info) (int fd, struct char_session_data* sd);
 	int (*mmo_char_send_characters) (int fd, struct char_session_data* sd);

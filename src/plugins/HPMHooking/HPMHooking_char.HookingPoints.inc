@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2018  Hercules Dev Team
+ * Copyright (C) 2013-2019  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(chr->count_users, HP_chr_count_users) },
 	{ HP_POP(chr->mmo_char_tobuf, HP_chr_mmo_char_tobuf) },
 	{ HP_POP(chr->send_HC_ACK_CHARINFO_PER_PAGE, HP_chr_send_HC_ACK_CHARINFO_PER_PAGE) },
+	{ HP_POP(chr->send_HC_ACK_CHARINFO_PER_PAGE_tail, HP_chr_send_HC_ACK_CHARINFO_PER_PAGE_tail) },
 	{ HP_POP(chr->mmo_char_send_ban_list, HP_chr_mmo_char_send_ban_list) },
 	{ HP_POP(chr->mmo_char_send_slots_info, HP_chr_mmo_char_send_slots_info) },
 	{ HP_POP(chr->mmo_char_send_characters, HP_chr_mmo_char_send_characters) },

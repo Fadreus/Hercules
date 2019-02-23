@@ -665,6 +665,15 @@ struct stylist_data_entry {
 };
 VECTOR_DECL(struct stylist_data_entry) stylist_data[MAX_STYLIST_TYPE];
 
+struct barter_itemlist_entry {
+	int addId;
+	int addAmount;
+	int removeIndex;
+	int shopIndex;
+};
+
+VECTOR_STRUCT_DECL(barteritemlist, struct barter_itemlist_entry);
+
 /**
 * Stylist Shop Responds
 **/
@@ -1534,7 +1543,7 @@ struct clif_interface {
 	void (*pRodexCancelWriteMail) (int fd, struct map_session_data *sd);
 	void (*pRodexOpenMailbox) (int fd, struct map_session_data *sd);
 	void (*pRodexCheckName) (int fd, struct map_session_data *sd);
-	void (*rodex_checkname_result) (struct map_session_data *sd, int char_id, short class_, int base_level, const char *name);
+	void (*rodex_checkname_result) (struct map_session_data *sd, int char_id, int class_, int base_level, const char *name);
 	void (*pRodexDeleteMail) (int fd, struct map_session_data *sd);
 	void (*rodex_delete_mail) (struct map_session_data *sd, int8 opentype, int64 mail_id);
 	void (*pRodexRefreshMaillist) (int fd, struct map_session_data *sd);
@@ -1587,6 +1596,10 @@ struct clif_interface {
 	void (*item_preview) (struct map_session_data *sd, int n);
 	bool (*enchant_equipment) (struct map_session_data *sd, enum equip_pos pos, int cardSlot, int cardId);
 	void (*pReqRemainTime) (int fd, struct map_session_data *sd);
+	void (*npc_barter_open) (struct map_session_data *sd, struct npc_data *nd);
+	void (*pNPCBarterClosed) (int fd, struct map_session_data *sd);
+	void (*pNPCBarterPurchase) (int fd, struct map_session_data *sd);
+	void (*pClientVersion) (int fd, struct map_session_data *sd);
 };
 
 #ifdef HERCULES_CORE

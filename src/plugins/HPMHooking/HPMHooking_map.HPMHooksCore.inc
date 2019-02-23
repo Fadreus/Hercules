@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2018  Hercules Dev Team
+ * Copyright (C) 2013-2019  Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2250,6 +2250,14 @@ struct {
 	struct HPMHookPoint *HP_clif_enchant_equipment_post;
 	struct HPMHookPoint *HP_clif_pReqRemainTime_pre;
 	struct HPMHookPoint *HP_clif_pReqRemainTime_post;
+	struct HPMHookPoint *HP_clif_npc_barter_open_pre;
+	struct HPMHookPoint *HP_clif_npc_barter_open_post;
+	struct HPMHookPoint *HP_clif_pNPCBarterClosed_pre;
+	struct HPMHookPoint *HP_clif_pNPCBarterClosed_post;
+	struct HPMHookPoint *HP_clif_pNPCBarterPurchase_pre;
+	struct HPMHookPoint *HP_clif_pNPCBarterPurchase_post;
+	struct HPMHookPoint *HP_clif_pClientVersion_pre;
+	struct HPMHookPoint *HP_clif_pClientVersion_post;
 	struct HPMHookPoint *HP_cmdline_init_pre;
 	struct HPMHookPoint *HP_cmdline_init_post;
 	struct HPMHookPoint *HP_cmdline_final_pre;
@@ -3212,6 +3220,8 @@ struct {
 	struct HPMHookPoint *HP_itemdb_lookup_const_post;
 	struct HPMHookPoint *HP_itemdb_lookup_const_mask_pre;
 	struct HPMHookPoint *HP_itemdb_lookup_const_mask_post;
+	struct HPMHookPoint *HP_itemdb_addname_sub_pre;
+	struct HPMHookPoint *HP_itemdb_addname_sub_post;
 	struct HPMHookPoint *HP_libconfig_read_pre;
 	struct HPMHookPoint *HP_libconfig_read_post;
 	struct HPMHookPoint *HP_libconfig_write_pre;
@@ -4258,6 +4268,8 @@ struct {
 	struct HPMHookPoint *HP_npc_trader_update_post;
 	struct HPMHookPoint *HP_npc_market_buylist_pre;
 	struct HPMHookPoint *HP_npc_market_buylist_post;
+	struct HPMHookPoint *HP_npc_barter_buylist_pre;
+	struct HPMHookPoint *HP_npc_barter_buylist_post;
 	struct HPMHookPoint *HP_npc_trader_open_pre;
 	struct HPMHookPoint *HP_npc_trader_open_post;
 	struct HPMHookPoint *HP_npc_market_fromsql_pre;
@@ -4268,6 +4280,14 @@ struct {
 	struct HPMHookPoint *HP_npc_market_delfromsql_post;
 	struct HPMHookPoint *HP_npc_market_delfromsql_sub_pre;
 	struct HPMHookPoint *HP_npc_market_delfromsql_sub_post;
+	struct HPMHookPoint *HP_npc_barter_fromsql_pre;
+	struct HPMHookPoint *HP_npc_barter_fromsql_post;
+	struct HPMHookPoint *HP_npc_barter_tosql_pre;
+	struct HPMHookPoint *HP_npc_barter_tosql_post;
+	struct HPMHookPoint *HP_npc_barter_delfromsql_pre;
+	struct HPMHookPoint *HP_npc_barter_delfromsql_post;
+	struct HPMHookPoint *HP_npc_barter_delfromsql_sub_pre;
+	struct HPMHookPoint *HP_npc_barter_delfromsql_sub_post;
 	struct HPMHookPoint *HP_npc_db_checkid_pre;
 	struct HPMHookPoint *HP_npc_db_checkid_post;
 	struct HPMHookPoint *HP_npc_refresh_pre;
@@ -8899,6 +8919,14 @@ struct {
 	int HP_clif_enchant_equipment_post;
 	int HP_clif_pReqRemainTime_pre;
 	int HP_clif_pReqRemainTime_post;
+	int HP_clif_npc_barter_open_pre;
+	int HP_clif_npc_barter_open_post;
+	int HP_clif_pNPCBarterClosed_pre;
+	int HP_clif_pNPCBarterClosed_post;
+	int HP_clif_pNPCBarterPurchase_pre;
+	int HP_clif_pNPCBarterPurchase_post;
+	int HP_clif_pClientVersion_pre;
+	int HP_clif_pClientVersion_post;
 	int HP_cmdline_init_pre;
 	int HP_cmdline_init_post;
 	int HP_cmdline_final_pre;
@@ -9861,6 +9889,8 @@ struct {
 	int HP_itemdb_lookup_const_post;
 	int HP_itemdb_lookup_const_mask_pre;
 	int HP_itemdb_lookup_const_mask_post;
+	int HP_itemdb_addname_sub_pre;
+	int HP_itemdb_addname_sub_post;
 	int HP_libconfig_read_pre;
 	int HP_libconfig_read_post;
 	int HP_libconfig_write_pre;
@@ -10907,6 +10937,8 @@ struct {
 	int HP_npc_trader_update_post;
 	int HP_npc_market_buylist_pre;
 	int HP_npc_market_buylist_post;
+	int HP_npc_barter_buylist_pre;
+	int HP_npc_barter_buylist_post;
 	int HP_npc_trader_open_pre;
 	int HP_npc_trader_open_post;
 	int HP_npc_market_fromsql_pre;
@@ -10917,6 +10949,14 @@ struct {
 	int HP_npc_market_delfromsql_post;
 	int HP_npc_market_delfromsql_sub_pre;
 	int HP_npc_market_delfromsql_sub_post;
+	int HP_npc_barter_fromsql_pre;
+	int HP_npc_barter_fromsql_post;
+	int HP_npc_barter_tosql_pre;
+	int HP_npc_barter_tosql_post;
+	int HP_npc_barter_delfromsql_pre;
+	int HP_npc_barter_delfromsql_post;
+	int HP_npc_barter_delfromsql_sub_pre;
+	int HP_npc_barter_delfromsql_sub_post;
 	int HP_npc_db_checkid_pre;
 	int HP_npc_db_checkid_post;
 	int HP_npc_refresh_pre;

@@ -1098,7 +1098,7 @@ static int char_mmo_chars_fromsql(struct char_session_data *sd, uint8 *buf, int 
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 0,  SQLDT_INT,    &p.char_id,          sizeof p.char_id,          NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 1,  SQLDT_UCHAR,  &p.slot,             sizeof p.slot,             NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 2,  SQLDT_STRING, &p.name,             sizeof p.name,             NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 3,  SQLDT_INT16,  &p.class,            sizeof p.class,            NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 3,  SQLDT_INT,    &p.class,            sizeof p.class,            NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 4,  SQLDT_INT,    &p.base_level,       sizeof p.base_level,       NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 5,  SQLDT_INT,    &p.job_level,        sizeof p.job_level,        NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 6,  SQLDT_UINT64, &p.base_exp,         sizeof p.base_exp,         NULL, NULL)
@@ -1221,7 +1221,7 @@ static int char_mmo_char_fromsql(int char_id, struct mmo_charstatus *p, bool loa
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 1,  SQLDT_INT,    &p->account_id,         sizeof p->account_id,         NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 2,  SQLDT_UCHAR,  &p->slot,               sizeof p->slot,               NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 3,  SQLDT_STRING, &p->name,               sizeof p->name,               NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 4,  SQLDT_INT16,  &p->class,              sizeof p->class,              NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 4,  SQLDT_INT,    &p->class,              sizeof p->class,              NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 5,  SQLDT_INT,    &p->base_level,         sizeof p->base_level,         NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 6,  SQLDT_INT,    &p->job_level,          sizeof p->job_level,          NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 7,  SQLDT_UINT64, &p->base_exp,           sizeof p->base_exp,           NULL, NULL)
@@ -1705,7 +1705,7 @@ static int char_check_char_name(const char *name, const char *esc_name)
  *  -5: 'Symbols in Character Names are forbidden'
  *  char_id: Success
  **/
-static int char_make_new_char_sql(struct char_session_data *sd, const char *name_, int str, int agi, int vit, int int_, int dex, int luk, int slot, int hair_color, int hair_style, int16 starting_class, uint8 sex)
+static int char_make_new_char_sql(struct char_session_data *sd, const char *name_, int str, int agi, int vit, int int_, int dex, int luk, int slot, int hair_color, int hair_style, int starting_class, uint8 sex)
 {
 	char name[NAME_LENGTH];
 	char esc_name[NAME_LENGTH*2+1];
@@ -1752,22 +1752,22 @@ static int char_make_new_char_sql(struct char_session_data *sd, const char *name
 #if PACKETVER >= 20120307
 	// Insert the new char entry to the database
 	if (SQL_ERROR == SQL->Query(inter->sql_handle, "INSERT INTO `%s` (`account_id`, `char_num`, `name`, `class`, `zeny`, `status_point`,`str`, `agi`, `vit`, `int`, `dex`, `luk`, `max_hp`, `hp`,"
-		"`max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`, `sex`) VALUES ("
-		"'%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%c')",
+		"`max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`, `sex`, `inventory_size`) VALUES ("
+		"'%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%c', '%d')",
 		char_db, sd->account_id , slot, esc_name, starting_class, start_zeny, 48, str, agi, vit, int_, dex, luk,
 		(40 * (100 + vit)/100) , (40 * (100 + vit)/100 ),  (11 * (100 + int_)/100), (11 * (100 + int_)/100), hair_style, hair_color,
-		mapindex_id2name(start_point.map), start_point.x, start_point.y, mapindex_id2name(start_point.map), start_point.x, start_point.y, sex)) {
+		mapindex_id2name(start_point.map), start_point.x, start_point.y, mapindex_id2name(start_point.map), start_point.x, start_point.y, sex, FIXED_INVENTORY_SIZE)) {
 			Sql_ShowDebug(inter->sql_handle);
 			return -2; //No, stop the procedure!
 	}
 #else
 	//Insert the new char entry to the database
 	if( SQL_ERROR == SQL->Query(inter->sql_handle, "INSERT INTO `%s` (`account_id`, `char_num`, `name`, `class`, `zeny`, `str`, `agi`, `vit`, `int`, `dex`, `luk`, `max_hp`, `hp`,"
-							   "`max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`) VALUES ("
-							   "'%d', '%d', '%s', '%d',  '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d')",
+							   "`max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`, `inventory_size`) VALUES ("
+							   "'%d', '%d', '%s', '%d',  '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%d')",
 							   char_db, sd->account_id , slot, esc_name, starting_class, start_zeny, str, agi, vit, int_, dex, luk,
 							   (40 * (100 + vit)/100) , (40 * (100 + vit)/100 ),  (11 * (100 + int_)/100), (11 * (100 + int_)/100), hair_style, hair_color,
-							   mapindex_id2name(start_point.map), start_point.x, start_point.y, mapindex_id2name(start_point.map), start_point.x, start_point.y) )
+							   mapindex_id2name(start_point.map), start_point.x, start_point.y, mapindex_id2name(start_point.map), start_point.x, start_point.y, FIXED_INVENTORY_SIZE) )
 	{
 		Sql_ShowDebug(inter->sql_handle);
 		return -2; //No, stop the procedure!
@@ -2139,15 +2139,20 @@ static void char_send_HC_ACK_CHARINFO_PER_PAGE(int fd, struct char_session_data 
 	p->packetId = HEADER_HC_ACK_CHARINFO_PER_PAGE;
 	p->packetLen = chr->mmo_chars_fromsql(sd, WFIFOP(fd, 4), &count) + sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
 	WFIFOSET(fd, p->packetLen);
-	// send empty packet if chars count is 3*N, for trigger final code in client
-	if (count % 3 != 0) {
-		WFIFOHEAD(fd, sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE));
-		p = WFIFOP(fd, 0);
-		p->packetId = HEADER_HC_ACK_CHARINFO_PER_PAGE;
-		p->packetLen = sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
-		WFIFOSET(fd, p->packetLen);
+	// send empty packet if chars count is 3, for trigger final code in client
+	if (count == 3) {
+		chr->send_HC_ACK_CHARINFO_PER_PAGE_tail(fd, sd);
 	}
 #endif
+}
+
+static void char_send_HC_ACK_CHARINFO_PER_PAGE_tail(int fd, struct char_session_data *sd)
+{
+	WFIFOHEAD(fd, sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE));
+	struct PACKET_HC_ACK_CHARINFO_PER_PAGE *p = WFIFOP(fd, 0);
+	p->packetId = HEADER_HC_ACK_CHARINFO_PER_PAGE;
+	p->packetLen = sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
+	WFIFOSET(fd, p->packetLen);
 }
 
 /* Sends character ban list */
@@ -2381,19 +2386,29 @@ static void char_ping_login_server(int fd)
 
 static int char_parse_fromlogin_connection_state(int fd)
 {
-	if (RFIFOB(fd,2)) {
-		//printf("connect login server error : %d\n", RFIFOB(fd,2));
+	switch (RFIFOB(fd,2)) {
+	case 0:
+		ShowStatus("Connected to login-server (connection #%d).\n", fd);
+		loginif->on_ready();
+		break;
+	case 1: // Invalid username/password
 		ShowError("Can not connect to login-server.\n");
 		ShowError("The server communication passwords (default s1/p1) are probably invalid.\n");
 		ShowError("Also, please make sure your login db has the correct communication username/passwords and the gender of the account is S.\n");
 		ShowError("The communication passwords are set in /conf/map/map-server.conf and /conf/char/char-server.conf\n");
 		sockt->eof(fd);
 		return 1;
-	} else {
-		ShowStatus("Connected to login-server (connection #%d).\n", fd);
-		loginif->on_ready();
+	case 2: // IP not allowed
+		ShowError("Can not connect to login-server.\n");
+		ShowError("Please make sure your IP is allowed in conf/network.conf\n");
+		sockt->eof(fd);
+		return 1;
+	default:
+		ShowError("Invalid response from the login-server. Error code: %d\n", (int)RFIFOB(fd,2));
+		sockt->eof(fd);
+		return 1;
 	}
-	RFIFOSKIP(fd,3);
+	RFIFOSKIP(fd, 3);
 	return 0;
 }
 
@@ -4444,6 +4459,7 @@ static void char_parse_char_connect(int fd, struct char_session_data *sd, uint32
 
 	if( core->runflag != CHARSERVER_ST_RUNNING ) {
 		chr->auth_error(fd, 0);
+		sockt->eof(fd);
 		return;
 	}
 
@@ -4458,11 +4474,13 @@ static void char_parse_char_connect(int fd, struct char_session_data *sd, uint32
 		/* restrictions apply */
 		if( chr->server_type == CST_MAINTENANCE && node->group_id < char_maintenance_min_group_id ) {
 			chr->auth_error(fd, 0);
+			sockt->eof(fd);
 			return;
 		}
 		/* the client will already deny this request, this check is to avoid someone bypassing. */
 		if( chr->server_type == CST_PAYING && (time_t)node->expiration_time < time(NULL) ) {
 			chr->auth_error(fd, 0);
+			sockt->eof(fd);
 			return;
 		}
 		idb_remove(auth_db, account_id);
@@ -4474,6 +4492,7 @@ static void char_parse_char_connect(int fd, struct char_session_data *sd, uint32
 			loginif->auth(fd, sd, ipl);
 		} else { // if no login-server, we must refuse connection
 			chr->auth_error(fd, 0);
+			sockt->eof(fd);
 		}
 	}
 }
@@ -4694,7 +4713,8 @@ static void char_creation_failed(int fd, int result)
 	/* Others I found [Ind] */
 	/* 0x02 = Symbols in Character Names are forbidden */
 	/* 0x03 = You are not eligible to open the Character Slot. */
-	/* 0x0B = This service is only available for premium users.  */
+	/* 0x0B = This service is only available for premium users. */
+	/* 0x0C = Character name is invalid. */
 	switch (result) {
 		case -1: WFIFOB(fd,2) = 0x00; break; // 'Charname already exists'
 		case -2: WFIFOB(fd,2) = 0xFF; break; // 'Char creation denied'
@@ -4994,6 +5014,7 @@ static void char_parse_char_login_map_server(int fd, uint32 ipl)
 		!sockt->allowed_ip_check(ipl))
 	{
 		chr->login_map_server_ack(fd, 3); // Failure
+		sockt->eof(fd);
 	} else {
 		chr->login_map_server_ack(fd, 0); // Success
 
@@ -6468,6 +6489,7 @@ void char_defaults(void)
 	chr->count_users = char_count_users;
 	chr->mmo_char_tobuf = char_mmo_char_tobuf;
 	chr->send_HC_ACK_CHARINFO_PER_PAGE = char_send_HC_ACK_CHARINFO_PER_PAGE;
+	chr->send_HC_ACK_CHARINFO_PER_PAGE_tail = char_send_HC_ACK_CHARINFO_PER_PAGE_tail;
 	chr->mmo_char_send_ban_list = char_mmo_char_send_ban_list;
 	chr->mmo_char_send_slots_info = char_mmo_char_send_slots_info;
 	chr->mmo_char_send_characters = char_mmo_char_send_characters;
