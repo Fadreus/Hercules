@@ -136,7 +136,6 @@ struct guild_interface {
 	int (*change_emblem) (struct map_session_data *sd,int len,const char *data);
 	int (*emblem_changed) (int len,int guild_id,int emblem_id,const char *data);
 	int (*send_message) (struct map_session_data *sd, const char *mes);
-	int (*recv_message) (int guild_id,int account_id,const char *mes,int len);
 	int (*send_dot_remove) (struct map_session_data *sd);
 	int (*skillupack) (int guild_id,uint16 skill_id,int account_id);
 	int (*dobreak) (struct map_session_data *sd, const char *name);
@@ -165,7 +164,8 @@ struct guild_interface {
 	int (*payexp_timer) (int tid, int64 tick, int id, intptr_t data);
 	struct map_session_data *(*sd_check) (int guild_id, int account_id, int char_id);
 	bool (*read_guildskill_tree_db) (char* split[], int columns, int current);
-	bool (*read_castledb) (char* str[], int columns, int current);
+	bool (*read_castledb_libconfig) (void);
+	bool (*read_castledb_libconfig_sub) (struct config_setting_t *it, int idx, const char *source);
 	int (*payexp_timer_sub) (union DBKey key, struct DBData *data, va_list ap);
 	int (*send_xy_timer_sub) (union DBKey key, struct DBData *data, va_list ap);
 	int (*send_xy_timer) (int tid, int64 tick, int id, intptr_t data);

@@ -2268,7 +2268,7 @@ static int pc_bonus_item_drop(struct s_add_drop *drop, const short max, int id, 
 	return 1;
 }
 
-static int pc_addautobonus(struct s_autobonus *bonus, char max, const char *bonus_script, short rate, unsigned int dur, short flag, const char *other_script, unsigned short pos, bool onskill)
+static int pc_addautobonus(struct s_autobonus *bonus, char max, const char *bonus_script, short rate, unsigned int dur, short flag, const char *other_script, unsigned int pos, bool onskill)
 {
 	int i;
 
@@ -4778,6 +4778,13 @@ static int pc_additem(struct map_session_data *sd, const struct item *item_data,
 
 	sd->weight += w;
 	clif->updatestatus(sd,SP_WEIGHT);
+
+	// auto-favorite
+	if (data->flag.auto_favorite > 0) {
+		sd->status.inventory[i].favorite = 1;
+		clif->favorite_item(sd, i);
+	}
+
 	//Auto-equip
 	if(data->flag.autoequip)
 		pc->equipitem(sd, i, data->equip);
@@ -4854,7 +4861,7 @@ static int pc_dropitem(struct map_session_data *sd, int n, int amount)
 	if(sd->status.inventory[n].nameid <= 0 ||
 		sd->status.inventory[n].amount <= 0 ||
 		sd->status.inventory[n].amount < amount ||
-		sd->state.trading || sd->state.vending ||
+		sd->state.trading || sd->state.vending || sd->state.prevend ||
 		!sd->inventory_data[n] //pc->delitem would fail on this case.
 		)
 		return 0;
@@ -5472,7 +5479,7 @@ static int pc_putitemtocart(struct map_session_data *sd, int idx, int amount)
 
 	item_data = &sd->status.inventory[idx];
 
-	if( item_data->nameid == 0 || amount < 1 || item_data->amount < amount || sd->state.vending )
+	if (item_data->nameid == 0 || amount < 1 || item_data->amount < amount || sd->state.vending || sd->state.prevend)
 		return 1;
 
 	if( (flag = pc->cart_additem(sd,item_data,amount,LOG_TYPE_NONE)) == 0 )
@@ -5519,10 +5526,10 @@ static int pc_getitemfromcart(struct map_session_data *sd, int idx, int amount)
 
 	item_data=&sd->status.cart[idx];
 
-	if(item_data->nameid==0 || amount < 1 || item_data->amount<amount || sd->state.vending )
+	if (item_data->nameid == 0 || amount < 1 || item_data->amount < amount || sd->state.vending || sd->state.prevend)
 		return 1;
 
-	if((flag = pc->additem(sd,item_data,amount,LOG_TYPE_NONE)) == 0)
+	if ((flag = pc->additem(sd,item_data,amount,LOG_TYPE_NONE)) == 0)
 		return pc->cart_delitem(sd,idx,amount,0,LOG_TYPE_NONE);
 
 	return flag;
@@ -7136,6 +7143,11 @@ static bool pc_gainexp(struct map_session_data *sd, struct block_list *src, uint
 		clif_disp_onlyself(sd, output);
 	}
 
+	// Share master EXP to homunculus
+	if (sd->hd != NULL && battle_config.hom_bonus_exp_from_master > 0) {
+		homun->gainexp(sd->hd, apply_percentrate((int)base_exp, battle_config.hom_bonus_exp_from_master, 100));
+	}
+
 	return true;
 }
 
@@ -7352,34 +7364,33 @@ static int pc_maxparameterincrease(struct map_session_data *sd, int type)
  */
 static bool pc_statusup(struct map_session_data *sd, int type, int increase)
 {
-	int max_increase = 0, current = 0, needed_points = 0, final_value = 0;
-
 	nullpo_ret(sd);
+	int realIncrease = increase;
 
 	// check conditions
-	if (type < SP_STR || type > SP_LUK || increase <= 0) {
-		clif->statusupack(sd, type, 0, 0);
+	if (type < SP_STR || type > SP_LUK || realIncrease <= 0) {
+		clif->statusupack(sd, type, 0, increase);
 		return false;
 	}
 
 	// check limits
-	current = pc->getstat(sd, type);
-	max_increase = pc->maxparameterincrease(sd, type);
-	increase = cap_value(increase, 0, max_increase); // cap to the maximum status points available
-	if (increase <= 0 || current + increase > pc_maxparameter(sd)) {
-		clif->statusupack(sd, type, 0, 0);
+	int current = pc->getstat(sd, type);
+	int max_increase = pc->maxparameterincrease(sd, type);
+	realIncrease = cap_value(realIncrease, 0, max_increase); // cap to the maximum status points available
+	if (realIncrease <= 0 || current + realIncrease > pc_maxparameter(sd)) {
+		clif->statusupack(sd, type, 0, increase);
 		return false;
 	}
 
 	// check status points
-	needed_points = pc->need_status_point(sd, type, increase);
+	int needed_points = pc->need_status_point(sd, type, realIncrease);
 	if (needed_points < 0 || needed_points > sd->status.status_point) { // Sanity check
-		clif->statusupack(sd, type, 0, 0);
+		clif->statusupack(sd, type, 0, increase);
 		return false;
 	}
 
 	// set new values
-	final_value = pc->setstat(sd, type, current + increase);
+	int final_value = pc->setstat(sd, type, current + realIncrease);
 	sd->status.status_point -= needed_points;
 
 	status_calc_pc(sd, SCO_NONE);
@@ -8138,7 +8149,7 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 
 					if( battle_config.show_mob_info&4 )
 					{// update name with new level
-						clif->charnameack(0, &md->bl);
+						clif->blname_ack(0, &md->bl);
 					}
 				}
 				src = battle->get_master(src); // Maybe Player Summon
@@ -9007,6 +9018,13 @@ static int pc_jobchange(struct map_session_data *sd, int class, int upper)
 	//to correctly calculate new job sprite without
 	if (sd->disguise != -1)
 		pc->disguise(sd, -1);
+
+	// Fix atcommand @jobchange when the player changing from 3rd job having alternate body style into non-3rd job, crashing the client
+	if (pc->has_second_costume(sd) == false) {
+		sd->status.body = 0;
+		sd->vd.body_style = 0;
+		clif->changelook(&sd->bl, LOOK_BODY2, sd->vd.body_style);
+	}
 
 	status->set_viewdata(&sd->bl, class);
 	clif->changelook(&sd->bl, LOOK_BASE, sd->vd.class); // move sprite update to prevent client crashes with incompatible equipment [Valaris]
@@ -10972,7 +10990,7 @@ static int map_day_timer(int tid, int64 tick, int id, intptr_t data)
 	map->night_flag = 0; // 0=day, 1=night [Yor]
 	map->foreachpc(pc->daynight_timer_sub);
 	safestrncpy(tmp_soutput, (data == 0) ? msg_txt(502) : msg_txt(60), sizeof(tmp_soutput)); // The day has arrived!
-	intif->broadcast(tmp_soutput, (int)strlen(tmp_soutput) + 1, BC_DEFAULT);
+	clif->broadcast(NULL, tmp_soutput, (int)strlen(tmp_soutput) + 1, BC_DEFAULT, ALL_CLIENT);
 	return 0;
 }
 
@@ -10993,7 +11011,7 @@ static int map_night_timer(int tid, int64 tick, int id, intptr_t data)
 	map->night_flag = 1; // 0=day, 1=night [Yor]
 	map->foreachpc(pc->daynight_timer_sub);
 	safestrncpy(tmp_soutput, (data == 0) ? msg_txt(503) : msg_txt(59), sizeof(tmp_soutput)); // The night has fallen...
-	intif->broadcast(tmp_soutput, (int)strlen(tmp_soutput) + 1, BC_DEFAULT);
+	clif->broadcast(NULL, tmp_soutput, (int)strlen(tmp_soutput) + 1, BC_DEFAULT, ALL_CLIENT);
 	return 0;
 }
 
@@ -12293,6 +12311,54 @@ static void pc_check_supernovice_call(struct map_session_data *sd, const char *m
 	}
 }
 
+/**
+ * Sends a message t all online GMs having the specified permission.
+ *
+ * @param sender_name  Sender character name.
+ * @param permission   The required permission to receive this message.
+ * @param message      The message body.
+ *
+ * @return The amount of characters the message was delivered to.
+ */
+// The transmission of GM only Wisp/Page from server to inter-server
+static int pc_wis_message_to_gm(const char *sender_name, int permission, const char *message)
+{
+	nullpo_ret(sender_name);
+	nullpo_ret(message);
+	int mes_len = (int)strlen(message) + 1; // + null
+	int count = 0;
+
+	// information is sent to all online GM
+	map->foreachpc(pc->wis_message_to_gm_sub, permission, sender_name, message, mes_len, &count);
+
+	return count;
+}
+
+/**
+ * Helper function for pc_wis_message_to_gm().
+ */
+static int pc_wis_message_to_gm_sub(struct map_session_data *sd, va_list va)
+{
+	nullpo_ret(sd);
+
+	int permission = va_arg(va, int);
+	if (!pc_has_permission(sd, permission))
+		return 0;
+
+	const char *sender_name = va_arg(va, const char *);
+	const char *message = va_arg(va, const char *);
+	int len = va_arg(va, int);
+	int *count = va_arg(va, int *);
+
+	nullpo_ret(sender_name);
+	nullpo_ret(message);
+	nullpo_ret(count);
+
+	clif->wis_message(sd->fd, sender_name, message, len);
+	++*count;
+	return 1;
+}
+
 static void pc_update_job_and_level(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
@@ -12335,7 +12401,8 @@ static bool pc_has_second_costume(struct map_session_data *sd)
 {
 	nullpo_retr(false, sd);
 
-	if ((sd->job & JOBL_THIRD) != 0)
+//	FIXME: JOB_SUPER_NOVICE_E(4190) is not supposed to be 3rd Job. (Issue#2383)
+	if ((sd->job & JOBL_THIRD) != 0 && (sd->job & MAPID_BASEMASK) != MAPID_NOVICE)
 		return true;
 	return false;
 }
@@ -12348,7 +12415,7 @@ static bool pc_expandInventory(struct map_session_data *sd, int adjustSize)
 		clif->inventoryExpandResult(sd, EXPAND_INVENTORY_RESULT_MAX_SIZE);
 		return false;
 	}
-	if (pc_isdead(sd) || sd->state.vending || sd->state.buyingstore || sd->chat_id != 0 || sd->state.trading || sd->state.storage_flag || sd->state.prevend) {
+	if (pc_isdead(sd) || sd->state.vending || sd->state.prevend || sd->state.buyingstore || sd->chat_id != 0 || sd->state.trading || sd->state.storage_flag || sd->state.prevend) {
 		clif->inventoryExpandResult(sd, EXPAND_INVENTORY_RESULT_OTHER_WORK);
 		return false;
 	}
@@ -12739,6 +12806,8 @@ void pc_defaults(void)
 
 	pc->check_supernovice_call = pc_check_supernovice_call;
 	pc->process_chat_message = pc_process_chat_message;
+	pc->wis_message_to_gm = pc_wis_message_to_gm;
+	pc->wis_message_to_gm_sub = pc_wis_message_to_gm_sub;
 
 	/**
 	 * Autotrade persistency [Ind/Hercules <3]

@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2019  Hercules Dev Team
- * Copyright (C) 2019  Andrei Karas (4144)
+ * Copyright (C) 2018-2019  Hercules Dev Team
+ * Copyright (C) 2018-2019  Andrei Karas (4144)
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3757,7 +3757,7 @@ packetLen(0x0a39, 36)  // CH_MAKE_CHAR
 packetLen(0x0a3a, 12)
 
 // Packet: 0x0a3b
-packetLen(0x0a3b, -1)  // ZC_CUSTOM_HAT_EFFECT
+packetLen(0x0a3b, -1)  // ZC_HAT_EFFECT
 
 // Packet: 0x0a3c
 packetLen(0x0a3c, -1)
@@ -3787,13 +3787,13 @@ packetLen(0x0a43, 85)  // ZC_ADD_MEMBER_TO_GROUP
 packetLen(0x0a44, -1)  // ZC_GROUP_LIST
 
 // Packet: 0x0a46
-packetLen(0x0a46, 14)
+packetLen(0x0a46, 14)  // CZ_REQ_STYLE_CHANGE
 
 // Packet: 0x0a47
 packetLen(0x0a47, 3)  // ZC_STYLE_CHANGE_RES
 
 // Packet: 0x0a48
-packetLen(0x0a48, 2)
+packetLen(0x0a48, 2)  // CZ_STYLE_CLOSE
 
 // Packet: 0x0a49
 packetLen(0x0a49, 22)  // CZ_PRIVATE_AIRSHIP_REQUEST
@@ -3901,7 +3901,7 @@ packetLen(0x0a74, 8)
 packetLen(0x0a76, 80)
 
 // Packet: 0x0a77
-packetLen(0x0a77, 15)
+packetLen(0x0a77, 15)  // CZ_CAMERA_INFO
 
 // Packet: 0x0a78
 packetLen(0x0a78, 15)
@@ -3946,10 +3946,10 @@ packetLen(0x0a85, 82)
 packetLen(0x0a86, -1)
 
 // Packet: 0x0a87
-packetLen(0x0a87, -1)
+packetLen(0x0a87, -1)  // ZC_BAN_LIST
 
 // Packet: 0x0a88
-packetLen(0x0a88, 2)
+packetLen(0x0a88, 2)  // CZ_COOLDOWN_RESET
 
 // Packet: 0x0a89
 packetLen(0x0a89, 61)  // ZC_NOTIFY_OFFLINE_STORE
@@ -3994,13 +3994,13 @@ packetLen(0x0a95, 4)
 packetLen(0x0a96, 61)  // ZC_ADD_EXCHANGE_ITEM4
 
 // Packet: 0x0a97
-packetLen(0x0a97, 8)  // CZ_ALT_EQUIPMENT_EQUIP
+packetLen(0x0a97, 8)  // CZ_ALT_EQUIPMENT_ADD
 
 // Packet: 0x0a98
 packetLen(0x0a98, 10)  // ZC_ALT_EQUIPMENT_EQUIP
 
 // Packet: 0x0a99
-packetLen(0x0a99, 4)
+packetLen(0x0a99, 4)  // CZ_ALT_EQUIPMENT_REMOVE
 
 // Packet: 0x0a9a
 packetLen(0x0a9a, 10)  // ZC_ALT_EQUIPMENT_REMOVE
@@ -4009,10 +4009,10 @@ packetLen(0x0a9a, 10)  // ZC_ALT_EQUIPMENT_REMOVE
 packetLen(0x0a9b, -1)  // ZC_ALT_EQUIPMENT_ITEMS
 
 // Packet: 0x0a9c
-packetLen(0x0a9c, 2)
+packetLen(0x0a9c, 2)  // CZ_ALT_EQUIPMENT_SWITCH
 
 // Packet: 0x0a9d
-packetLen(0x0a9d, 4)
+packetLen(0x0a9d, 4)  // ZC_ALT_EQUIPMENT_SWITCH_ACK
 
 // Packet: 0x0a9e
 packetLen(0x0a9e, 2)
@@ -4168,7 +4168,7 @@ packetLen(0x0acf, 68)  // CA_LOGIN_OTP
 packetLen(0x0ad0, 11)  // CA_OTP_CODE
 
 // Packet: 0x0ad1
-packetLen(0x0ad1, -1)
+packetLen(0x0ad1, -1)  // AC_LOGIN_OTP
 
 // Packet: 0x0ad2
 packetLen(0x0ad2, 30)
@@ -4210,7 +4210,7 @@ packetLen(0x0add, 24)  // ZC_ITEM_FALL_ENTRY
 packetLen(0x0ade, 6)  // ZC_OVERWEIGHT_PERCENT
 
 // Packet: 0x0adf
-packetLen(0x0adf, 58)  // ZC_ACK_REQNAME
+packetLen(0x0adf, 58)  // ZC_ACK_REQNAME_TITLE
 
 // Packet: 0x0ae0
 packetLen(0x0ae0, 30)
@@ -4270,7 +4270,7 @@ packetLen(0x0af4, 11)  // CZ_USE_SKILL_TOGROUND
 packetLen(0x0af5, 3)
 
 // Packet: 0x0af6
-packetLen(0x0af6, 88)
+packetLen(0x0af6, 88)  // ZC_ACK_RANKING
 
 // Packet: 0x0af7
 packetLen(0x0af7, 32)  // ZC_ACK_REQNAME_BYGID
@@ -4288,7 +4288,7 @@ packetLen(0x0afa, 54)
 packetLen(0x0afb, -1)  // ZC_AUTOSPELLLIST
 
 // Packet: 0x0afc
-packetLen(0x0afc, 16)
+packetLen(0x0afc, 16)  // CZ_REQ_STYLE_CHANGE2
 
 // Packet: 0x0afd
 packetLen(0x0afd, -1)  // ZC_GUILD_POSITION
@@ -4312,7 +4312,13 @@ packetLen(0x0b02, 26)  // AC_REFUSE_LOGIN4
 packetLen(0x0b03, -1)  // ZC_EQUIPWIN_MICROSCOPE_V7
 
 // Packet: 0x0b04
+#if PACKETVER >= 20190807
+packetLen(0x0b04, 90)
+#elif PACKETVER >= 20190605
+packetLen(0x0b04, 72)
+#elif PACKETVER >= 20190109
 packetLen(0x0b04, 80)
+#endif
 
 // Packet: 0x0b05
 packetLen(0x0b05, 63)  // ZC_OFFLINE_STORE_VISIBLE
@@ -4375,7 +4381,334 @@ packetLen(0x0b18, 4)  // ZC_INVENTORY_EXPANSION_INFO
 packetLen(0x0b19, 2)  // CZ_INVENTORY_EXPAND_REJECTED
 
 // Packet: 0x0b1a
-packetLen(0x0b1a, 29)
+packetLen(0x0b1a, 29)  // ZC_USESKILL_ACK3
+
+// Packet: 0x0b1b
+#if PACKETVER >= 20190213
+packetLen(0x0b1b, 2)  // ZC_ALT_PING
+#endif
+
+// Packet: 0x0b1c
+#if PACKETVER >= 20190227
+packetLen(0x0b1c, 2)  // CZ_PING
+#endif
+
+// Packet: 0x0b1d
+#if PACKETVER >= 20190227
+packetLen(0x0b1d, 2)  // ZC_PING
+#endif
+
+// Packet: 0x0b1e
+#if PACKETVER >= 20190619
+packetLen(0x0b1e, 14)
+#elif PACKETVER >= 20190227
+packetLen(0x0b1e, 10)
+#endif
+
+// Packet: 0x0b1f
+#if PACKETVER >= 20190619
+packetLen(0x0b1f, 14)
+#elif PACKETVER >= 20190306
+packetLen(0x0b1f, 10)
+#endif
+
+// Packet: 0x0b20
+#if PACKETVER >= 20190403
+packetLen(0x0b20, 271)  // ZC_SHORTCUT_KEY_LIST_V4
+#endif
+
+// Packet: 0x0b21
+#if PACKETVER >= 20190403
+packetLen(0x0b21, 13)  // CZ_SHORTCUT_KEY_CHANGE
+#elif PACKETVER >= 20190306
+// removed
+#elif PACKETVER >= 20190227
+packetLen(0x0b21, 10)  // CZ_SHORTCUT_KEY_CHANGE
+#endif
+
+// Packet: 0x0b22
+#if PACKETVER >= 20190403
+packetLen(0x0b22, 5)  // CZ_SHORTCUTKEYBAR_ROTATE
+#elif PACKETVER >= 20190306
+// removed
+#elif PACKETVER >= 20190227
+packetLen(0x0b22, 6)  // CZ_SHORTCUTKEYBAR_ROTATE
+#endif
+
+// Packet: 0x0b23
+#if PACKETVER >= 20190417
+packetLen(0x0b23, 6)
+#elif PACKETVER >= 20190306
+// removed
+#elif PACKETVER >= 20190227
+packetLen(0x0b23, 10)
+#endif
+
+// Packet: 0x0b24
+#if PACKETVER >= 20190417
+packetLen(0x0b24, 6)
+#endif
+
+// Packet: 0x0b25
+#if PACKETVER >= 20190417
+packetLen(0x0b25, 6)
+#endif
+
+// Packet: 0x0b26
+#if PACKETVER >= 20190522
+// removed
+#elif PACKETVER >= 20190508
+packetLen(0x0b26, 16)
+#elif PACKETVER >= 20190417
+packetLen(0x0b26, 18)
+#endif
+
+// Packet: 0x0b27
+#if PACKETVER >= 20190508
+packetLen(0x0b27, -1)
+#endif
+
+// Packet: 0x0b28
+#if PACKETVER >= 20190522
+packetLen(0x0b28, 3)
+#elif PACKETVER >= 20190508
+packetLen(0x0b28, 22)
+#endif
+
+// Packet: 0x0b29
+#if PACKETVER >= 20190605
+// removed
+#elif PACKETVER >= 20190508
+packetLen(0x0b29, 6)
+#endif
+
+// Packet: 0x0b2a
+#if PACKETVER >= 20190605
+// removed
+#elif PACKETVER >= 20190522
+packetLen(0x0b2a, 40)
+#elif PACKETVER >= 20190508
+packetLen(0x0b2a, 6)
+#endif
+
+// Packet: 0x0b2b
+#if PACKETVER >= 20190522
+packetLen(0x0b2b, 11)
+#endif
+
+// Packet: 0x0b2c
+#if PACKETVER >= 20190522
+packetLen(0x0b2c, 3)
+#endif
+
+// Packet: 0x0b2d
+#if PACKETVER >= 20190522
+packetLen(0x0b2d, 11)
+#endif
+
+// Packet: 0x0b2e
+#if PACKETVER >= 20190522
+packetLen(0x0b2e, 4)
+#endif
+
+// Packet: 0x0b2f
+#if PACKETVER >= 20190529
+packetLen(0x0b2f, 73)  // ZC_PROPERTY_HOMUN_3
+#endif
+
+// Packet: 0x0b30
+#if PACKETVER >= 20190529
+packetLen(0x0b30, -1)
+#endif
+
+// Packet: 0x0b31
+#if PACKETVER >= 20190619
+packetLen(0x0b31, 17)  // ZC_ADD_SKILL
+#endif
+
+// Packet: 0x0b32
+#if PACKETVER >= 20190619
+packetLen(0x0b32, -1)  // ZC_SKILLINFO_LIST
+#endif
+
+// Packet: 0x0b33
+#if PACKETVER >= 20190619
+packetLen(0x0b33, 17)  // ZC_SKILLINFO_UPDATE2
+#endif
+
+// Packet: 0x0b34
+#if PACKETVER >= 20190724
+packetLen(0x0b34, 50)
+#elif PACKETVER >= 20190703
+packetLen(0x0b34, 26)
+#endif
+
+// Packet: 0x0b35
+#if PACKETVER >= 20190703
+packetLen(0x0b35, 3)
+#endif
+
+// Packet: 0x0b36
+#if PACKETVER >= 20190717
+packetLen(0x0b36, -1)
+#endif
+
+// Packet: 0x0b37
+#if PACKETVER >= 20190724
+packetLen(0x0b37, -1)
+#endif
+
+// Packet: 0x0b38
+#if PACKETVER >= 20190724
+packetLen(0x0b38, -1)
+#endif
+
+// Packet: 0x0b39
+#if PACKETVER >= 20190724
+packetLen(0x0b39, -1)
+#endif
+
+// Packet: 0x0b3a
+#if PACKETVER >= 20190724
+packetLen(0x0b3a, 4)
+#endif
+
+// Packet: 0x0b3b
+#if PACKETVER >= 20190724
+packetLen(0x0b3b, 4)
+#endif
+
+// Packet: 0x0b3c
+#if PACKETVER >= 20190724
+packetLen(0x0b3c, 4)
+#endif
+
+// Packet: 0x0b3d
+#if PACKETVER >= 20190724
+packetLen(0x0b3d, -1)
+#endif
+
+// Packet: 0x0b3e
+#if PACKETVER >= 20190724
+packetLen(0x0b3e, -1)
+#endif
+
+// Packet: 0x0b3f
+#if PACKETVER >= 20190724
+packetLen(0x0b3f, 64)
+#endif
+
+// Packet: 0x0b40
+#if PACKETVER >= 20190724
+packetLen(0x0b40, -1)
+#endif
+
+// Packet: 0x0b41
+#if PACKETVER >= 20190724
+packetLen(0x0b41, 41)
+#endif
+
+// Packet: 0x0b42
+#if PACKETVER >= 20190724
+packetLen(0x0b42, 30)
+#endif
+
+// Packet: 0x0b43
+#if PACKETVER >= 20190724
+packetLen(0x0b43, 47)
+#endif
+
+// Packet: 0x0b44
+#if PACKETVER >= 20190724
+packetLen(0x0b44, 32)
+#endif
+
+// Packet: 0x0b45
+#if PACKETVER >= 20190724
+packetLen(0x0b45, 32)
+#endif
+
+// Packet: 0x0b46
+#if PACKETVER >= 20190724
+packetLen(0x0b46, 10)
+#endif
+
+// Packet: 0x0b47
+#if PACKETVER >= 20190724
+packetLen(0x0b47, 14)
+#endif
+
+// Packet: 0x0b48
+#if PACKETVER >= 20190724
+packetLen(0x0b48, 18)
+#endif
+
+// Packet: 0x0b49
+#if PACKETVER >= 20190724
+packetLen(0x0b49, 4)
+#endif
+
+// Packet: 0x0b4a
+#if PACKETVER >= 20190724
+packetLen(0x0b4a, 6)
+#endif
+
+// Packet: 0x0b4b
+#if PACKETVER >= 20190724
+packetLen(0x0b4b, 4)
+#endif
+
+// Packet: 0x0b4c
+#if PACKETVER >= 20190724
+packetLen(0x0b4c, 2)
+#endif
+
+// Packet: 0x0b4d
+#if PACKETVER >= 20190807
+packetLen(0x0b4d, -1)
+#elif PACKETVER >= 20190724
+packetLen(0x0b4d, 6)
+#endif
+
+// Packet: 0x0b4e
+#if PACKETVER >= 20190807
+packetLen(0x0b4e, -1)
+#endif
+
+// Packet: 0x0b4f
+#if PACKETVER >= 20190807
+packetLen(0x0b4f, 2)
+#endif
+
+// Packet: 0x0b50
+#if PACKETVER >= 20190807
+packetLen(0x0b50, 2)
+#endif
+
+// Packet: 0x0b51
+#if PACKETVER >= 20190807
+packetLen(0x0b51, 2)
+#endif
+
+// Packet: 0x0b52
+#if PACKETVER >= 20190807
+packetLen(0x0b52, 2)
+#endif
+
+// Packet: 0x0b53
+#if PACKETVER >= 20190821
+packetLen(0x0b53, 52)
+#endif
+
+// Packet: 0x0b54
+#if PACKETVER >= 20190821
+packetLen(0x0b54, 8)
+#endif
+
+// Packet: 0x0b55
+#if PACKETVER >= 20190821
+packetLen(0x0b55, -1)
+#endif
 
 
 #endif /* COMMON_PACKETS2019_LEN_MAIN_H */

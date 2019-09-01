@@ -130,6 +130,7 @@ enum item_itemid {
 	ITEMID_INDIGO_PTS            = 6361,
 	ITEMID_YELLOW_WISH_PTS       = 6362,
 	ITEMID_LIME_GREEN_PTS        = 6363,
+	ITEMID_BLACKSMITH_BLESSING   = 6635,
 	ITEMID_STONE                 = 7049,
 	ITEMID_FIRE_BOTTLE           = 7135,
 	ITEMID_ACID_BOTTLE           = 7136,
@@ -520,7 +521,8 @@ struct item_data {
 		unsigned no_refine : 1; // [celest]
 		unsigned delay_consume : 1;     ///< Signifies items that are not consumed immediately upon double-click [Skotlex]
 		unsigned trade_restriction : 9; ///< Item trade restrictions mask (@see enum ItemTradeRestrictions)
-		unsigned autoequip: 1;
+		unsigned autoequip : 1;
+		unsigned auto_favorite : 1;
 		unsigned buyingstore : 1;
 		unsigned bindonequip : 1;
 		unsigned keepafteruse : 1;

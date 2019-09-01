@@ -55,6 +55,9 @@ struct skill_unit;
 struct unit_data;
 struct view_data;
 struct achievement_data; // map/achievement.h
+struct s_refine_requirement;
+struct PACKET_ZC_ACK_RANKING_sub;
+struct SKILLDATA;
 
 enum clif_messages;
 enum rodex_add_item;
@@ -71,16 +74,17 @@ enum rodex_get_items;
 #define MAX_ROULETTE_COLUMNS 9 /** client-defined value **/
 #define RGB2BGR(c) (((c) & 0x0000FF) << 16 | ((c) & 0x00FF00) | ((c) & 0xFF0000) >> 16)
 
-#ifndef MAX_STYLIST_TYPE
-#define MAX_STYLIST_TYPE LOOK_MAX
-#endif
-
 #define COLOR_CYAN    0x00ffffU
 #define COLOR_RED     0xff0000U
 #define COLOR_GREEN   0x00ff00U
 #define COLOR_WHITE   0xffffffU
 #define COLOR_YELLOW  0xffff00U
 #define COLOR_DEFAULT COLOR_GREEN
+
+#define MAX_STORAGE_ITEM_PACKET_NORMAL ((INT16_MAX - (sizeof(struct ZC_STORE_ITEMLIST_NORMAL) - (sizeof(struct NORMALITEM_INFO) * MAX_ITEMLIST))) / sizeof(struct NORMALITEM_INFO))
+#define MAX_STORAGE_ITEM_PACKET_EQUIP  ((INT16_MAX - (sizeof(struct ZC_STORE_ITEMLIST_EQUIP) - (sizeof(struct EQUIPITEM_INFO) * MAX_ITEMLIST))) / sizeof(struct EQUIPITEM_INFO))
+STATIC_ASSERT(MAX_STORAGE_ITEM_PACKET_NORMAL > 0, "Max items per storage item packet for normal items is less than 1, it's most likely to be a bug and shall not be ignored.");
+STATIC_ASSERT(MAX_STORAGE_ITEM_PACKET_EQUIP > 0, "Max items per storage item packet for equip items is less than 1, it's most likely to be a bug and shall not be ignored.");
 
 /**
  * Enumerations
@@ -409,23 +413,26 @@ enum CASH_SHOP_BUY_RESULT {
 	CSBR_RUNE_OVERCOUNT     = 0x9,
 	CSBR_EACHITEM_OVERCOUNT = 0xa,
 	CSBR_UNKNOWN            = 0xb,
+	CSBR_BUSY               = 0xc,
 };
 
 enum BATTLEGROUNDS_QUEUE_ACK {
-	BGQA_SUCCESS = 1,
-	BGQA_FAIL_QUEUING_FINISHED,
-	BGQA_FAIL_BGNAME_INVALID,
-	BGQA_FAIL_TYPE_INVALID,
-	BGQA_FAIL_PPL_OVERAMOUNT,
-	BGQA_FAIL_LEVEL_INCORRECT,
-	BGQA_DUPLICATE_REQUEST,
-	BGQA_PLEASE_RELOGIN,
-	BGQA_NOT_PARTY_GUILD_LEADER,
-	BGQA_FAIL_CLASS_INVALID,
+	BGQA_SUCCESS                 = 1,
+	BGQA_FAIL_QUEUING_FINISHED   = 2,
+	BGQA_FAIL_BGNAME_INVALID     = 3,
+	BGQA_FAIL_TYPE_INVALID       = 4,
+	BGQA_FAIL_PPL_OVERAMOUNT     = 5,
+	BGQA_FAIL_LEVEL_INCORRECT    = 6,
+	BGQA_DUPLICATE_REQUEST       = 7,
+	BGQA_PLEASE_RELOGIN          = 8,
+	BGQA_NOT_PARTY_GUILD_LEADER  = 9,
+	BGQA_FAIL_CLASS_INVALID      = 10,
 	/* not official way to respond (gotta find packet?) */
-	BGQA_FAIL_DESERTER,
-	BGQA_FAIL_COOLDOWN,
-	BGQA_FAIL_TEAM_COUNT,
+	BGQA_FAIL_DESERTER           = 11,
+	BGQA_FAIL_COOLDOWN           = 12,
+	BGQA_FAIL_TEAM_COUNT         = 13,
+	// official continue
+	BGQA_FAIL_TEAM_IN_BG_ALREADY = 15
 };
 
 enum BATTLEGROUNDS_QUEUE_NOTICE_DELETED {
@@ -558,7 +565,7 @@ enum clif_unittype {
 **/
 enum CZ_CONFIG {
 	CZ_CONFIG_OPEN_EQUIPMENT_WINDOW  = 0,
-	// Unknown                       = 1,
+	CZ_CONFIG_CALL                   = 1,
 	CZ_CONFIG_PET_AUTOFEEDING        = 2,
 	CZ_CONFIG_HOMUNCULUS_AUTOFEEDING = 3,
 };
@@ -655,16 +662,6 @@ struct attendance_entry {
 	int qty;
 };
 
-/* Stylist data [Asheraf/Hercules]*/
-struct stylist_data_entry {
-	int16 id;
-	int32 zeny;
-	int itemid;
-	int boxid;
-	bool allow_doram;
-};
-VECTOR_DECL(struct stylist_data_entry) stylist_data[MAX_STYLIST_TYPE];
-
 struct barter_itemlist_entry {
 	int addId;
 	int addAmount;
@@ -701,6 +698,26 @@ enum expand_inventory_result {
 	EXPAND_INVENTORY_RESULT_MISSING_ITEM = 3,
 	EXPAND_INVENTORY_RESULT_MAX_SIZE = 4
 };
+
+#if PACKETVER_RE_NUM >= 20190807 || PACKETVER_ZERO_NUM >= 20190814
+enum market_buy_result {
+	MARKET_BUY_RESULT_ERROR = 0xffff,  // -1
+	MARKET_BUY_RESULT_SUCCESS = 0,
+	MARKET_BUY_RESULT_NO_ZENY = 1,
+	MARKET_BUY_RESULT_OVER_WEIGHT = 2,
+	MARKET_BUY_RESULT_OUT_OF_SPACE = 3,
+	MARKET_BUY_RESULT_AMOUNT_TOO_BIG = 9
+};
+#else
+enum market_buy_result {
+	MARKET_BUY_RESULT_ERROR = 0,
+	MARKET_BUY_RESULT_SUCCESS = 1,
+	MARKET_BUY_RESULT_NO_ZENY = 0,
+	MARKET_BUY_RESULT_OVER_WEIGHT = 0,
+	MARKET_BUY_RESULT_OUT_OF_SPACE = 0,
+	MARKET_BUY_RESULT_AMOUNT_TOO_BIG = 0
+};
+#endif
 
 /**
  * Clif.c Interface
@@ -854,9 +871,12 @@ struct clif_interface {
 	void (*fame_alchemist) (struct map_session_data *sd, int points);
 	void (*fame_taekwon) (struct map_session_data *sd, int points);
 	void (*ranklist) (struct map_session_data *sd, enum fame_list_type type);
+	void (*ranklist_sub) (struct PACKET_ZC_ACK_RANKING_sub *ranks, enum fame_list_type type);
+	void (*ranklist_sub2) (uint32 *chars, uint32 *points, enum fame_list_type type);
 	void (*update_rankingpoint) (struct map_session_data *sd, enum fame_list_type type, int points);
 	void (*pRanklist) (int fd, struct map_session_data *sd);
-	void (*hotkeys) (struct map_session_data *sd);
+	void (*hotkeys) (struct map_session_data *sd, int tab);
+	void (*hotkeysAll) (struct map_session_data *sd);
 	int (*insight) (struct block_list *bl,va_list ap);
 	int (*outsight) (struct block_list *bl,va_list ap);
 	void (*skillcastcancel) (struct block_list* bl);
@@ -895,7 +915,19 @@ struct clif_interface {
 	void (*mvp_exp) (struct map_session_data *sd, unsigned int exp);
 	void (*mvp_noitem) (struct map_session_data* sd);
 	void (*changed_dir) (struct block_list *bl, enum send_target target);
-	void (*charnameack) (int fd, struct block_list *bl);
+	void (*blname_ack) (int fd, struct block_list *bl);
+	void (*pcname_ack) (int fd, struct block_list *bl);
+	void (*homname_ack) (int fd, struct block_list *bl);
+	void (*mername_ack) (int fd, struct block_list *bl);
+	void (*petname_ack) (int fd, struct block_list *bl);
+	void (*npcname_ack) (int fd, struct block_list *bl);
+	void (*mobname_ack) (int fd, struct block_list *bl);
+	void (*mobname_guardian_ack) (int fd, struct block_list *bl);
+	void (*mobname_additional_ack) (int fd, struct block_list *bl);
+	void (*mobname_normal_ack) (int fd, struct block_list *bl);
+	void (*chatname_ack) (int fd, struct block_list *bl);
+	void (*elemname_ack) (int fd, struct block_list *bl);
+	void (*unknownname_ack) (int fd, struct block_list *bl);
 	void (*monster_hp_bar) ( struct mob_data* md, struct map_session_data *sd );
 	int (*hpmeter) (struct map_session_data *sd);
 	void (*hpmeter_single) (int fd, int id, unsigned int hp, unsigned int maxhp);
@@ -993,6 +1025,7 @@ struct clif_interface {
 	void (*joinchatok) (struct map_session_data *sd,struct chat_data* cd);
 	void (*addchat) (struct chat_data* cd,struct map_session_data *sd);
 	void (*changechatowner) (struct chat_data* cd, struct map_session_data* sd);
+	void (*chatRoleChange) (struct chat_data *cd, struct map_session_data *sd, struct block_list* bl, int isNotOwner);
 	void (*clearchat) (struct chat_data *cd,int fd);
 	void (*leavechat) (struct chat_data* cd, struct map_session_data* sd, bool flag);
 	void (*changechatstatus) (struct chat_data* cd);
@@ -1021,7 +1054,7 @@ struct clif_interface {
 	void (*wisexin) (struct map_session_data *sd,int type,int flag);
 	void (*wisall) (struct map_session_data *sd,int type,int flag);
 	void (*PMIgnoreList) (struct map_session_data* sd);
-	void (*ShowScript) (struct block_list* bl, const char* message);
+	void (*ShowScript) (struct block_list* bl, const char* message, enum send_target target);
 	/* trade handling */
 	void (*traderequest) (struct map_session_data* sd, const char* name);
 	void (*tradestart) (struct map_session_data* sd, uint8 type);
@@ -1056,6 +1089,7 @@ struct clif_interface {
 	void (*skillinfo) (struct map_session_data *sd,int skill_id, int inf);
 	void (*addskill) (struct map_session_data *sd, int id);
 	void (*deleteskill) (struct map_session_data *sd, int id);
+	void (*playerSkillToPacket) (struct map_session_data *sd, struct SKILLDATA *skillData, int skillId, int idx, bool newSkill);
 	/* party-specific */
 	void (*party_created) (struct map_session_data *sd,int result);
 	void (*party_member_info) (struct party_data *p, struct map_session_data *sd);
@@ -1252,15 +1286,17 @@ struct clif_interface {
 	int (*delay_damage_sub) (int tid, int64 tick, int id, intptr_t data);
 	/* NPC Market */
 	void (*npc_market_open) (struct map_session_data *sd, struct npc_data *nd);
-	void (*npc_market_purchase_ack) (struct map_session_data *sd, const struct itemlist *item_list, unsigned char response);
+	void (*npc_market_purchase_ack) (struct map_session_data *sd, const struct itemlist *item_list, enum market_buy_result response);
 	/* */
 	bool (*parse_roulette_db) (void);
 	void (*roulette_generate_ack) (struct map_session_data *sd, enum GENERATE_ROULETTE_ACK result, short stage, short prizeIdx, int bonusItemID);
+	void (*roulette_close) (struct map_session_data *sd);
 	/* Merge Items */
 	void (*openmergeitem) (int fd, struct map_session_data *sd);
 	void (*cancelmergeitem) (int fd, struct map_session_data *sd);
 	int (*comparemergeitem) (const void *a, const void *b);
 	void (*ackmergeitems) (int fd, struct map_session_data *sd);
+	void (*mergeitems) (int fd, struct map_session_data *sd, int index, int amount, enum mergeitem_reason reason);
 	/* */
 	bool (*isdisguised) (struct block_list* bl);
 	void (*navigate_to) (struct map_session_data *sd, const char* mapname, uint16 x, uint16 y, uint8 flag, bool hideWindow, uint16 mob_id);
@@ -1278,7 +1314,8 @@ struct clif_interface {
 	void (*pWantToConnection) (int fd, struct map_session_data *sd);
 	void (*pLoadEndAck) (int fd,struct map_session_data *sd);
 	void (*pTickSend) (int fd, struct map_session_data *sd);
-	void (*pHotkey) (int fd, struct map_session_data *sd);
+	void (*pHotkey1) (int fd, struct map_session_data *sd);
+	void (*pHotkey2) (int fd, struct map_session_data *sd);
 	void (*pProgressbar) (int fd, struct map_session_data * sd);
 	void (*pWalkToXY) (int fd, struct map_session_data *sd);
 	void (*pQuitGame) (int fd, struct map_session_data *sd);
@@ -1490,6 +1527,7 @@ struct clif_interface {
 	void (*pCashShopBuy) (int fd, struct map_session_data *sd);
 	void (*pPartyTick) (int fd, struct map_session_data *sd);
 	void (*pGuildInvite2) (int fd, struct map_session_data *sd);
+	void (*cashShopBuyAck) (int fd, struct map_session_data *sd, int itemId, enum CASH_SHOP_BUY_RESULT result);
 	/* Group Search System Update */
 	void (*pPartyBookingAddFilter) (int fd, struct map_session_data *sd);
 	void (*pPartyBookingSubFilter) (int fd, struct map_session_data *sd);
@@ -1515,7 +1553,8 @@ struct clif_interface {
 	void (*pNPCMarketPurchase) (int fd, struct map_session_data *sd);
 	/* */
 	int (*add_item_options) (struct ItemOptions *buf, const struct item *it);
-	void (*pHotkeyRowShift) (int fd, struct map_session_data *sd);
+	void (*pHotkeyRowShift1) (int fd, struct map_session_data *sd);
+	void (*pHotkeyRowShift2) (int fd, struct map_session_data *sd);
 	void (*dressroom_open) (struct map_session_data *sd, int view);
 	void (*pOneClick_ItemIdentify) (int fd,struct map_session_data *sd);
 	/* Cart Deco */
@@ -1576,15 +1615,9 @@ struct clif_interface {
 	void (*pPrivateAirshipRequest) (int fd, struct map_session_data *sd);
 	void (*PrivateAirshipResponse) (struct map_session_data *sd, uint32 flag);
 
-	void (*stylist_vector_init) (void);
-	void (*stylist_vector_clear) (void);
-	bool (*stylist_read_db_libconfig) (void);
-	bool (*stylist_read_db_libconfig_sub) (struct config_setting_t *it, int idx, const char *source);
-	bool (*style_change_validate_requirements) (struct map_session_data *sd, int type, int16 idx);
-	void (*stylist_send_rodexitem) (struct map_session_data *sd, int itemid);
 	void (*pReqStyleChange) (int fd, struct map_session_data *sd);
 	void (*pReqStyleChange2) (int fd, struct map_session_data *sd);
-	void (*cz_req_style_change_sub) (struct map_session_data *sd, int type, int16 idx, bool isitem);
+	void (*pStyleClose) (int fd, struct map_session_data *sd);
 	void (*style_change_response) (struct map_session_data *sd, enum stylist_shop flag);
 	void (*pPetEvolution) (int fd, struct map_session_data *sd);
 	void (*petEvolutionResult) (int fd, enum pet_evolution_result result);
@@ -1600,6 +1633,19 @@ struct clif_interface {
 	void (*pNPCBarterClosed) (int fd, struct map_session_data *sd);
 	void (*pNPCBarterPurchase) (int fd, struct map_session_data *sd);
 	void (*pClientVersion) (int fd, struct map_session_data *sd);
+	void (*pPing) (int fd, struct map_session_data *sd);
+	void (*ping) (struct map_session_data *sd);
+	int (*pingTimer) (int tid, int64 tick, int id, intptr_t data);
+	int (*pingTimerSub) (struct map_session_data *sd, va_list ap);
+	void (*pResetCooldown) (int fd, struct map_session_data *sd);
+	void (*loadConfirm) (struct map_session_data *sd);
+	void (*send_selforarea) (int fd, struct block_list *bl, const void *buf, int len);
+	void (*OpenRefineryUI) (struct map_session_data *sd);
+	void (*pAddItemRefineryUI) (int fd, struct map_session_data *sd);
+	void (*AddItemRefineryUIAck) (struct map_session_data *sd, int item_index, struct s_refine_requirement *req);
+	void (*pRefineryUIClose) (int fd, struct map_session_data *sd);
+	void (*pRefineryUIRefine) (int fd, struct map_session_data *sd);
+	void (*announce_refine_status) (struct map_session_data *sd, int item_id, int refine_level, bool success, enum send_target target);
 };
 
 #ifdef HERCULES_CORE

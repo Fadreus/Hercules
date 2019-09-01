@@ -34,6 +34,8 @@ struct hplugin_data_store;
 struct itemlist; // map/itemdb.h
 struct view_data;
 
+enum market_buy_result;
+
 enum npc_parse_options {
 	NPO_NONE  = 0x0,
 	NPO_ONINIT  = 0x1,
@@ -129,6 +131,7 @@ struct npc_data {
 			int spawn_timer;
 		} tomb;
 	} u;
+	VECTOR_DECL(struct questinfo) qi_data;
 	struct hplugin_data_store *hdata; ///< HPM Plugin Data Store
 };
 
@@ -148,7 +151,7 @@ enum actor_classes {
 #define MAX_NPC_CLASS 1000
 // New NPC range
 #define MAX_NPC_CLASS2_START 10001
-#define MAX_NPC_CLASS2_END 10310
+#define MAX_NPC_CLASS2_END 10344
 
 //Script NPC events.
 enum npce_event {
@@ -309,7 +312,7 @@ struct npc_interface {
 	void (*trader_count_funds) (struct npc_data *nd, struct map_session_data *sd);
 	bool (*trader_pay) (struct npc_data *nd, struct map_session_data *sd, int price, int points);
 	void (*trader_update) (int master);
-	int (*market_buylist) (struct map_session_data *sd, struct itemlist *item_list);
+	enum market_buy_result (*market_buylist) (struct map_session_data *sd, struct itemlist *item_list);
 	int (*barter_buylist) (struct map_session_data *sd, struct barteritemlist *item_list);
 	bool (*trader_open) (struct map_session_data *sd, struct npc_data *nd);
 	void (*market_fromsql) (void);
@@ -322,6 +325,7 @@ struct npc_interface {
 	void (*barter_delfromsql_sub) (const char *npcname, int itemId, int itemId2, int amount2);
 	bool (*db_checkid) (const int id);
 	void (*refresh) (struct npc_data* nd);
+	void (*questinfo_clear) (struct npc_data *nd);
 	/**
 	 * For the Secure NPC Timeout option (check config/Secure.h) [RR]
 	 **/

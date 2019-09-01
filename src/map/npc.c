@@ -36,6 +36,7 @@
 #include "map/mob.h"
 #include "map/pc.h"
 #include "map/pet.h"
+#include "map/quest.h"
 #include "map/script.h"
 #include "map/skill.h"
 #include "map/status.h"
@@ -2114,7 +2115,7 @@ static int npc_buylist(struct map_session_data *sd, struct itemlist *item_list)
 /**
  * Processes incoming npc market purchase list
  **/
-static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item_list)
+static enum market_buy_result npc_market_buylist(struct map_session_data *sd, struct itemlist *item_list)
 {
 	struct npc_data* nd;
 	struct npc_item_list *shop = NULL;
@@ -2128,7 +2129,7 @@ static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item
 	nd = npc->checknear(sd,map->id2bl(sd->npc_shopid));
 
 	if (nd == NULL || nd->subtype != SCRIPT || VECTOR_LENGTH(*item_list) == 0 || !nd->u.scr.shop || nd->u.scr.shop->type != NST_MARKET)
-		return 1;
+		return MARKET_BUY_RESULT_ERROR;
 
 	shop = nd->u.scr.shop->item;
 	shop_size = nd->u.scr.shop->items;
@@ -2148,18 +2149,18 @@ static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item
 				 entry->id == itemdb_viewid(shop[j].nameid) //item_avail replacement
 				 );
 		if (j == shop_size) /* TODO find official response for this */
-			return 1; // no such item in shop
+			return MARKET_BUY_RESULT_ERROR; // no such item in shop
 
 		entry->id = shop[j].nameid; //item_avail replacement
 
 		if (entry->amount > (int)shop[j].qty)
-			return 1;
+			return MARKET_BUY_RESULT_AMOUNT_TOO_BIG;
 
 		value = shop[j].value;
 		npc_market_qty[i] = j;
 
 		if (!itemdb->exists(entry->id)) /* TODO find official response for this */
-			return 1; // item no longer in itemdb
+			return MARKET_BUY_RESULT_ERROR; // item no longer in itemdb
 
 		if (!itemdb->isstackable(entry->id) && entry->amount > 1) {
 			//Exploit? You can't buy more than 1 of equipment types o.O
@@ -2183,13 +2184,13 @@ static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item
 	}
 
 	if (z > sd->status.zeny) /* TODO find official response for this */
-		return 1; // Not enough Zeny
+		return MARKET_BUY_RESULT_NO_ZENY; // Not enough Zeny
 
 	if( w + sd->weight > sd->max_weight ) /* TODO find official response for this */
-		return 1; // Too heavy
+		return MARKET_BUY_RESULT_OVER_WEIGHT; // Too heavy
 
 	if( pc->inventoryblank(sd) < new_ ) /* TODO find official response for this */
-		return 1; // Not enough space to store items
+		return MARKET_BUY_RESULT_OUT_OF_SPACE; // Not enough space to store items
 
 	pc->payzeny(sd,(int)z,LOG_TYPE_NPC, NULL);
 
@@ -2199,7 +2200,7 @@ static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item
 		j = npc_market_qty[i];
 
 		if (entry->amount > (int)shop[j].qty) /* wohoo someone tampered with the packet. */
-			return 1;
+			return MARKET_BUY_RESULT_AMOUNT_TOO_BIG;
 
 		shop[j].qty -= entry->amount;
 
@@ -2217,7 +2218,7 @@ static int npc_market_buylist(struct map_session_data *sd, struct itemlist *item
 		}
 	}
 
-	return 0;
+	return MARKET_BUY_RESULT_SUCCESS;
 }
 
 /**
@@ -2638,8 +2639,9 @@ static int npc_unload(struct npc_data *nd, bool single)
 		nd->path = NULL;
 	}
 
-	if( single && nd->bl.m != -1 )
-		map->remove_questinfo(nd->bl.m,nd);
+	if (single && nd->bl.m != -1)
+		map->remove_questinfo(nd->bl.m, nd);
+	npc->questinfo_clear(nd);
 
 	if (nd->src_id == 0 && ( nd->subtype == SHOP || nd->subtype == CASHSHOP)) {
 		//src check for duplicate shops [Orcao]
@@ -2978,6 +2980,7 @@ static struct npc_data *npc_create_npc(enum npc_subtype subtype, int m, int x, i
 	nd->class_ = class_;
 	nd->speed = 200;
 	nd->vd = npc_viewdb[0]; // Copy INVISIBLE_CLASS view data. Actual view data is set by npc->add_to_location() later.
+	VECTOR_INIT(nd->qi_data);
 
 	return nd;
 }
@@ -3911,7 +3914,7 @@ static void npc_setdisplayname(struct npc_data *nd, const char *newname)
 
 	safestrncpy(nd->name, newname, sizeof(nd->name));
 	if( map->list[nd->bl.m].users )
-		clif->charnameack(0, &nd->bl);
+		clif->blname_ack(0, &nd->bl);
 }
 
 /// Changes the display class of the npc.
@@ -4365,8 +4368,7 @@ static const char *npc_parse_mapflag(const char *w1, const char *w2, const char 
 	if (!strcmpi(w3, "nosave")) {
 		char savemap[32];
 		int savex, savey;
-		if (state == 0)
-			; //Map flag disabled.
+		if (state == 0); //Map flag disabled.
 		else if (w4 && !strcmpi(w4, "SavePoint")) {
 			map->list[m].save.map = 0;
 			map->list[m].save.x = -1;
@@ -4659,7 +4661,8 @@ static const char *npc_parse_mapflag(const char *w1, const char *w2, const char 
 			}
 		}
 
-		if( modifier[0] == '\0' ) {
+		if (state == 0); //Map flag disabled.
+		else if (modifier[0] == '\0') {
 			ShowWarning("npc_parse_mapflag: Missing 5th param for 'adjust_unit_duration' flag! removing flag from %s in file '%s', line '%d'.\n", map->list[m].name, filepath, strline(buffer,start-buffer));
 			if (retval) *retval = EXIT_FAILURE;
 		} else if( !( skill_id = skill->name2id(skill_name) ) || !skill->get_unit_id( skill->name2id(skill_name), 0) ) {
@@ -4718,7 +4721,8 @@ static const char *npc_parse_mapflag(const char *w1, const char *w2, const char 
 			}
 		}
 
-		if( modifier[0] == '\0' ) {
+		if (state == 0); //Map flag disabled.
+		else if (modifier[0] == '\0') {
 			ShowWarning("npc_parse_mapflag: Missing 5th param for 'adjust_skill_damage' flag! removing flag from %s in file '%s', line '%d'.\n", map->list[m].name, filepath, strline(buffer,start-buffer));
 			if (retval) *retval = EXIT_FAILURE;
 		} else if( !( skill_id = skill->name2id(skill_name) ) ) {
@@ -4794,6 +4798,10 @@ static const char *npc_parse_mapflag(const char *w1, const char *w2, const char 
 		map->list[m].flag.pairship_startable = (state) ? 1 : 0;
 	}  else if (!strcmpi(w3, "pairship_endable")) {
 		map->list[m].flag.pairship_endable = (state) ? 1 : 0;
+	}  else if (!strcmpi(w3, "nostorage")) {
+		map->list[m].flag.nostorage = (state) ? cap_value(atoi(w4), 1, 3) : 0;
+	}  else if (!strcmpi(w3, "nogstorage")) {
+		map->list[m].flag.nogstorage = (state) ? cap_value(atoi(w4), 1, 3) : 0;
 	} else {
 		npc->parse_unknown_mapflag(mapname, w3, w4, start, buffer, filepath, retval);
 	}
@@ -5331,6 +5339,18 @@ static void npc_debug_warps(void)
 			npc->debug_warps_sub(map->list[m].npc[i]);
 }
 
+static void npc_questinfo_clear(struct npc_data *nd)
+{
+	nullpo_retv(nd);
+
+	for (int i = 0; i < VECTOR_LENGTH(nd->qi_data); i++) {
+		struct questinfo *qi = &VECTOR_INDEX(nd->qi_data, i);
+		VECTOR_CLEAR(qi->items);
+		VECTOR_CLEAR(qi->quest_requirement);
+	}
+	VECTOR_CLEAR(nd->qi_data);
+}
+
 /*==========================================
  * npc initialization
  *------------------------------------------*/
@@ -5551,4 +5571,5 @@ void npc_defaults(void)
 	npc->barter_delfromsql_sub = npc_barter_delfromsql_sub;
 	npc->db_checkid = npc_db_checkid;
 	npc->refresh = npc_refresh;
+	npc->questinfo_clear = npc_questinfo_clear;
 }
