@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -529,16 +529,49 @@ enum script_petinfo_types {
  * Player blocking actions related flags.
  */
 enum pcblock_action_flag {
-	PCBLOCK_NONE     = 0x00,
-	PCBLOCK_MOVE     = 0x01,
-	PCBLOCK_ATTACK   = 0x02,
-	PCBLOCK_SKILL    = 0x04,
-	PCBLOCK_USEITEM  = 0x08,
-	PCBLOCK_CHAT     = 0x10,
-	PCBLOCK_IMMUNE   = 0x20,
-	PCBLOCK_SITSTAND = 0x40,
-	PCBLOCK_COMMANDS = 0x80,
-	PCBLOCK_ALL      = 0xFF,
+	PCBLOCK_NONE     = 0x000,
+	PCBLOCK_MOVE     = 0x001,
+	PCBLOCK_ATTACK   = 0x002,
+	PCBLOCK_SKILL    = 0x004,
+	PCBLOCK_USEITEM  = 0x008,
+	PCBLOCK_CHAT     = 0x010,
+	PCBLOCK_IMMUNE   = 0x020,
+	PCBLOCK_SITSTAND = 0x040,
+	PCBLOCK_COMMANDS = 0x080,
+	PCBLOCK_NPC      = 0x100,
+	PCBLOCK_ALL      = 0x1FF,
+};
+
+/**
+ * Types of Siege (WoE)
+ */
+enum siege_type {
+	SIEGE_TYPE_FE,
+	SIEGE_TYPE_SE,
+	SIEGE_TYPE_TE,
+	SIEGE_TYPE_MAX
+};
+
+/**
+ * Types of MadoGear
+ */
+enum mado_type {
+	MADO_ROBOT = 0x00,
+	// unused  = 0x01,
+	MADO_SUITE = 0x02,
+#ifndef MADO_MAX
+	MADO_MAX
+#endif
+};
+
+/**
+ * Option flags for itemskill() script command.
+ **/
+enum itemskill_flag {
+	ISF_NONE = 0x00,
+	ISF_IGNORECONDITIONS = 0x01, // Ignore skill conditions and don't consume them.
+	ISF_INSTANTCAST = 0x02, // Cast skill instantaneously.
+	ISF_CASTONSELF = 0x04, // Forcefully cast skill on invoking character without showing the target selection cursor.
 };
 
 /**
@@ -1029,16 +1062,21 @@ struct script_interface {
 	int (*string_dup) (char *str);
 	void (*load_translations) (void);
 	bool (*load_translation_addstring) (const char *file, uint8 lang_id, const char *msgctxt, const struct script_string_buf *msgid, const struct script_string_buf *msgstr);
-	int (*load_translation) (const char *file, uint8 lang_id);
+	int (*load_translation_file) (const char *file, uint8 lang_id);
+	int (*load_translation) (const char *directory, uint8 lang_id);
 	int (*translation_db_destroyer) (union DBKey key, struct DBData *data, va_list ap);
 	void (*clear_translations) (bool reload);
 	int (*parse_cleanup_timer) (int tid, int64 tick, int id, intptr_t data);
 	uint8 (*add_language) (const char *name);
-	const char *(*get_translation_file_name) (const char *file);
+	const char *(*get_translation_dir_name) (const char *directory);
 	void (*parser_clean_leftovers) (void);
 	void (*run_use_script) (struct map_session_data *sd, struct item_data *data, int oid);
 	void (*run_item_equip_script) (struct map_session_data *sd, struct item_data *data, int oid);
 	void (*run_item_unequip_script) (struct map_session_data *sd, struct item_data *data, int oid);
+	void (*run_item_rental_end_script) (struct map_session_data *sd, struct item_data *data, int oid);
+	void (*run_item_rental_start_script) (struct map_session_data *sd, struct item_data *data, int oid);
+	void (*run_item_lapineddukddak_script) (struct map_session_data *sd, struct item_data *data, int oid);
+	bool (*sellitemcurrency_add) (struct npc_data *nd, struct script_state* st, int argIndex);
 };
 
 #ifdef HERCULES_CORE

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2019  Hercules Dev Team
+ * Copyright (C) 2013-2020 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2518,6 +2518,58 @@ enum parsefunc_rcode HP_PRIV__lclif_parse_CA_CHARSERVERCONNECT(int fd, struct lo
 	return retVal___;
 }
 /* libconfig_interface */
+void HP_libconfig_set_db_path(const char *db_path) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_libconfig_set_db_path_pre > 0) {
+		void (*preHookFunc) (const char **db_path);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_libconfig_set_db_path_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_libconfig_set_db_path_pre[hIndex].func;
+			preHookFunc(&db_path);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.libconfig.set_db_path(db_path);
+	}
+	if (HPMHooks.count.HP_libconfig_set_db_path_post > 0) {
+		void (*postHookFunc) (const char *db_path);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_libconfig_set_db_path_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_libconfig_set_db_path_post[hIndex].func;
+			postHookFunc(db_path);
+		}
+	}
+	return;
+}
+void HP_libconfig_format_db_path(const char *filename, char *path_buf, int buffer_len) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_libconfig_format_db_path_pre > 0) {
+		void (*preHookFunc) (const char **filename, char **path_buf, int *buffer_len);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_libconfig_format_db_path_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_libconfig_format_db_path_pre[hIndex].func;
+			preHookFunc(&filename, &path_buf, &buffer_len);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.libconfig.format_db_path(filename, path_buf, buffer_len);
+	}
+	if (HPMHooks.count.HP_libconfig_format_db_path_post > 0) {
+		void (*postHookFunc) (const char *filename, char *path_buf, int buffer_len);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_libconfig_format_db_path_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_libconfig_format_db_path_post[hIndex].func;
+			postHookFunc(filename, path_buf, buffer_len);
+		}
+	}
+	return;
+}
 int HP_libconfig_read(struct config_t *config, FILE *stream) {
 	int hIndex = 0;
 	int retVal___ = 0;

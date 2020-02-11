@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -747,7 +747,7 @@ static int inter_guild_sql_init(void)
 	inter_guild->castle_db = idb_alloc(DB_OPT_RELEASE_DATA);
 
 	//Read exp file
-	sv->readdb("db", DBPATH"exp_guild.txt", ',', 1, 1, MAX_GUILDLEVEL, inter_guild->exp_parse_row);
+	sv->readdb(chr->db_path, DBPATH"exp_guild.txt", ',', 1, 1, MAX_GUILDLEVEL, inter_guild->exp_parse_row);
 
 	timer->add_func_list(inter_guild->save_timer, "inter_guild->save_timer");
 	timer->add(timer->gettick() + 10000, inter_guild->save_timer, 0, 0);

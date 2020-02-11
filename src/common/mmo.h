@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -218,7 +218,7 @@
 #define MAX_FAME 1000000000
 #define MAX_CART 100
 #ifndef MAX_SKILL_DB
-#define MAX_SKILL_DB 1510 ///< Maximum number of skills in the skill DB (compacted array size)
+#define MAX_SKILL_DB 1314 ///< Maximum number of skills in the skill DB (compacted array size)
 #endif
 #ifndef MAX_SKILL_ID
 #define MAX_SKILL_ID 10015   // [Ind/Hercules] max used skill ID
@@ -580,6 +580,7 @@ struct status_change_data {
 	unsigned short type;        ///< Status change type (@see enum sc_type)
 	int val1, val2, val3, val4; ///< Parameters (meaning depends on type).
 	int tick;                   ///< Remaining duration.
+	int total_tick;             ///< Total duration.
 };
 
 struct storage_data {
@@ -821,8 +822,8 @@ struct party_member {
 	int char_id;
 	char name[NAME_LENGTH];
 	int class;
+	int lv;
 	unsigned short map;
-	unsigned short lv;
 	unsigned leader : 1,
 	         online : 1;
 };
@@ -907,6 +908,14 @@ struct guild_castle {
 	int mapindex;
 	char castle_name[NAME_LENGTH];
 	char castle_event[NAME_LENGTH];
+	int siege_type;
+	bool enable_client_warp;
+	struct {
+		int x;
+		int y;
+		int zeny;
+		int zeny_siege;
+	} client_warp;
 	int guild_id;
 	int economy;
 	int defense;

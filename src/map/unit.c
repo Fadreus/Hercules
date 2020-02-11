@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -459,10 +459,10 @@ static int unit_walktoxy_timer(int tid, int64 tick, int id, intptr_t data)
 		}
 		if (tbl->m == bl->m && check_distance_bl(bl, tbl, ud->chaserange)) {
 			//Reached destination.
+			ud->target_to = 0;
 			if (ud->state.attack_continue) {
 				//Aegis uses one before every attack, we should
 				//only need this one for syncing purposes. [Skotlex]
-				ud->target_to = 0;
 				clif->fixpos(bl);
 				unit->attack(bl, tbl->id, ud->state.attack_continue);
 			}
@@ -544,6 +544,8 @@ static int unit_walktoxy(struct block_list *bl, short x, short y, int flag)
 	ud->to_x = x;
 	ud->to_y = y;
 	unit->stop_attack(bl); //Sets target to 0
+	if ((flag & 8) == 0) // Stepaction might be delayed due to occupied cell
+		unit->stop_stepaction(bl); // unit->walktoxy removes any remembered stepaction and resets ud->target_to
 
 	sc = status->get_sc(bl);
 	if( sc ) {
@@ -661,7 +663,7 @@ static void unit_run_hit(struct block_list *bl, struct status_change *sc, struct
 	lv = sc->data[type]->val1;
 	//If you can't run forward, you must be next to a wall, so bounce back. [Skotlex]
 	if( type == SC_RUN )
-		clif->sc_load(bl,bl->id,AREA,SI_TING,0,0,0);
+		clif->sc_load(bl, bl->id, AREA, status->get_sc_icon(SC_TING), 0, 0, 0);
 
 	ud = unit->bl2ud(bl);
 	nullpo_retv(ud);
@@ -673,7 +675,7 @@ static void unit_run_hit(struct block_list *bl, struct status_change *sc, struct
 		if (lv > 0)
 			skill->blown(bl, bl, skill->get_blewcount(TK_RUN, lv), unit->getdir(bl), 0);
 		clif->fixpos(bl); //Why is a clif->slide (skill->blown) AND a fixpos needed? Ask Aegis.
-		clif->sc_end(bl, bl->id, AREA, SI_TING);
+		clif->sc_end(bl, bl->id, AREA, status->get_sc_icon(SC_TING));
 	} else if (sd) {
 		clif->fixpos(bl);
 		skill->castend_damage_id(bl, &sd->bl, RA_WUGDASH, lv, timer->gettick(), SD_LEVEL);
@@ -1039,11 +1041,15 @@ static int unit_stop_walking(struct block_list *bl, int flag)
 
 static int unit_skilluse_id(struct block_list *src, int target_id, uint16 skill_id, uint16 skill_lv)
 {
-	return unit->skilluse_id2(
-		src, target_id, skill_id, skill_lv,
-		skill->cast_fix(src, skill_id, skill_lv),
-		skill->get_castcancel(skill_id)
-	);
+	int casttime = skill->cast_fix(src, skill_id, skill_lv);
+	int castcancel = skill->get_castcancel(skill_id);
+	int ret = unit->skilluse_id2(src, target_id, skill_id, skill_lv, casttime, castcancel);
+	struct map_session_data *sd = BL_CAST(BL_PC, src);
+
+	if (sd != NULL)
+		pc->itemskill_clear(sd);
+
+	return ret;
 }
 
 static int unit_is_walking(struct block_list *bl)
@@ -1328,6 +1334,12 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 
 	if (src->type==BL_HOM)
 		switch(skill_id) { //Homun-auto-target skills.
+			case HVAN_CHAOTIC:
+				target_id = ud->target; // Choose attack target for now
+				target = map->id2bl(target_id);
+				if (target != NULL)
+					break;
+				FALLTHROUGH // Attacking nothing, choose master as default target instead
 			case HLIF_HEAL:
 			case HLIF_AVOID:
 			case HAMI_DEFENCE:
@@ -1410,22 +1422,8 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 		}
 	}
 
-	if (src->type == BL_HOM) {
-		// In case of homunuculus, set the sd to the homunculus' master, as needed below
-		struct block_list *master = battle->get_master(src);
-		if (master)
-			sd = map->id2sd(master->id);
-	}
-
-	if (sd) {
-		/* temporarily disabled, awaiting for kenpachi to detail this so we can make it work properly */
-#if 0
-		if (sd->skillitem != skill_id && !skill->check_condition_castbegin(sd, skill_id, skill_lv))
-#else
-		if (!skill->check_condition_castbegin(sd, skill_id, skill_lv))
-#endif
-			return 0;
-	}
+	if (sd != NULL && skill->check_condition_castbegin(sd, skill_id, skill_lv) == 0)
+		return 0;
 
 	if (src->type == BL_MOB) {
 		const struct mob_data *src_md = BL_UCCAST(BL_MOB, src);
@@ -1608,6 +1606,9 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 	if (!ud->state.running) //need TK_RUN or WUGDASH handler to be done before that, see bugreport:6026
 		unit->stop_walking(src, STOPWALKING_FLAG_FIXPOS);// even though this is not how official works but this will do the trick. bugreport:6829
 
+	if (sd != NULL && sd->state.itemskill_no_casttime == 1 && skill->is_item_skill(sd, skill_id, skill_lv))
+		casttime = 0;
+
 	// in official this is triggered even if no cast time.
 	clif->useskill(src, src->id, target_id, 0,0, skill_id, skill_lv, casttime);
 	if( casttime > 0 || temp )
@@ -1677,11 +1678,15 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 
 static int unit_skilluse_pos(struct block_list *src, short skill_x, short skill_y, uint16 skill_id, uint16 skill_lv)
 {
-	return unit->skilluse_pos2(
-		src, skill_x, skill_y, skill_id, skill_lv,
-		skill->cast_fix(src, skill_id, skill_lv),
-		skill->get_castcancel(skill_id)
-	);
+	int casttime = skill->cast_fix(src, skill_id, skill_lv);
+	int castcancel = skill->get_castcancel(skill_id);
+	int ret = unit->skilluse_pos2(src, skill_x, skill_y, skill_id, skill_lv, casttime, castcancel);
+	struct map_session_data *sd = BL_CAST(BL_PC, src);
+
+	if (sd != NULL)
+		pc->itemskill_clear(sd);
+
+	return ret;
 }
 
 static int unit_skilluse_pos2(struct block_list *src, short skill_x, short skill_y, uint16 skill_id, uint16 skill_lv, int casttime, int castcancel)
@@ -1806,6 +1811,10 @@ static int unit_skilluse_pos2(struct block_list *src, short skill_x, short skill
 	}
 
 	unit->stop_walking(src, STOPWALKING_FLAG_FIXPOS);
+
+	if (sd != NULL && sd->state.itemskill_no_casttime == 1 && skill->is_item_skill(sd, skill_id, skill_lv))
+		casttime = 0;
+
 	// in official this is triggered even if no cast time.
 	clif->useskill(src, src->id, 0, skill_x, skill_y, skill_id, skill_lv, casttime);
 	if( casttime > 0 ) {
@@ -1931,8 +1940,10 @@ static int unit_attack(struct block_list *src, int target_id, int continuous)
 
 	if (src->type == BL_PC) {
 		struct map_session_data *sd = BL_UCAST(BL_PC, src);
-		if( target->type == BL_NPC ) { // monster npcs [Valaris]
-			npc->click(sd, BL_UCAST(BL_NPC, target)); // submitted by leinsirk10 [Celest]
+		if (target->type == BL_NPC) { // monster npcs [Valaris]
+			if (sd->block_action.npc == 0) { // *pcblock script command
+				npc->click(sd, BL_UCAST(BL_NPC, target)); // submitted by leinsirk10 [Celest]
+			}
 			return 0;
 		}
 		if( pc_is90overweight(sd) || pc_isridingwug(sd) ) { // overweight or mounted on warg - stop attacking

@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,12 @@ struct status_change_entry;
 #define MAX_SKILL_ITEM_REQUIRE    10
 #define MAX_SKILLUNITGROUPTICKSET 25
 #define MAX_SKILL_NAME_LENGTH     32
+
+// Custom Skill Ranges is used in skill_get_index, to allocate indexes based on ID and gaps between 2 SkillID
+#ifndef CUSTOM_SKILL_RANGES
+	#define CUSTOM_SKILL_RANGES
+#endif  // CUSTOM_SKILL_RANGES
+
 
 // (Epoque:) To-do: replace this macro with some sort of skill tree check (rather than hard-coded skill names)
 #define skill_ischangesex(id) ( \
@@ -125,6 +131,7 @@ enum e_skill_inf2 {
 	INF2_SHOW_SKILL_SCALE  = 0x20000,
 	INF2_ALLOW_REPRODUCE   = 0x40000,
 	INF2_HIDDEN_TRAP       = 0x80000, // Traps that are hidden (based on trap_visiblity battle conf)
+	INF2_IS_COMBO_SKILL    = 0x100000, // Sets whether a skill can be used in combos or not
 };
 
 
@@ -2012,6 +2019,7 @@ struct skill_interface {
 	int (*cast_fix_sc) ( struct block_list *bl, int time);
 	int (*vf_cast_fix) ( struct block_list *bl, double time, uint16 skill_id, uint16 skill_lv);
 	int (*delay_fix) ( struct block_list *bl, uint16 skill_id, uint16 skill_lv);
+	bool (*is_item_skill) (struct map_session_data *sd, int skill_id, int skill_lv);
 	int (*check_condition_castbegin) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
 	int (*check_condition_castend) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
 	int (*consume_requirement) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv, short type);

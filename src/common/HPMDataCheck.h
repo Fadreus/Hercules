@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2014-2019  Hercules Dev Team
+ * Copyright (C) 2014-2020 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -525,6 +525,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "item_combo", sizeof(struct item_combo), SERVER_TYPE_MAP },
 		{ "item_data", sizeof(struct item_data), SERVER_TYPE_MAP },
 		{ "item_group", sizeof(struct item_group), SERVER_TYPE_MAP },
+		{ "item_lapineddukddak", sizeof(struct item_lapineddukddak), SERVER_TYPE_MAP },
 		{ "item_package", sizeof(struct item_package), SERVER_TYPE_MAP },
 		{ "item_package_must_entry", sizeof(struct item_package_must_entry), SERVER_TYPE_MAP },
 		{ "item_package_rand_entry", sizeof(struct item_package_rand_entry), SERVER_TYPE_MAP },
@@ -599,6 +600,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 	#endif // MAP_MOB_H
 	#ifdef MAP_NPC_H
 		{ "event_data", sizeof(struct event_data), SERVER_TYPE_MAP },
+		{ "npc_barter_currency", sizeof(struct npc_barter_currency), SERVER_TYPE_MAP },
 		{ "npc_chat_interface", sizeof(struct npc_chat_interface), SERVER_TYPE_MAP },
 		{ "npc_data", sizeof(struct npc_data), SERVER_TYPE_MAP },
 		{ "npc_interface", sizeof(struct npc_interface), SERVER_TYPE_MAP },
@@ -665,6 +667,8 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_ACK_LEAVE_GUILD1", sizeof(struct PACKET_ZC_ACK_LEAVE_GUILD1), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ACK_LEAVE_GUILD2", sizeof(struct PACKET_ZC_ACK_LEAVE_GUILD2), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ACK_OPEN_WRITE_MAIL", sizeof(struct PACKET_ZC_ACK_OPEN_WRITE_MAIL), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_ACK_RANKING_name", sizeof(struct PACKET_ZC_ACK_RANKING_name), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_ACK_RANKING_points", sizeof(struct PACKET_ZC_ACK_RANKING_points), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ACK_RANKING_sub", sizeof(struct PACKET_ZC_ACK_RANKING_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ACK_REMOVE_ITEM_MAIL", sizeof(struct PACKET_ZC_ACK_REMOVE_ITEM_MAIL), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ACK_REQMAKINGITEM", sizeof(struct PACKET_ZC_ACK_REQMAKINGITEM), SERVER_TYPE_MAP },
@@ -681,6 +685,7 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_ADD_ITEM_TO_STORE", sizeof(struct PACKET_ZC_ADD_ITEM_TO_STORE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ADD_MEMBER_TO_GROUP", sizeof(struct PACKET_ZC_ADD_MEMBER_TO_GROUP), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ADD_SKILL", sizeof(struct PACKET_ZC_ADD_SKILL), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_AUTORUN_SKILL", sizeof(struct PACKET_ZC_AUTORUN_SKILL), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_BAN_LIST", sizeof(struct PACKET_ZC_BAN_LIST), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_BAN_LIST_sub", sizeof(struct PACKET_ZC_BAN_LIST_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_CASH_ITEM_DELETE", sizeof(struct PACKET_ZC_CASH_ITEM_DELETE), SERVER_TYPE_MAP },
@@ -733,14 +738,17 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_REPAIRITEMLIST", sizeof(struct PACKET_ZC_REPAIRITEMLIST), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_REPAIRITEMLIST_sub", sizeof(struct PACKET_ZC_REPAIRITEMLIST_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_ROLE_CHANGE", sizeof(struct PACKET_ZC_ROLE_CHANGE), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_SE_CASHSHOP_OPEN", sizeof(struct PACKET_ZC_SE_CASHSHOP_OPEN), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SEARCH_STORE_INFO_ACK", sizeof(struct PACKET_ZC_SEARCH_STORE_INFO_ACK), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SEARCH_STORE_INFO_ACK_sub", sizeof(struct PACKET_ZC_SEARCH_STORE_INFO_ACK_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SKILL_SCALE", sizeof(struct PACKET_ZC_SKILL_SCALE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SKILLINFO_LIST", sizeof(struct PACKET_ZC_SKILLINFO_LIST), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SKILLINFO_UPDATE2", sizeof(struct PACKET_ZC_SKILLINFO_UPDATE2), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_SPRITE_CHANGE", sizeof(struct PACKET_ZC_SPRITE_CHANGE), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_STATE_CHANGE", sizeof(struct PACKET_ZC_STATE_CHANGE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_STATUS_CHANGE_ACK", sizeof(struct PACKET_ZC_STATUS_CHANGE_ACK), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_STYLE_CHANGE_RES", sizeof(struct PACKET_ZC_STYLE_CHANGE_RES), SERVER_TYPE_MAP },
+		{ "PACKET_ZC_TALKBOX_CHATCONTENTS", sizeof(struct PACKET_ZC_TALKBOX_CHATCONTENTS), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_UI_ACTION", sizeof(struct PACKET_ZC_UI_ACTION), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_UPDATE_ITEM_FROM_BUYING_STORE", sizeof(struct PACKET_ZC_UPDATE_ITEM_FROM_BUYING_STORE), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_USE_ITEM_ACK", sizeof(struct PACKET_ZC_USE_ITEM_ACK), SERVER_TYPE_MAP },
@@ -748,8 +756,6 @@ HPExport const struct s_HPMDataCheck HPMDataCheck[] = {
 		{ "PACKET_ZC_WARPLIST_sub", sizeof(struct PACKET_ZC_WARPLIST_sub), SERVER_TYPE_MAP },
 		{ "PACKET_ZC_WRITE_MAIL_RESULT", sizeof(struct PACKET_ZC_WRITE_MAIL_RESULT), SERVER_TYPE_MAP },
 		{ "SKILLDATA", sizeof(struct SKILLDATA), SERVER_TYPE_MAP },
-		{ "ZC_INVENTORY_END", sizeof(struct ZC_INVENTORY_END), SERVER_TYPE_MAP },
-		{ "ZC_INVENTORY_START", sizeof(struct ZC_INVENTORY_START), SERVER_TYPE_MAP },
 		{ "ZC_PROGRESS_ACTOR", sizeof(struct ZC_PROGRESS_ACTOR), SERVER_TYPE_MAP },
 		{ "ZC_STORE_ITEMLIST_EQUIP", sizeof(struct ZC_STORE_ITEMLIST_EQUIP), SERVER_TYPE_MAP },
 		{ "ZC_STORE_ITEMLIST_NORMAL", sizeof(struct ZC_STORE_ITEMLIST_NORMAL), SERVER_TYPE_MAP },

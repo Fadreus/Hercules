@@ -2,8 +2,8 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2018  Hercules Dev Team
- * Copyright (C)  Athena Dev Teams
+ * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,6 @@ struct hplugin_data_store;
 //The number of drops all mobs have and the max drop-slot that the steal skill will attempt to steal from.
 #define MAX_MOB_DROP 10
 #define MAX_MVP_DROP 3
-#define MAX_STEAL_DROP 7
 
 //Min time between AI executions
 #define MIN_MOBTHINKTIME 100
@@ -256,6 +255,7 @@ struct mob_data {
 	int areanpc_id; //Required in OnTouchNPC (to avoid multiple area touchs)
 	unsigned int bg_id; // BattleGround System
 	int clan_id; // Clan System
+	int npc_id; // NPC ID if spawned with monster/areamonster/guardian/bg_monster/atcommand("@monster xy") (Used to kill mob on NPC unload.)
 
 	int64 next_walktime, last_thinktime, last_linktime, last_pcneartime, dmgtick;
 	short move_fail_count;
@@ -508,14 +508,14 @@ struct mob_interface {
 	int (*db_checkid) (const int id);
 	struct view_data* (*get_viewdata) (int class_);
 	int (*parse_dataset) (struct spawn_data *data);
-	struct mob_data* (*spawn_dataset) (struct spawn_data *data);
+	struct mob_data* (*spawn_dataset) (struct spawn_data *data, int npc_id);
 	int (*get_random_id) (int type, int flag, int lv);
 	bool (*ksprotected) (struct block_list *src, struct block_list *target);
-	struct mob_data* (*once_spawn_sub) (struct block_list *bl, int16 m, int16 x, int16 y, const char *mobname, int class_, const char *event, unsigned int size, unsigned int ai);
+	struct mob_data* (*once_spawn_sub) (struct block_list *bl, int16 m, int16 x, int16 y, const char *mobname, int class_, const char *event, unsigned int size, unsigned int ai, int npc_id);
 	int (*once_spawn) (struct map_session_data *sd, int16 m, int16 x, int16 y, const char *mobname, int class_, int amount, const char *event, unsigned int size, unsigned int ai);
 	int (*once_spawn_area) (struct map_session_data *sd, int16 m, int16 x0, int16 y0, int16 x1, int16 y1, const char *mobname, int class_, int amount, const char *event, unsigned int size, unsigned int ai);
-	int (*spawn_guardian) (const char *mapname, short x, short y, const char *mobname, int class_, const char *event, int guardian, bool has_index);
-	int (*spawn_bg) (const char *mapname, short x, short y, const char *mobname, int class_, const char *event, unsigned int bg_id);
+	int (*spawn_guardian) (const char *mapname, short x, short y, const char *mobname, int class_, const char *event, int guardian, bool has_index, int npc_id);
+	int (*spawn_bg) (const char *mapname, short x, short y, const char *mobname, int class_, const char *event, unsigned int bg_id, int npc_id);
 	int (*can_reach) (struct mob_data *md, struct block_list *bl, int range, int state);
 	int (*linksearch) (struct block_list *bl, va_list ap);
 	int (*delayspawn) (int tid, int64 tick, int id, intptr_t data);
@@ -529,6 +529,7 @@ struct mob_interface {
 	int (*ai_sub_hard_bg_ally) (struct block_list *bl, va_list ap);
 	int (*ai_sub_hard_lootsearch) (struct block_list *bl, va_list ap);
 	int (*warpchase_sub) (struct block_list *bl, va_list ap);
+	bool (*is_in_battle_state) (const struct mob_data *md);
 	int (*ai_sub_hard_slavemob) (struct mob_data *md, int64 tick);
 	int (*unlocktarget) (struct mob_data *md, int64 tick);
 	int (*randomwalk) (struct mob_data *md, int64 tick);
@@ -589,8 +590,9 @@ struct mob_interface {
 	uint32 (*read_db_mode_sub) (struct mob_db *entry, struct config_setting_t *t);
 	struct optdrop_group *(*read_db_drops_option) (struct mob_db *entry, const char *item_name, struct config_setting_t *drop, int *drop_rate);
 	void (*read_db_stats_sub) (struct mob_db *entry, struct config_setting_t *t);
+	void (*read_db_viewdata_sub) (struct mob_db *entry, struct config_setting_t *t);
 	void (*name_constants) (void);
-	bool (*readdb_mobavail) (char *str[], int columns, int current);
+	void (*mobavail_removal_notice) (void);
 	int (*read_randommonster) (void);
 	bool (*parse_row_chatdb) (char **str, const char *source, int line, int *last_msg_id);
 	void (*readchatdb) (void);

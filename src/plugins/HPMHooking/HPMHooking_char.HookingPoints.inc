@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2019  Hercules Dev Team
+ * Copyright (C) 2013-2020 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -368,8 +368,10 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(inter_mercenary->delete, HP_inter_mercenary_delete) },
 /* inter_party_interface */
 	{ HP_POP(inter_party->check_lv, HP_inter_party_check_lv) },
+	{ HP_POP(inter_party->is_family_party, HP_inter_party_is_family_party) },
 	{ HP_POP(inter_party->calc_state, HP_inter_party_calc_state) },
 	{ HP_POP(inter_party->tosql, HP_inter_party_tosql) },
+	{ HP_POP(inter_party->del_nonexistent_party, HP_inter_party_del_nonexistent_party) },
 	{ HP_POP(inter_party->fromsql, HP_inter_party_fromsql) },
 	{ HP_POP(inter_party->sql_init, HP_inter_party_sql_init) },
 	{ HP_POP(inter_party->sql_final, HP_inter_party_sql_final) },
@@ -425,6 +427,8 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(inter_storage->parse_frommap, HP_inter_storage_parse_frommap) },
 	{ HP_POP(inter_storage->retrieve_bound_items, HP_inter_storage_retrieve_bound_items) },
 /* libconfig_interface */
+	{ HP_POP(libconfig->set_db_path, HP_libconfig_set_db_path) },
+	{ HP_POP(libconfig->format_db_path, HP_libconfig_format_db_path) },
 	{ HP_POP(libconfig->read, HP_libconfig_read) },
 	{ HP_POP(libconfig->write, HP_libconfig_write) },
 	{ HP_POP(libconfig->set_options, HP_libconfig_set_options) },
@@ -665,6 +669,8 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(mapif->parse_ClanMemberKick, HP_mapif_parse_ClanMemberKick) },
 	{ HP_POP(mapif->parse_ClanMemberCount, HP_mapif_parse_ClanMemberCount) },
 /* mapindex_interface */
+	{ HP_POP(mapindex->config_read_dbpath, HP_mapindex_config_read_dbpath) },
+	{ HP_POP(mapindex->config_read, HP_mapindex_config_read) },
 	{ HP_POP(mapindex->init, HP_mapindex_init) },
 	{ HP_POP(mapindex->final, HP_mapindex_final) },
 	{ HP_POP(mapindex->addmap, HP_mapindex_addmap) },

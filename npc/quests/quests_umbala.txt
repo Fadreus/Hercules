@@ -9,14 +9,14 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2015  Hercules Dev Team
-//= Copyright (C)  rAthena Team
-//= Copyright (C)  eAthena Team
-//= Copyright (C)  L0ne_W0lf
-//= Copyright (C)  SinSloth
-//= Copyright (C)  Evera
-//= Copyright (C)  Lupus
-//= Copyright (C)  sabernet09
+//= Copyright (C) 2012-2020 Hercules Dev Team
+//= Copyright (C) rAthena Team
+//= Copyright (C) eAthena Team
+//= Copyright (C) L0ne_W0lf
+//= Copyright (C) SinSloth
+//= Copyright (C) Evera
+//= Copyright (C) Lupus
+//= Copyright (C) sabernet09
 //=
 //= Hercules is free software: you can redistribute it and/or modify
 //= it under the terms of the GNU General Public License as published by
@@ -773,6 +773,10 @@ um_in,44,71,2	script	Utan Shaman	4_F_UMOLDWOMAN,{
 				.@shaman_max += rand(6,10);
 				++.@sha_man;
 			}
+			if (countitem(.@divide) < .@input) {
+				close;
+			}
+			delitem .@divide, .@input;
 			switch(.@divide) {
 			case 994:
 				getitem Boody_Red,.@shaman_max;
@@ -786,7 +790,6 @@ um_in,44,71,2	script	Utan Shaman	4_F_UMOLDWOMAN,{
 			case 997:
 				getitem Yellow_Live,.@shaman_max;
 			}
-			delitem .@divide,.@input;
 			close;
 		}
 		mes "[Puchuchartan]";
