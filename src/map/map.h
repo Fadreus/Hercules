@@ -27,6 +27,7 @@
 #include "common/db.h"
 #include "common/mapindex.h"
 #include "common/mmo.h"
+#include "map/unitdefines.h"  // enum unit_dir
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -587,6 +588,7 @@ typedef enum {
 	CELL_NOCHAT,
 	CELL_ICEWALL,
 	CELL_NOICEWALL,
+	CELL_NOSKILL,
 
 } cell_t;
 
@@ -611,6 +613,7 @@ typedef enum {
 	CELL_CHKNOCHAT,
 	CELL_CHKICEWALL,
 	CELL_CHKNOICEWALL,
+	CELL_CHKNOSKILL,
 
 } cell_chk;
 
@@ -629,7 +632,8 @@ struct mapcell {
 		novending : 1,
 		nochat : 1,
 		icewall : 1,
-		noicewall : 1;
+		noicewall : 1,
+		noskill : 1;
 
 #ifdef CELL_NOSTACK
 	int cell_bl; //Holds amount of bls in this cell.
@@ -845,7 +849,7 @@ struct map_data {
 	} cell_buf;
 
 	/* questinfo entries list */
-	VECTOR_DECL(struct npc_data) qi_list;
+	VECTOR_DECL(struct npc_data *) qi_list;
 
 	/* speeds up clif_updatestatus processing by causing hpmeter to run only when someone with the permission can view it */
 	unsigned short hpmeter_visible;
@@ -1216,8 +1220,8 @@ END_ZEROED_BLOCK;
 	// reload config file looking only for npcs
 	void (*reloadnpc) (bool clear);
 
-	int (*check_dir) (int s_dir,int t_dir);
-	uint8 (*calc_dir) (struct block_list *src,int16 x,int16 y);
+	int (*check_dir) (enum unit_dir s_dir, enum unit_dir t_dir);
+	enum unit_dir (*calc_dir) (const struct block_list *src, int16 x, int16 y);
 	int (*random_dir) (struct block_list *bl, short *x, short *y); // [Skotlex]
 
 	int (*cleanup_sub) (struct block_list *bl, va_list ap);

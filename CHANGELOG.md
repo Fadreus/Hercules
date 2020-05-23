@@ -5,9 +5,173 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 <!--
 If you are reading this in a text editor, simply ignore this section
 -->
+
+## [v2020.05.03] `May 03 2020`
+
+### Added
+
+- Added the new pets (including the jRO exclusive ones) and their related items/monsters to the renewal database. (#2689)
+- Added constants `ALL_MOBS_NONBOSS`, `ALL_MOBS_BOSS`, `ALL_MOBS` for the special mob IDs for global skill assignment in the mob skill database. (part of #2691)
+- Added support for `__func__` on Windows, since it's now available in every supported compiler. (part of #2691)
+- Added documentation for the mob skill database. See `doc/mob_skill_db.conf`. (#2680)
+- Added missing functions for the name ack packets for `BL_ITEM` and `BL_SKILL`. (part of #2695)
+- Added/updated packets and encryption keys for clients up to 2020-04-14. (#2695)
+- Added support for packets `ZC_LAPINEUPGRADE_OPEN`, `CZ_LAPINEUPGRADE_CLOSE` and `ZC_LAPINEUPGRADE_RESULT` and a placeholder for `CZ_LAPINEUPGRADE_MAKE_ITEM`. (part of #2695)
+- Added a new cell type `cell_noskill`, to block skill usage. (#2188)
+
+### Changed
+
+- Removed warning messages about missing elements in the mob db, since it's an optional field. (part of #2689)
+- Updated the renewal pet database with the correct values and bonuses. (part of #2689, issue #2435)
+- Changed `mob_getfriendstatus()` to consider character as friends of their support monsters, for consistency with `mob_getfriendhprate()`. (part of #2691)
+- Changed `MSC_AFTERSKILL` to trigger on any skill when its `ConditionData` is 0, for consistency with `MSC_SKILLUSED`. (part of #2691)
+- Improved data validation and error reporting in the mob skill database. (part of #2691)
+- Changed return values of `mob_skill_use()` and `mobskill_event()`. Any third party code that uses them needs to be updated. (part of #2691)
+- Changed the battle configuration flag `manner_system` to be applied immediately to any existing `SC_NOCHAT`. (#2696, issue #227)
+- Changed the `atcommand()` command to ignore `PCBLOCK_COMMANDS`. (#2062)
+
+### Fixed
+
+- Fixed `SC_AUTOTRADE`, `SC_KSPROTECTED` and `SC_NO_SWITCH_EQUIP` incorrectly recognized as unknown status changes. (#2686, issue #2684)
+- Prevented `SC_KSPROTECTED` from starting on dead monsters. (part of #2686)
+- Fixed character unhiding while disguised or when using `@option 0`. (#2687, issues #1556 and #2104)
+- Fixed an incorrect order of operations causing results too small in various calculations related to free cell search, mob skill chances/delays, exp penalty, pet hunger and friendly rates, cast duration. (#2690)
+- Fixed errors caused by `pet_ai_sub_hard()` called for monsters that haven't been added to a map yet. (#2693)
+- Fixed a wrong packet error displayed when using an incorrect password for the char-login connection. (part of #2695)
+- Fixed a security check in the lapine ack packet handler. (part of #2695)
+- Fixed some incorrect assumptions about the skill index values, causing the Bard/Dancer soul link to grant the wrong skills. (#2710, issue #2670)
+- Fixed some conditions that could cause a skill to be attempted to save to the database with a negative skill level, resulting in query errors and data loss. (part of #2710)
+- Fixed the skill type of `RK_DRAGONBREATH` and `RK_DRAGONBREATH_WATER` to be `BF_WEAPON` and support the `bLongAtkRate` bonus. (#1304)
+- Fixed `SC_TELEKINESIS_INTENSE` to add percent MATK instead of fixed MATK. (part of #1304)
+
+## [v2020.04.05] `April 05 2020` `PATCH 1`
+
+### Fixed
+
+- Fixed a regression that prevented pets from hatching. (#2685, issue #2683)
+
+## [v2020.04.05] `April 05 2020`
+
+### Added
+
+- Added/updated packets, encryption keys and message tables for clients up to 2020-04-01. (#2663)
+- The `setpcblock()` and `checkpcblock()` can now be used on another character by passing the account id. (#2668)
+- Added new StatusChange types (`SC_POPECOOKIE`, `SC_VITALIZE_POTION`, `SC_SKF_MATK`, `SC_SKF_ATK`, `SC_SKF_ASPD`, `SC_SKF_CAST`, `SC_ALMIGHTY`) and updated relevant items. (#2658, related to #1177)
+- Added _libbacktrace_ support (currently Linux-only) for better error call stack logging. (#2581)
+
+### Changed
+
+- Extended the atcommand `@fakename` with a new `options` parameter, to select which names will be displayed. (#2637, related to issue #1966 and #2168)
+- Refactored the pet system code. (#2600, issues #2434 and #303)
+  - Added enumerations for pet hunger/intimacy levels
+  - Added value capping to `pet_set_intimate()` function.
+  - Adjusted pet catch rate calculation. The old, custom, calculation can be restored by setting the `pet_catch_rate_official_formula` battle config flag to false.
+  - Adjusted pet intimacy calculation when feeding.
+  - Improved validation of the Pet DB fields and of the input of various pet related functions.
+  - Removed the redundant `SpriteName` field from pet DB.
+  - Changed `EggItem` field in pet DB to be mandatory.
+  - Added new field `HungerDecrement` to pet DB. This replaces the `pet_hungry_friendly_decrease` battle config setting.
+  - Added new field `Intimacy.StarvingDelay` to pet DB.
+  - Added new field `Intimacy.StarvingDecrement` to pet DB.
+  - Increased `MAX_MOB_DB` to 22000.
+  - Added pet DB documentation file. (`doc/pet_db.txt`)
+  - Removed fields from pet DB where default values can be used.
+  - Added intimacy validation to pet DB `EquipScript` fields. This replaces the `pet_equip_min_friendly` battle config setting.
+  - Adjusted `inter_pet_tosql()` and `inter_pet_fromsql()` functions to use prepared statements.
+  - Refactored and/or updated code style of various functions that were touched by this pull request.
+- Added a backtrace to the error message of `clif_unknownname_ack()`. (part of #2663)
+- Added a `UNIQUE` constraint to the `userid` column of the `login` SQL table to prevent having multiple accounts with the same name. (#2666, related to #2169)
+- Increased the column size of `list`for the `ipbanlist` SQL table to accomodate for non-wildcard IPv4 and for IPv6 compatiblity. (#2665, issue #2631)
+
+### Fixed
+
+- Fixed memory violations and incorrect handling of `npc_data` in the quest info code. (#2682)
+- Fixed an issue that prevented the fake name to show up when using `@fakename` in RE clients. (part of #2637)
+- Fixed a compiler error in `PACKET_ZC_SE_CASHSHOP_OPEN`. (part of #2663, issue #2669)
+- Added missing libraries into the plugins Makefile, causing a linking error when a plugin uses MySQL or other libraries. (part of #2663)
+- Fixed a bug causing failed assertions that appeared when attacking a skill unit (such as Ice Wall). (#2678)
+- Fixed a bug causing failed assertions in `timer_do_delete()`, related to `ud->walktimer`. (#2676)
+- Fixed a bug allowing to equip bullets and grenades regardless of the weapon type. (#2660, issue #2661, related to #2579)
+- Fixed a memory leak in barter NPCs. (#2655)
+- Fixed a pointer overflow in the script command `getiteminfo()`.  (#2656)
+- Refactored and fixed several bugs in the skill auto-cast system. (#2657, issue #1211)
+
+### Removed
+
+- Removed the `pet_hungry_friendly_decrease` battle config setting, superseded by the `HungerDecrement` field of the Pet DB. (part of #2600)
+- Removed the `pet_equip_min_friendly` battle config setting, superseded by the code inside the Pet DB `EquipScript` fields. (part of #2600)
+- Removed the redundant `SpriteName` field from pet DB. (part of #2600)
+
+## [v2020.03.08+2] `March 08 2020` `PATCH 2`
+
+### Fixed
+
+- Fixed an incorrect return value in `unit->walktobl()` causing mobs to get stuck when they try to loot. (#2664)
+
+## [v2020.03.08+1] `March 08 2020` `PATCH 1`
+
+### Fixed
+
+- Fixed an incorrect return value in `unit->walktobl()` causing mobs to be unable to walk to their target. (#2659)
+
+## [v2020.03.08] `March 08 2020`
+
+### Added
+
+- Added/updated packets, encryption keys and message tables for clients up to 2020-03-04. (#2645)
+- Exposed the item bound type (`IBT_*`) constants to the script engine. (#2650)
+- Added item scripts for item IDs 12459 through 12465 and corrected their name in the pre-renewal DB. (#2634, issue #1196)
+- Added the `unitiswalking()` script command, to check whether an unit is walking at a given time. (#2628)
+
+### Changed
+
+- Changed the default `PACKETVER` to 2019-05-30. (part of #2645)
+- Major refactoring of the functions in `unit.c`, adding code documentation and following the code style guidelines. Functions have been renamed when backward compatible changes to the arguments or return values were made. (#2546)
+  - A new header `unitdefines.h` has been added.
+  - `enum unit_dir` is now provided, to standardize handling of facing/walking directions.
+  - The macros `unit_get_opposite_dir()`, `unit_is_diagonal_dir()`, `unit_is_dir_or_opposite()`, `unit_get_ccw90_dir()`, `unit_get_rnd_diagonal_dir()` have been added.
+  - `unit->walktoxy_timer()` has been renamed to `unit->walk_toxy_timer()` and its return values have been changed and documented.
+  - `unit->walktoxy_sub()` has been renamed to `unit->walk_toxy_sub()` and its return values have been changed and documented.
+  - `unit->delay_walktoxy_timer()` has been renamed to `unit->delay_walk_toxy_timer()` and its return values have been changed and documented.
+  - `unit->walktoxy()` has been renamed to `unit->walk_toxy()` and its return values have been changed and documented.
+  - `unit->walktobl_sub()` has been renamed to `unit->walk_tobl_timer()` and its return values have been changed and documented.
+  - `unit->setdir()` has been renamed to `unit->set_dir()` and its return value and arguments have been changed and documented.
+  - `unit->getdir()` has been renamed to `unit->get_dir()` and its return type and constness of the arguments have been changed.
+  - `unit->warpto_master()` has been added.
+  - `unit->sleep_timer()` has been renamed to `unit->sleeptimer()` and its return values have been changed and documented.
+  - `unit->calc_pos()` now accepts `enum unit_dir`.
+  - `map->check_dir()` now accepts `enum unit_dir`.
+  - `map->calc_dir()` now returns `enum unit_dir` and accepts a const bl.
+  - `npc->create_npc()` now accepts `enum unit_dir`.
+  - `skill->blown()` now accepts `enum unit_dir`.
+  - `skill->brandishspear_first()` now accepts `enum unit_dir`.
+  - `skill->brandishspear_dir()` now accepts `enum unit_dir`.
+  - `skill->attack_blow_unknown()` now accepts `enum unit_dir`.
+  - The remaining unit functions have been documented.
+- New return values have been added to `pc->setpos()`, for better error handling. (#2633, issue #2632)
+- Increased the `MAX_MOB_LIST_PER_MAP` value to 115 in pre-renewal builds, to fit all the default spawns. (#2638, issue #1915)
+- Extended the `getiteminfo()` command to also accept item names, and added the types `ITEMINFO_ID`, `ITEMINFO_AEGISNAME`, `ITEMINFO_NAME`. (#2639)
+- Changed `itemskill()` to ignore conditions by default. The `ISF_CHECKCONDITIONS` needs to be explicitly passed if conditions should be checked/consumed. (part of #2648)
+- Changed the NPC shop behavior to prevent selling items from the favorites tab of the inventory. (#2651)
+- Updated Doxygen configuration to speed up generation and fix compatibility warnings. (0d747896e0)
+- Updated the Travis-CI configuration file according to the validation warnings and notices. (eb97973e68)
+
+### Fixed
+
+- Fixed a missing `get_index()` call in `Skill2SCTable`, causing some skills to activate the wrong status. (#2643, issue #2636)
+- Fixed a compilation error C2233 in Visual Studio. (part of #2645)
+- Fixed Basilica unintentionally restraining boss mobs. (#2612, issue #1276, related to issue #2420)
+- Fixed the handling of unequip scripts in zones where an item is restricted. The `OnUnequip` script is now never executed when unequipping in a restricted zone, but it is always executed when entering such zones, regardless of the `unequip_restricted_equipment` battle flag. (#2642, issue #2180)
+- Fixed the handling of skill requirements and conditions by the `itemskill()` command. (#2648, issue #2646)
+- Added missing requirements to `CASH_INCAGI` and `RK_CRUSHSTRIKE`. (part of #2648)
+
+### Removed
+
+- Removed the `ISF_IGNORECONDITIONS` flag previously used by `itemskill()`, now the default behavior. (#2648)
 
 ## [v2020.02.09] `February 09 2020`
 
@@ -1196,6 +1360,12 @@ If you are reading this in a text editor, simply ignore this section
 - New versioning scheme and project changelogs/release notes (#1853)
 
 [Unreleased]: https://github.com/HerculesWS/Hercules/compare/stable...master
+[v2020.05.03]: https://github.com/HerculesWS/Hercules/compare/v2020.04.05+1...v2020.05.03
+[v2020.04.05+1]: https://github.com/HerculesWS/Hercules/compare/v2020.04.05...v2020.04.05+1
+[v2020.04.05]: https://github.com/HerculesWS/Hercules/compare/v2020.03.08+2...v2020.04.05
+[v2020.03.08+2]: https://github.com/HerculesWS/Hercules/compare/v2020.03.08+1...v2020.03.08+2
+[v2020.03.08+1]: https://github.com/HerculesWS/Hercules/compare/v2020.03.08...v2020.03.08+1
+[v2020.03.08]: https://github.com/HerculesWS/Hercules/compare/v2020.02.09...v2020.03.08
 [v2020.02.09]: https://github.com/HerculesWS/Hercules/compare/v2020.01.12...v2020.02.09
 [v2020.01.12]: https://github.com/HerculesWS/Hercules/compare/v2019.12.15...v2020.01.12
 [v2019.12.15]: https://github.com/HerculesWS/Hercules/compare/v2019.11.17+1...v2019.12.15

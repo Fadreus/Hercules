@@ -3231,12 +3231,11 @@ static int64 battle_calc_damage(struct block_list *src, struct block_list *bl, s
 		if (!damage) return 0;
 
 		if( (sce = sc->data[SC_LIGHTNINGWALK]) && flag&BF_LONG && rnd()%100 < sce->val1 ) {
-			int dx[8]={0,-1,-1,-1,0,1,1,1};
-			int dy[8]={1,1,0,-1,-1,-1,0,1};
-			uint8 dir = map->calc_dir(bl, src->x, src->y);
-			if( unit->movepos(bl, src->x-dx[dir], src->y-dy[dir], 1, 1) ) {
-				clif->slide(bl,src->x-dx[dir],src->y-dy[dir]);
-				unit->setdir(bl, dir);
+			enum unit_dir dir = map->calc_dir(bl, src->x, src->y);
+			Assert_ret(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX);
+			if (unit->movepos(bl, src->x - dirx[dir], src->y - diry[dir], 1, 1)) {
+				clif->slide(bl, src->x - dirx[dir], src->y - diry[dir]);
+				unit->set_dir(bl, dir);
 			}
 			d->dmg_lv = ATK_DEF;
 			status_change_end(bl, SC_LIGHTNINGWALK, INVALID_TIMER);
@@ -3751,7 +3750,7 @@ static struct Damage battle_calc_magic_attack(struct block_list *src, struct blo
 
 				if (sc){
 					if( sc->data[SC_TELEKINESIS_INTENSE] && s_ele == ELE_GHOST )
-						ad.damage += sc->data[SC_TELEKINESIS_INTENSE]->val3;
+						ad.damage += ad.damage * sc->data[SC_TELEKINESIS_INTENSE]->val3 / 100;
 				}
 				switch(skill_id){
 					case MG_FIREBOLT:
@@ -4124,13 +4123,6 @@ static struct Damage battle_calc_misc_attack(struct block_list *src, struct bloc
 		break;
 	case NPC_EVILLAND:
 		md.damage = skill->calc_heal(src,target,skill_id,skill_lv,false);
-		break;
-	case RK_DRAGONBREATH:
-	case RK_DRAGONBREATH_WATER:
-		md.damage = ((status_get_hp(src) / 50) + (status_get_max_sp(src) / 4)) * skill_lv;
-		RE_LVL_MDMOD(150);
-		if (sd) md.damage = md.damage * (95 + 5 * pc->checkskill(sd,RK_DRAGONTRAINING)) / 100;
-		md.flag |= BF_LONG|BF_WEAPON;
 		break;
 	/**
 	 * Ranger
@@ -4958,6 +4950,12 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 					wd.damage = hd->homunculus.intimacy;
 					break;
 				}
+				break;
+			case RK_DRAGONBREATH:
+			case RK_DRAGONBREATH_WATER:
+				wd.damage = ((status_get_hp(src) / 50) + (status_get_max_sp(src) / 4)) * skill_lv;
+				wd.damage = wd.damage * status->get_lv(src) / 150;
+				if (sd) wd.damage = wd.damage * (95 + 5 * pc->checkskill(sd, RK_DRAGONTRAINING)) / 100;
 				break;
 			default:
 			{
@@ -5858,10 +5856,10 @@ static void battle_reflect_damage(struct block_list *target, struct block_list *
 		if( wd->flag & BF_SHORT ) {
 			if( !is_boss(src) ) {
 				if( sc->data[SC_DEATHBOUND] && skill_id != WS_CARTTERMINATION ) {
-					uint8 dir = map->calc_dir(target,src->x,src->y),
-					t_dir = unit->getdir(target);
+					enum unit_dir dir = map->calc_dir(target, src->x, src->y);
+					enum unit_dir t_dir = unit->getdir(target);
 
-					if( !map->check_dir(dir,t_dir) ) {
+					if (map->check_dir(dir, t_dir) == 0) {
 						int64 rd1 = damage * sc->data[SC_DEATHBOUND]->val2 / 100; // Amplify damage.
 
 						trdamage += rdamage = rd1 - (damage = rd1 * 30 / 100); // not normalized as intended.
@@ -5929,21 +5927,21 @@ static void battle_reflect_damage(struct block_list *target, struct block_list *
 					delay += 100;/* gradual increase so the numbers don't clip in the client */
 				}
 				if( sc->data[SC_LG_REFLECTDAMAGE] && rnd()%100 < (30 + 10*sc->data[SC_LG_REFLECTDAMAGE]->val1) ) {
-					bool change = false;
-
 					NORMALIZE_RDAMAGE(damage * sc->data[SC_LG_REFLECTDAMAGE]->val2 / 100);
 
 					trdamage -= rdamage;/* wont count towards total */
 
-					if( sd && !sd->state.autocast ) {
-						change = true;
-						sd->state.autocast = 1;
+					enum autocast_type ac_type;
+
+					if (sd != NULL) {
+						ac_type = sd->autocast.type;
+						sd->autocast.type = AUTOCAST_TEMP;
 					}
 
 					map->foreachinshootrange(battle->damage_area,target,skill->get_splash(LG_REFLECTDAMAGE,1),BL_CHAR,tick,target,delay,wd->dmotion,rdamage,status_get_race(target));
 
-					if( change )
-						sd->state.autocast = 0;
+					if (sd != NULL)
+						sd->autocast.type = ac_type;
 
 					delay += 150;/* gradual increase so the numbers don't clip in the client */
 
@@ -6133,7 +6131,7 @@ static int battle_damage_area(struct block_list *bl, va_list ap)
 		else
 			status_fix_damage(src,bl,damage,0);
 		clif->damage(bl,bl,amotion,dmotion,damage,1,BDT_ENDURE,0);
-		if (src->type != BL_PC || !BL_UCCAST(BL_PC, src)->state.autocast)
+		if (src->type != BL_PC || BL_UCCAST(BL_PC, src)->autocast.type != AUTOCAST_TEMP)
 			skill->additional_effect(src, bl, CR_REFLECTSHIELD, 1, BF_WEAPON|BF_SHORT|BF_NORMAL,ATK_DEF,tick);
 		map->freeblock_unlock();
 	}
@@ -6229,10 +6227,10 @@ static enum damage_lv battle_weapon_attack(struct block_list *src, struct block_
 			status_change_end(src, SC_CLOAKINGEXCEED, INVALID_TIMER);
 	}
 	if( tsc && tsc->data[SC_AUTOCOUNTER] && status->check_skilluse(target, src, KN_AUTOCOUNTER, 1) ) {
-		uint8 dir = map->calc_dir(target,src->x,src->y);
-		int t_dir = unit->getdir(target);
+		enum unit_dir   dir = map->calc_dir(target, src->x, src->y);
+		enum unit_dir t_dir = unit->getdir(target);
 		int dist = distance_bl(src, target);
-		if(dist <= 0 || (!map->check_dir(dir,t_dir) && dist <= tstatus->rhw.range+1)) {
+		if(dist <= 0 || (map->check_dir(dir, t_dir) == 0 && dist <= tstatus->rhw.range + 1)) {
 			uint16 skill_lv = tsc->data[SC_AUTOCOUNTER]->val1;
 			clif->skillcastcancel(target); //Remove the casting bar. [Skotlex]
 			clif->damage(src, target, sstatus->amotion, 1, 0, 1, BDT_NORMAL, 0); //Display MISS.
@@ -6457,10 +6455,10 @@ static enum damage_lv battle_weapon_attack(struct block_list *src, struct block_
 					}
 				}
 
-				sd->state.autocast = 1;
+				sd->autocast.type = AUTOCAST_TEMP;
 				skill->consume_requirement(sd,r_skill,r_lv,3);
 				skill->castend_type(type, src, target, r_skill, r_lv, tick, flag);
-				sd->state.autocast = 0;
+				sd->autocast.type = AUTOCAST_NONE;
 				sd->ud.canact_tick = tick + skill->delay_fix(src, r_skill, r_lv);
 				clif->status_change(src, status->get_sc_icon(SC_POSTDELAY), status->get_sc_relevant_bl_types(SC_POSTDELAY), 1, skill->delay_fix(src, r_skill, r_lv), 0, 0, 1);
 			}
@@ -6601,10 +6599,6 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 
 	m = target->m;
 
-	if (flag & BCT_ENEMY && (map->getcell(m, src, src->x, src->y, CELL_CHKBASILICA) || map->getcell(m, src, target->x, target->y, CELL_CHKBASILICA))) {
-		return -1;
-	}
-
 	//t_bl/s_bl hold the 'master' of the attack, while src/target are the actual
 	//objects involved.
 	if( (t_bl = battle->get_master(target)) == NULL )
@@ -6612,6 +6606,11 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 
 	if( (s_bl = battle->get_master(src)) == NULL )
 		s_bl = src;
+
+	if ((flag & BCT_ENEMY) != 0 && (status_get_mode(s_bl) & MD_BOSS) == 0 && (map->getcell(m, src, src->x, src->y, CELL_CHKBASILICA) != 0
+	    || map->getcell(m, src, target->x, target->y, CELL_CHKBASILICA) != 0)) {
+		return -1;
+	}
 
 	if (s_bl->type == BL_PC) {
 		const struct map_session_data *s_sd = BL_UCCAST(BL_PC, s_bl);
@@ -7085,16 +7084,15 @@ static const struct battle_data {
 	{ "guild_emperium_check",               &battle_config.guild_emperium_check,            1,      0,      1,              },
 	{ "guild_exp_limit",                    &battle_config.guild_exp_limit,                 50,     0,      99,             },
 	{ "player_invincible_time",             &battle_config.pc_invincible_time,              5000,   0,      INT_MAX,        },
+	{ "pet_catch_rate_official_formula",    &battle_config.pet_catch_rate_official_formula, 1,      0,      1,              },
 	{ "pet_catch_rate",                     &battle_config.pet_catch_rate,                  100,    0,      INT_MAX,        },
 	{ "pet_rename",                         &battle_config.pet_rename,                      0,      0,      1,              },
 	{ "pet_friendly_rate",                  &battle_config.pet_friendly_rate,               100,    0,      INT_MAX,        },
 	{ "pet_hungry_delay_rate",              &battle_config.pet_hungry_delay_rate,           100,    10,     INT_MAX,        },
-	{ "pet_hungry_friendly_decrease",       &battle_config.pet_hungry_friendly_decrease,    5,      0,      INT_MAX,        },
 	{ "pet_status_support",                 &battle_config.pet_status_support,              0,      0,      1,              },
 	{ "pet_attack_support",                 &battle_config.pet_attack_support,              0,      0,      1,              },
 	{ "pet_damage_support",                 &battle_config.pet_damage_support,              0,      0,      1,              },
 	{ "pet_support_min_friendly",           &battle_config.pet_support_min_friendly,        900,    0,      950,            },
-	{ "pet_equip_min_friendly",             &battle_config.pet_equip_min_friendly,          900,    0,      950,            },
 	{ "pet_support_rate",                   &battle_config.pet_support_rate,                100,    0,      INT_MAX,        },
 	{ "pet_attack_exp_to_master",           &battle_config.pet_attack_exp_to_master,        0,      0,      1,              },
 	{ "pet_attack_exp_rate",                &battle_config.pet_attack_exp_rate,             100,    0,      INT_MAX,        },

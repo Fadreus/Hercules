@@ -72,6 +72,34 @@ static struct s_skill_dbs skilldbs;
 
 struct skill_interface *skill;
 
+static const struct {
+	int start;
+	int end;
+} skill_idx_ranges[] = {
+	{ NV_BASIC, NPC_LEX_AETERNA },
+	{ KN_CHARGEATK, SA_ELEMENTWIND },
+	{ RK_ENCHANTBLADE, AB_SILENTIUM },
+	{ WL_WHITEIMPRISON, SC_FEINTBOMB },
+	{ LG_CANNONSPEAR, SR_GENTLETOUCH_REVITALIZE },
+	{ WA_SWING_DANCE, WA_MOONLIT_SERENADE },
+	{ MI_RUSH_WINDMILL, MI_HARMONIZE },
+	{ WM_LESSON, WM_UNLIMITED_HUMMING_VOICE },
+	{ SO_FIREWALK, SO_EARTH_INSIGNIA },
+	{ GN_TRAINING_SWORD, GN_SLINGITEM_RANGEMELEEATK },
+	{ AB_SECRAMENT, LG_OVERBRAND_PLUSATK },
+	{ ALL_ODINS_RECALL, ALL_LIGHTGUARD },
+	{ RL_GLITTERING_GREED, RL_GLITTERING_GREED_ATK },
+	{ KO_YAMIKUMO, OB_AKAITSUKI },
+	{ ECL_SNOWFLIP, ALL_THANATOS_RECALL },
+	{ GC_DARKCROW, NC_MAGMA_ERUPTION_DOTDAMAGE },
+	{ SU_BASIC_SKILL, SU_SPIRITOFSEA },
+	{ HLIF_HEAL, MH_VOLCANIC_ASH },
+	{ MS_BASH, MER_INVINCIBLEOFF2 },
+	{ EL_CIRCLE_OF_FIRE, EL_STONE_RAIN },
+	{ GD_APPROVAL, GD_DEVELOPMENT },
+	CUSTOM_SKILL_RANGES
+};
+
 //Since only mob-casted splash skills can hit ice-walls
 static int skill_splash_target(struct block_list *bl)
 {
@@ -96,51 +124,37 @@ static int skill_name2id(const char *name)
 /// Returns the skill's array index, or 0 (Unknown Skill).
 static int skill_get_index(int skill_id)
 {
-	int skillRange[] = { NV_BASIC, NPC_LEX_AETERNA,
-			KN_CHARGEATK, SA_ELEMENTWIND,
-			RK_ENCHANTBLADE, AB_SILENTIUM,
-			WL_WHITEIMPRISON, SC_FEINTBOMB,
-			LG_CANNONSPEAR, SR_GENTLETOUCH_REVITALIZE,
-			WA_SWING_DANCE, WA_MOONLIT_SERENADE,
-			MI_RUSH_WINDMILL, MI_HARMONIZE,
-			WM_LESSON, WM_UNLIMITED_HUMMING_VOICE,
-			SO_FIREWALK, SO_EARTH_INSIGNIA,
-			GN_TRAINING_SWORD, GN_SLINGITEM_RANGEMELEEATK,
-			AB_SECRAMENT, LG_OVERBRAND_PLUSATK,
-			ALL_ODINS_RECALL, ALL_LIGHTGUARD,
-			RL_GLITTERING_GREED, RL_GLITTERING_GREED_ATK,
-			KO_YAMIKUMO, OB_AKAITSUKI,
-			ECL_SNOWFLIP, ALL_THANATOS_RECALL,
-			GC_DARKCROW, NC_MAGMA_ERUPTION_DOTDAMAGE,
-			SU_BASIC_SKILL, SU_SPIRITOFSEA,
-			HLIF_HEAL, MH_VOLCANIC_ASH,
-			MS_BASH, MER_INVINCIBLEOFF2,
-			EL_CIRCLE_OF_FIRE, EL_STONE_RAIN,
-			GD_APPROVAL, GD_DEVELOPMENT
-			CUSTOM_SKILL_RANGES};
-	int length = sizeof(skillRange) / sizeof(int);
-	STATIC_ASSERT(sizeof(skillRange) / sizeof(int) % 2 == 0, "skill_get_index: skillRange should be multiple of 2");
+	int length = ARRAYLENGTH(skill_idx_ranges);
 
 
-	if (skill_id < skillRange[0] || skill_id > skillRange[length - 1]) {
+	if (skill_id < skill_idx_ranges[0].start || skill_id > skill_idx_ranges[length - 1].end) {
 		ShowWarning("skill_get_index: skill id '%d' is not being handled!\n", skill_id);
+		Assert_report(0);
 		return 0;
 	}
 
 	int skill_idx = 0;
+	bool found = false;
 	// Map Skill ID to Skill Indexes (in reverse order)
-	for (int i = 0; i < length; i += 2) {
+	for (int i = 0; i < length; i++) {
 		// Check if SkillID belongs to this range.
-		if (skill_id <= skillRange[i + 1] && skill_id >= skillRange[i]) {
-			skill_idx += (skillRange[i + 1] - skill_id);
+		if (skill_id <= skill_idx_ranges[i].end && skill_id >= skill_idx_ranges[i].start) {
+			skill_idx += (skill_idx_ranges[i].end - skill_id);
+			found = true;
 			break;
 		}
 		// Add the difference of current range
-		skill_idx += (skillRange[i + 1] - skillRange[i] + 1);
+		skill_idx += (skill_idx_ranges[i].end - skill_idx_ranges[i].start + 1);
 	}
 
+	if (!found) {
+		ShowWarning("skill_get_index: skill id '%d' (idx: %d) is not handled as it lies outside the defined ranges!\n", skill_id, skill_idx);
+		Assert_report(0);
+		return 0;
+	}
 	if (skill_idx >= MAX_SKILL_DB) {
 		ShowWarning("skill_get_index: skill id '%d'(idx: %d) is not being handled as it exceeds MAX_SKILL_DB!\n", skill_id, skill_idx);
+		Assert_report(0);
 		return 0;
 	}
 
@@ -935,6 +949,8 @@ static int skill_calc_heal(struct block_list *src, struct block_list *target, ui
 			hp -= hp * 20/100;
 		if(sc->data[SC_HEALPLUS] && skill_id != NPC_EVILLAND && skill_id != BA_APPLEIDUN)
 			hp += hp * sc->data[SC_HEALPLUS]->val1/100; // Only affects Heal, Sanctuary and PotionPitcher.(like bHealPower) [Inkfish]
+		if (sc->data[SC_VITALIZE_POTION] != NULL && skill_id != NPC_EVILLAND && skill_id != BA_APPLEIDUN)
+			hp += hp * sc->data[SC_VITALIZE_POTION]->val3 / 100;
 		if(sc->data[SC_WATER_INSIGNIA] && sc->data[SC_WATER_INSIGNIA]->val1 == 2)
 			hp += hp / 10;
 		if (sc->data[SC_VITALITYACTIVATION])
@@ -1010,14 +1026,17 @@ static int skillnotok(uint16 skill_id, struct map_session_data *sd)
 	if (pc_has_permission(sd, PC_PERM_SKILL_UNCONDITIONAL))
 		return 0; // can do any damn thing they want
 
-	if( skill_id == AL_TELEPORT && sd->skillitem == skill_id && sd->skillitemlv > 2 )
-		return 0; // Teleport lv 3 bypasses this check.[Inkfish]
+	if (map->getcell(sd->bl.m, &sd->bl, sd->bl.x, sd->bl.y, CELL_CHKNOSKILL))
+		return 1; // block usage on 'noskill' cells [Wolfie]
+
+	if (skill_id == AL_TELEPORT && sd->autocast.type == AUTOCAST_ITEM && sd->autocast.skill_lv > 2)
+		return 0; // Teleport level 3 and higher bypasses this check if cast by itemskill() script commands.
 
 	// Epoque:
 	// This code will compare the player's attack motion value which is influenced by ASPD before
 	// allowing a skill to be cast. This is to prevent no-delay ACT files from spamming skills such as
 	// AC_DOUBLE which do not have a skill delay and are not regarded in terms of attack motion.
-	if( !sd->state.autocast && sd->skillitem != skill_id && sd->canskill_tick &&
+	if (sd->autocast.type == AUTOCAST_NONE && sd->canskill_tick != 0 &&
 		DIFF_TICK(timer->gettick(), sd->canskill_tick) < (sd->battle_status.amotion * (battle_config.skill_amotion_leniency) / 100) )
 	{// attempted to cast a skill before the attack motion has finished
 		return 1;
@@ -1032,7 +1051,7 @@ static int skillnotok(uint16 skill_id, struct map_session_data *sd)
 	 * It has been confirmed on a official server (thanks to Yommy) that item-cast skills bypass all the restrictions below
 	 * Also, without this check, an exploit where an item casting + healing (or any other kind buff) isn't deleted after used on a restricted map
 	 **/
-	if( sd->skillitem == skill_id )
+	if (sd->autocast.type == AUTOCAST_ITEM)
 		return 0;
 
 	if( sd->sc.data[SC_ALL_RIDING] )
@@ -1177,10 +1196,34 @@ static int skillnotok_mercenary(uint16 skill_id, struct mercenary_data *md)
 	return skill->not_ok(skill_id, md->master);
 }
 
+/**
+ * Validates the plausibility of auto-cast related data and calls pc_autocast_clear() if necessary.
+ *
+ * @param sd The character who cast the skill.
+ * @param skill_id The cast skill's ID.
+ * @param skill_lv The cast skill's level. (clif_parse_UseSkillMap() passes 0.)
+ *
+ **/
+static void skill_validate_autocast_data(struct map_session_data *sd, int skill_id, int skill_lv)
+{
+	nullpo_retv(sd);
+
+	// Determine if called by clif_parse_UseSkillMap().
+	bool use_skill_map = (skill_lv == 0 && (skill_id == AL_WARP || skill_id == AL_TELEPORT));
+
+	if (sd->autocast.type == AUTOCAST_NONE)
+		pc->autocast_clear(sd); // No auto-cast type set. Preventively unset all auto-cast related data.
+	else if (sd->autocast.type == AUTOCAST_TEMP)
+		pc->autocast_clear(sd); // AUTOCAST_TEMP should have been unset straight after usage.
+	else if (sd->autocast.skill_id == 0 || skill_id == 0 || sd->autocast.skill_id != skill_id)
+		pc->autocast_clear(sd); // Implausible skill ID.
+	else if (sd->autocast.skill_lv == 0 || (!use_skill_map && (skill_lv == 0 || sd->autocast.skill_lv != skill_lv)))
+		pc->autocast_clear(sd); // Implausible skill level.
+}
+
 static struct s_skill_unit_layout *skill_get_unit_layout(uint16 skill_id, uint16 skill_lv, struct block_list *src, int x, int y)
 {
 	int pos = skill->get_unit_layout_type(skill_id,skill_lv);
-	uint8 dir;
 
 	nullpo_retr(&skill->dbs->unit_layout[0], src);
 	if (pos < -1 || pos >= MAX_SKILL_UNIT_LAYOUT) {
@@ -1191,7 +1234,9 @@ static struct s_skill_unit_layout *skill_get_unit_layout(uint16 skill_id, uint16
 	if (pos != -1) // simple single-definition layout
 		return &skill->dbs->unit_layout[pos];
 
-	dir = (src->x == x && src->y == y) ? 6 : map->calc_dir(src,x,y); // 6 - default aegis direction
+	enum unit_dir dir = UNIT_DIR_EAST; // default aegis direction
+	if (src->x != x || src->y != y)
+		dir = map->calc_dir(src, x, y);
 
 	if (skill_id == MG_FIREWALL)
 		return &skill->dbs->unit_layout [skill->firewall_unit_pos + dir];
@@ -2064,9 +2109,9 @@ static int skill_additional_effect(struct block_list *src, struct block_list *bl
 
 			temp = (sd->autospell[i].id > 0) ? sd->autospell[i].id : -sd->autospell[i].id;
 
-			sd->state.autocast = 1;
+			sd->autocast.type = AUTOCAST_TEMP;
 			notok = skill->not_ok(temp, sd);
-			sd->state.autocast = 0;
+			sd->autocast.type = AUTOCAST_NONE;
 
 			if ( notok )
 				continue;
@@ -2117,11 +2162,12 @@ static int skill_additional_effect(struct block_list *src, struct block_list *bl
 			else if (temp == PF_SPIDERWEB) //Special case, due to its nature of coding.
 				type = CAST_GROUND;
 
-			sd->state.autocast = 1;
+			sd->autocast.type = AUTOCAST_TEMP;
 			skill->consume_requirement(sd,temp,auto_skill_lv,1);
 			skill->toggle_magicpower(src, temp);
 			skill->castend_type(type, src, tbl, temp, auto_skill_lv, tick, 0);
-			sd->state.autocast = 0;
+			sd->autocast.type = AUTOCAST_NONE;
+
 			//Set canact delay. [Skotlex]
 			ud = unit->bl2ud(src);
 			if (ud) {
@@ -2190,6 +2236,9 @@ static int skill_onskillusage(struct map_session_data *sd, struct block_list *bl
 	if( sd == NULL || !skill_id )
 		return 0;
 
+	// Preserve auto-cast type if bAutoSpellOnSkill was triggered by a skill which was cast by Abracadabra, Improvised Song or an item.
+	enum autocast_type ac_type = sd->autocast.type;
+
 	for( i = 0; i < ARRAYLENGTH(sd->autospell3) && sd->autospell3[i].flag; i++ ) {
 		if( sd->autospell3[i].flag != skill_id )
 			continue;
@@ -2199,9 +2248,9 @@ static int skill_onskillusage(struct map_session_data *sd, struct block_list *bl
 
 		temp = (sd->autospell3[i].id > 0) ? sd->autospell3[i].id : -sd->autospell3[i].id;
 
-		sd->state.autocast = 1;
+		sd->autocast.type = AUTOCAST_TEMP;
 		notok = skill->not_ok(temp, sd);
-		sd->state.autocast = 0;
+		sd->autocast.type = AUTOCAST_NONE;
 
 		if ( notok )
 			continue;
@@ -2247,13 +2296,15 @@ static int skill_onskillusage(struct map_session_data *sd, struct block_list *bl
 			!battle->check_range(&sd->bl, tbl, skill->get_range2(&sd->bl, temp,skill_lv) + (temp == RG_CLOSECONFINE?0:1)) )
 			continue;
 
-		sd->state.autocast = 1;
 		sd->autospell3[i].lock = true;
+		sd->autocast.type = AUTOCAST_TEMP;
 		skill->consume_requirement(sd,temp,skill_lv,1);
 		skill->castend_type(type, &sd->bl, tbl, temp, skill_lv, tick, 0);
+		sd->autocast.type = AUTOCAST_NONE;
 		sd->autospell3[i].lock = false;
-		sd->state.autocast = 0;
 	}
+
+	sd->autocast.type = ac_type;
 
 	if (sd->autobonus3[0].rate) {
 		for( i = 0; i < ARRAYLENGTH(sd->autobonus3); i++ ) {
@@ -2401,6 +2452,9 @@ static int skill_counter_additional_effect(struct block_list *src, struct block_
 		struct unit_data *ud;
 		int i, auto_skill_id, auto_skill_lv, type, notok;
 
+		// Preserve auto-cast type if bAutoSpellWhenHit was triggered during cast of a skill which was cast by Abracadabra, Improvised Song or an item.
+		enum autocast_type ac_type = dstsd->autocast.type;
+
 		for (i = 0; i < ARRAYLENGTH(dstsd->autospell2) && dstsd->autospell2[i].id; i++) {
 
 			if(!(dstsd->autospell2[i].flag&attack_type&BF_WEAPONMASK &&
@@ -2416,9 +2470,9 @@ static int skill_counter_additional_effect(struct block_list *src, struct block_
 			if (attack_type&BF_LONG)
 				 rate>>=1;
 
-			dstsd->state.autocast = 1;
+			dstsd->autocast.type = AUTOCAST_TEMP;
 			notok = skill->not_ok(auto_skill_id, dstsd);
-			dstsd->state.autocast = 0;
+			dstsd->autocast.type = AUTOCAST_NONE;
 
 			if ( notok )
 				continue;
@@ -2459,10 +2513,11 @@ static int skill_counter_additional_effect(struct block_list *src, struct block_
 			if( !battle->check_range(src, tbl, skill->get_range2(src, auto_skill_id,auto_skill_lv) + (auto_skill_id == RG_CLOSECONFINE?0:1)) && battle_config.autospell_check_range )
 				continue;
 
-			dstsd->state.autocast = 1;
+			dstsd->autocast.type = AUTOCAST_TEMP;
 			skill->consume_requirement(dstsd,auto_skill_id,auto_skill_lv,1);
 			skill->castend_type(type, bl, tbl, auto_skill_id, auto_skill_lv, tick, 0);
-			dstsd->state.autocast = 0;
+			dstsd->autocast.type = AUTOCAST_NONE;
+
 			// Set canact delay. [Skotlex]
 			ud = unit->bl2ud(bl);
 			if (ud) {
@@ -2474,6 +2529,8 @@ static int skill_counter_additional_effect(struct block_list *src, struct block_
 				}
 			}
 		}
+
+		dstsd->autocast.type = ac_type;
 	}
 
 	//Autobonus when attacked
@@ -2626,11 +2683,11 @@ static int skill_strip_equip(struct block_list *bl, unsigned short where, int ra
 /*=========================================================================
  * Used to knock back players, monsters, traps, etc
  * 'count' is the number of squares to knock back
- * 'direction' indicates the way OPPOSITE to the knockback direction (or -1 for default behavior)
+ * 'direction' indicates the way OPPOSITE to the knockback direction (or UNIT_DIR_UNDEFINED for default behavior)
  * if 'flag&0x1', position update packets must not be sent.
  * if 'flag&0x2', skill blown ignores players' special_state.no_knockback
  */
-static int skill_blown(struct block_list *src, struct block_list *target, int count, int8 dir, int flag)
+static int skill_blown(struct block_list *src, struct block_list *target, int count, enum unit_dir dir, int flag)
 {
 	int dx = 0, dy = 0;
 	struct status_change *tsc = status->get_sc(target);
@@ -2672,10 +2729,10 @@ static int skill_blown(struct block_list *src, struct block_list *target, int co
 			break;
 	}
 
-	if (dir == -1) // <optimized>: do the computation here instead of outside
+	if (dir == UNIT_DIR_UNDEFINED) // <optimized>: do the computation here instead of outside
 		dir = map->calc_dir(target, src->x, src->y); // direction from src to target, reversed
 
-	if (dir >= 0 && dir < 8) {
+	if (dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX) {
 		// take the reversed 'direction' and reverse it
 		dx = -dirx[dir];
 		dy = -diry[dir];
@@ -3297,7 +3354,7 @@ static int skill_attack(int attack_type, struct block_list *src, struct block_li
 	//Only knockback if it's still alive, otherwise a "ghost" is left behind. [Skotlex]
 	//Reflected spells do not bounce back (bl == dsrc since it only happens for direct skills)
 	if (dmg.blewcount > 0 && bl!=dsrc && !status->isdead(bl)) {
-		int8 dir = -1; // default
+		enum unit_dir dir = UNIT_DIR_UNDEFINED; // default
 		switch(skill_id) {//direction
 			case MG_FIREWALL:
 			case PR_SANCTUARY:
@@ -3310,13 +3367,13 @@ static int skill_attack(int attack_type, struct block_list *src, struct block_li
 			// This ensures the storm randomly pushes instead of exactly a cell backwards per official mechanics.
 			case WZ_STORMGUST:
 				if(!battle_config.stormgust_knockback)
-					dir = rnd()%8;
+					dir = rnd() % UNIT_DIR_MAX;
 				break;
 			case WL_CRIMSONROCK:
 				dir = map->calc_dir(bl,skill->area_temp[4],skill->area_temp[5]);
 				break;
 			case MC_CARTREVOLUTION:
-				dir = 6; // Official servers push target to the West
+				dir = UNIT_DIR_EAST; // Official servers push target to the West
 				break;
 			default:
 				dir = skill->attack_dir_unknown(&attack_type, src, dsrc, bl, &skill_id, &skill_lv, &tick, &flag);
@@ -3337,8 +3394,12 @@ static int skill_attack(int attack_type, struct block_list *src, struct block_li
 			case SR_KNUCKLEARROW:
 				if( skill->blown(dsrc,bl,dmg.blewcount,dir,0) && !(flag&4) ) {
 					short dir_x, dir_y;
-					dir_x = dirx[(dir+4)%8];
-					dir_y = diry[(dir+4)%8];
+					if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+						map->freeblock_unlock(); // unblock before assert-returning
+						return 0;
+					}
+					dir_x = dirx[unit_get_opposite_dir(dir)];
+					dir_y = diry[unit_get_opposite_dir(dir)];
 					if (map->getcell(bl->m, bl, bl->x + dir_x, bl->y + dir_y, CELL_CHKNOPASS) != 0)
 						skill->addtimerskill(src, tick + 300 * ((flag&2) ? 1 : 2), bl->id, 0, 0, skill_id, skill_lv, BF_WEAPON, flag|4);
 				}
@@ -3498,10 +3559,12 @@ static int skill_attack_copy_unknown(int *attack_type, struct block_list *src, s
 
 static int skill_attack_dir_unknown(int *attack_type, struct block_list *src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag)
 {
-	return -1;
+	return UNIT_DIR_UNDEFINED;
 }
 
-static void skill_attack_blow_unknown(int *attack_type, struct block_list *src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag, int *type, struct Damage *dmg, int64 *damage, int8 *dir)
+static void skill_attack_blow_unknown(int *attack_type, struct block_list *src, struct block_list *dsrc, struct block_list *bl,
+                                      uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag, int *type,
+                                      struct Damage *dmg, int64 *damage, enum unit_dir *dir)
 {
 	nullpo_retv(bl);
 	nullpo_retv(dmg);
@@ -3512,7 +3575,7 @@ static void skill_attack_blow_unknown(int *attack_type, struct block_list *src, 
 	if (!dmg->blewcount && bl->type == BL_SKILL && *damage > 0){
 		struct skill_unit *su = BL_UCAST(BL_SKILL, bl);
 		if (su->group && su->group->skill_id == HT_BLASTMINE)
-			skill->blown(src, bl, 3, -1, 0);
+			skill->blown(src, bl, 3, UNIT_DIR_UNDEFINED, 0);
 	}
 }
 
@@ -4190,11 +4253,6 @@ static void skill_castend_type(int type, struct block_list *src, struct block_li
 			skill->castend_damage_id(src, bl, skill_id, skill_lv, tick, flag);
 			break;
 	}
-
-	struct map_session_data *sd = BL_CAST(BL_PC, src);
-
-	if (sd != NULL)
-		pc->itemskill_clear(sd);
 }
 
 /*==========================================
@@ -4406,7 +4464,7 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 		case KN_CHARGEATK: {
 				bool path_exists = path->search_long(NULL, src, src->m, src->x, src->y, bl->x, bl->y,CELL_CHKWALL);
 				unsigned int dist = distance_bl(src, bl);
-				uint8 dir = map->calc_dir(bl, src->x, src->y);
+				enum unit_dir dir = map->calc_dir(bl, src->x, src->y);
 
 				// teleport to target (if not on WoE grounds)
 				if( !map_flag_gvg2(src->m) && !map->list[src->m].flag.battleground && unit->movepos(src, bl->x, bl->y, 0, 1) )
@@ -4418,7 +4476,7 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 					skill->blown(src, bl, dist, dir, 0);
 					//HACK: since knockback officially defaults to the left, the client also turns to the left... therefore,
 					// make the caster look in the direction of the target
-					unit->setdir(src, (dir+4)%8);
+					unit->set_dir(src, unit_get_opposite_dir(dir));
 				}
 
 			}
@@ -4457,12 +4515,13 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 
 		case RG_BACKSTAP:
 			{
-				uint8 dir = map->calc_dir(src, bl->x, bl->y), t_dir = unit->getdir(bl);
-				if ((!check_distance_bl(src, bl, 0) && !map->check_dir(dir, t_dir)) || bl->type == BL_SKILL) {
+				enum unit_dir dir = map->calc_dir(src, bl->x, bl->y);
+				enum unit_dir t_dir = unit->getdir(bl);
+				if ((!check_distance_bl(src, bl, 0) && map->check_dir(dir, t_dir) == 0) || bl->type == BL_SKILL) {
 					status_change_end(src, SC_HIDING, INVALID_TIMER);
 					skill->attack(BF_WEAPON, src, src, bl, skill_id, skill_lv, tick, flag);
-					dir = dir < 4 ? dir+4 : dir-4; // change direction [Celest]
-					unit->setdir(bl,dir);
+					dir = unit_get_opposite_dir(dir); // change direction [Celest]
+					unit->set_dir(bl, dir);
 				}
 				else if (sd)
 					clif->skill_fail(sd, skill_id, USESKILL_FAIL_LEVEL, 0, 0);
@@ -4489,7 +4548,6 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 			{
 				short x, y, i = 2; // Move 2 cells for Issen(from target)
 				struct block_list *mbl = bl;
-				short dir = 0;
 
 				skill->attack(BF_WEAPON,src,src,bl,skill_id,skill_lv,tick,flag);
 
@@ -4511,13 +4569,13 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 					status->set_hp(src, 1, STATUS_HEAL_DEFAULT);
 #endif // RENEWAL
 				}
-				dir = map->calc_dir(src,bl->x,bl->y);
-				if( dir > 0 && dir < 4) x = -i;
-				else if( dir > 4 ) x = i;
-				else x = 0;
-				if( dir > 2 && dir < 6 ) y = -i;
-				else if( dir == 7 || dir < 2 ) y = i;
-				else y = 0;
+				enum unit_dir dir = map->calc_dir(src, bl->x, bl->y);
+				if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+					map->freeblock_unlock(); // unblock before assert-returning
+					return 0;
+				}
+				x = i * dirx[dir];
+				y = i * diry[dir];
 				if ((mbl == src || (!map_flag_gvg2(src->m) && !map->list[src->m].flag.battleground))) { // only NJ_ISSEN don't have slide effect in GVG
 					if (!(unit->movepos(src, mbl->x+x, mbl->y+y, 1, 1))) {
 						// The cell is not reachable (wall, object, ...), move next to the target
@@ -4744,12 +4802,12 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 					if(idb_exists(skill->bowling_db, bl->id))
 						break;
 					// Random direction
-					dir = rnd()%8;
+					dir = rnd() % UNIT_DIR_MAX;
 				} else {
 					// Create an empty list of already hit targets
 					db_clear(skill->bowling_db);
 					// Direction is walkpath
-					dir = (unit->getdir(src)+4)%8;
+					dir = unit_get_opposite_dir(unit->getdir(src));
 				}
 				// Add current target to the list of already hit targets
 				idb_put(skill->bowling_db, bl->id, bl);
@@ -4758,6 +4816,10 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 				ty = bl->y;
 				for(i=0;i<c;i++) {
 					// Target coordinates (get changed even if knockback fails)
+					if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+						map->freeblock_unlock(); // unblock before assert-returning
+						return 0;
+					}
 					tx -= dirx[dir];
 					ty -= diry[dir];
 					// If target cell is a wall then break
@@ -4786,18 +4848,24 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 				if (bl->id==skill->area_temp[1])
 					break;
 				if (skill->attack(BF_WEAPON,src,src,bl,skill_id,skill_lv,tick,SD_ANIMATION))
-					skill->blown(src,bl,skill->area_temp[2],-1,0);
+					skill->blown(src, bl, skill->area_temp[2], UNIT_DIR_UNDEFINED, 0);
 			} else {
-				int x=bl->x,y=bl->y,i,dir;
-				dir = map->calc_dir(bl,src->x,src->y);
+				int x = bl->x;
+				int y = bl->y;
+				int i;
+				enum unit_dir dir = map->calc_dir(bl, src->x, src->y);
 				skill->area_temp[1] = bl->id;
 				skill->area_temp[2] = skill->get_blewcount(skill_id,skill_lv);
 				// all the enemies between the caster and the target are hit, as well as the target
 				if (skill->attack(BF_WEAPON,src,src,bl,skill_id,skill_lv,tick,0))
-					skill->blown(src,bl,skill->area_temp[2],-1,0);
+					skill->blown(src, bl, skill->area_temp[2], UNIT_DIR_UNDEFINED, 0);
 				for (i=0;i<4;i++) {
 					map->foreachincell(skill->area_sub,bl->m,x,y,BL_CHAR,src,skill_id,skill_lv,
 					                   tick,flag|BCT_ENEMY|1,skill->castend_damage_id);
+					if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+						map->freeblock_unlock(); // unblock before assert-returning
+						return 0;
+					}
 					x += dirx[dir];
 					y += diry[dir];
 				}
@@ -4954,7 +5022,7 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 			if( (tsc = status->get_sc(bl)) && (tsc->data[SC_HIDING] )) {
 				clif->skill_nodamage(src,src,skill_id,skill_lv,1);
 			} else
-				skill->attack(BF_MISC,src,src,bl,skill_id,skill_lv,tick,flag);
+				skill->attack(BF_WEAPON,src,src,bl,skill_id,skill_lv,tick,flag);
 		}
 			break;
 		case NPC_SELFDESTRUCTION: {
@@ -5019,7 +5087,7 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 			if(rnd()%100 < (10 + 3*skill_lv)) {
 				if( !sd || pc->checkskill(sd,KN_SPEARBOOMERANG) == 0 )
 					break; // Spear Boomerang auto cast chance only works if you have mastered Spear Boomerang.
-				skill->blown(src,bl,6,-1,0);
+				skill->blown(src, bl, 6, UNIT_DIR_UNDEFINED, 0);
 				skill->addtimerskill(src,tick+800,bl->id,0,0,skill_id,skill_lv,BF_WEAPON,flag);
 				skill->castend_damage_id(src,bl,KN_SPEARBOOMERANG,1,tick,0);
 			}
@@ -5027,7 +5095,7 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 		case RK_PHANTOMTHRUST:
 		{
 			struct map_session_data *tsd = BL_CAST(BL_PC, bl);
-			unit->setdir(src,map->calc_dir(src, bl->x, bl->y));
+			unit->set_dir(src, map->calc_dir(src, bl->x, bl->y));
 			clif->skill_nodamage(src,bl,skill_id,skill_lv,1);
 
 			skill->blown(src,bl,distance_bl(src,bl)-1,unit->getdir(src),0);
@@ -5041,16 +5109,13 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 		case KO_JYUMONJIKIRI:
 		case GC_DARKILLUSION:
 			{
-				short x, y;
-				short dir = map->calc_dir(bl, src->x, src->y);
-
-				if ( dir < 4 ) {
-					x = bl->x + 2 * (dir > 0) - 3 * (dir > 0);
-					y = bl->y + 1 - (dir / 2) - (dir > 2);
-				} else {
-					x = bl->x + 2 * (dir > 4) - 1 * (dir > 4);
-					y = bl->y + (dir / 6) - 1 + (dir > 6);
+				enum unit_dir dir = map->calc_dir(bl, src->x, src->y);
+				if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+					map->freeblock_unlock(); // unblock before assert-returning
+					return 0;
 				}
+				short x = bl->x + dirx[dir];
+				short y = bl->y + diry[dir];
 
 				if ( unit->movepos(src, x, y, 1, 1) ) {
 					clif->slide(src, x, y);
@@ -5207,14 +5272,16 @@ static int skill_castend_damage_id(struct block_list *src, struct block_list *bl
 			skill->attack(BF_MAGIC,src,src,bl,skill_id,skill_lv,tick,flag|ELE_DARK);
 			break;
 		case RA_WUGSTRIKE:
-			if( sd && pc_isridingwug(sd) ){
-				short x[8]={0,-1,-1,-1,0,1,1,1};
-				short y[8]={1,1,0,-1,-1,-1,0,1};
-				uint8 dir = map->calc_dir(bl, src->x, src->y);
-
-				if( unit->movepos(src, bl->x+x[dir], bl->y+y[dir], 1, 1) )
-				{
-					clif->slide(src, bl->x+x[dir], bl->y+y[dir]);
+			if (sd != NULL && pc_isridingwug(sd)) {
+				enum unit_dir dir = map->calc_dir(bl, src->x, src->y);
+				if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+					map->freeblock_unlock(); // unblock before assert-returning
+					return 0;
+				}
+				short x = bl->x + dirx[dir];
+				short y = bl->y + diry[dir];
+				if (unit->movepos(src, x, y, 1, 1) != 0) {
+					clif->slide(src, x, y);
 					clif->fixpos(src);
 					skill->attack(BF_WEAPON, src, src, bl, skill_id, skill_lv, tick, flag);
 				}
@@ -5657,8 +5724,9 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 		}
 
 		if(ud->skill_id == RG_BACKSTAP) {
-			uint8 dir = map->calc_dir(src,target->x,target->y),t_dir = unit->getdir(target);
-			if(check_distance_bl(src, target, 0) || map->check_dir(dir,t_dir)) {
+			enum unit_dir dir = map->calc_dir(src, target->x, target->y);
+			enum unit_dir t_dir = unit->getdir(target);
+			if (check_distance_bl(src, target, 0) || map->check_dir(dir, t_dir) != 0) {
 				break;
 			}
 		}
@@ -5775,7 +5843,7 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 		if (ud->walktimer != INVALID_TIMER && ud->skill_id != TK_RUN && ud->skill_id != RA_WUGDASH)
 			unit->stop_walking(src, STOPWALKING_FLAG_FIXPOS);
 
-		if( !sd || sd->skillitem != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) )
+		if (sd == NULL || sd->autocast.skill_id != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) != 0)
 			ud->canact_tick = tick + skill->delay_fix(src, ud->skill_id, ud->skill_lv); // Tests show wings don't overwrite the delay but skill scrolls do. [Inkfish]
 		if (sd) { // Cooldown application
 			int i, cooldown = skill->get_cooldown(ud->skill_id, ud->skill_lv);
@@ -5844,7 +5912,7 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 		}
 
 		if( sd && ud->skill_id != SA_ABRACADABRA && ud->skill_id != WM_RANDOMIZESPELL ) // they just set the data so leave it as it is.[Inkfish]
-			sd->skillitem = sd->skillitemlv = 0;
+			pc->autocast_clear(sd);
 
 		if (ud->skilltimer == INVALID_TIMER) {
 			if(md) md->skill_idx = -1;
@@ -5854,7 +5922,7 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 
 		// Asura Strike caster doesn't look to their target in the end
 		if (src->id != target->id && !is_asura)
-			unit->setdir(src, map->calc_dir(src, target->x, target->y));
+			unit->set_dir(src, map->calc_dir(src, target->x, target->y));
 
 		map->freeblock_unlock();
 		return 1;
@@ -5877,25 +5945,13 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 		}
 		if (target && target->m == src->m) {
 			//Move character to target anyway.
-			int dir, x, y;
+			enum unit_dir dir = map->calc_dir(src, target->x, target->y);
+			Assert_ret(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX);
 			int dist = 3; // number of cells that asura caster will walk
+			int x = dist * dirx[dir];
+			int y = dist * diry[dir];
 
-			dir = map->calc_dir(src,target->x,target->y);
-			if (dir > 0 && dir < 4)
-				x = -dist;
-			else if (dir > 4)
-				x = dist;
-			else
-				x = 0;
-			
-			if (dir > 2 && dir < 6)
-				y = -dist;
-			else if (dir == 7 || dir < 2)
-				y = dist;
-			else
-				y = 0;
-
-			if (unit->movepos(src, src->x + x, src->y + y, 1, 1) == 1) {
+			if (unit->movepos(src, src->x + x, src->y + y, 1, 1) != 0) {
 				//Display movement + animation.
 				clif->slide(src, src->x, src->y);
 				clif->spiritball(src);
@@ -5905,14 +5961,14 @@ static int skill_castend_id(int tid, int64 tick, int id, intptr_t data)
 		}
 	}
 
-	if( !sd || sd->skillitem != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) )
+	if (sd == NULL || sd->autocast.skill_id != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) != 0)
 		ud->canact_tick = tick;
 	ud->skill_id = ud->skill_lv = ud->skilltarget = 0;
 	//You can't place a skill failed packet here because it would be
 	//sent in ALL cases, even cases where skill_check_condition fails
 	//which would lead to double 'skill failed' messages u.u [Skotlex]
 	if(sd)
-		sd->skillitem = sd->skillitemlv = 0;
+		pc->autocast_clear(sd);
 	else if(md)
 		md->skill_idx = -1;
 	return 0;
@@ -6294,9 +6350,9 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 
 				if (sd) {
 					// player-casted
-					sd->state.abra_flag = 1;
-					sd->skillitem = abra_skill_id;
-					sd->skillitemlv = abra_skill_lv;
+					sd->autocast.type = AUTOCAST_ABRA;
+					sd->autocast.skill_id = abra_skill_id;
+					sd->autocast.skill_lv = abra_skill_lv;
 					clif->item_skill(sd, abra_skill_id, abra_skill_lv);
 				} else {
 					// mob-casted
@@ -7344,7 +7400,7 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 				int rate = 100 * (100 - (tstatus->int_ / 2 + tstatus->vit / 3 + tstatus->luk / 10));
 				int duration = skill->get_time2(skill_id, skill_lv);
 
-				duration *= (100 - (tstatus->int_ + tstatus->vit) / 2) / 100;
+				duration = duration * (100 - (tstatus->int_ + tstatus->vit) / 2) / 100;
 				status->change_start(src, bl, SC_BLIND, rate, 1, 0, 0, 0, duration, SCFLAG_NONE);
 			}
 
@@ -7425,7 +7481,7 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 					map->freeblock_unlock();
 					return 1;
 				}
-				if( sd->skillitem != skill_id )
+				if (sd->autocast.type == AUTOCAST_NONE)
 					status_zap(src, 0, skill->get_sp(skill_id, skill_lv)); // consume sp only if succeeded
 			}
 			break;
@@ -7462,7 +7518,7 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 					break;
 				}
 
-				if( sd->state.autocast || ( (sd->skillitem == AL_TELEPORT || battle_config.skip_teleport_lv1_menu) && skill_lv == 1 ) || skill_lv == 3 )
+				if (sd->autocast.type == AUTOCAST_TEMP || ((sd->autocast.skill_id == AL_TELEPORT || battle_config.skip_teleport_lv1_menu) && skill_lv == 1) || skill_lv == 3)
 				{
 					if( skill_lv == 1 )
 						pc->randomwarp(sd,CLR_TELEPORT);
@@ -7835,7 +7891,9 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 
 		case TK_HIGHJUMP:
 			{
-				int x,y, dir = unit->getdir(src);
+				int x;
+				int y;
+				enum unit_dir dir = unit->getdir(src);
 
 				//Fails on noteleport maps, except for GvG and BG maps [Skotlex]
 				if( map->list[src->m].flag.noteleport
@@ -8084,11 +8142,19 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 
 		case NPC_RUN:
 			{
-				const int mask[8][2] = {{0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}};
-				uint8 dir = (bl == src)?unit->getdir(src):map->calc_dir(src,bl->x,bl->y); //If cast on self, run forward, else run away.
+				enum unit_dir dir;
+				if (bl == src) //If cast on self, run forward, else run away.
+					dir = unit->getdir(src);
+				else
+					dir = map->calc_dir(src, bl->x, bl->y);
+				if (Assert_chk(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX)) {
+					map->freeblock_unlock(); // unblock before assert-returning
+					return 0;
+				}
 				unit->stop_attack(src);
 				//Run skillv tiles overriding the can-move check.
-				if (unit->walktoxy(src, src->x + skill_lv * mask[dir][0], src->y + skill_lv * mask[dir][1], 2) && md)
+				if (unit->walk_toxy(src, src->x + skill_lv * -dirx[dir], src->y + skill_lv * -diry[dir], 2) == 0
+				    && md != NULL)
 					md->state.skillstate = MSS_WALK; //Otherwise it isn't updated in the AI.
 			}
 			break;
@@ -9449,7 +9515,9 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 		case NC_F_SIDESLIDE:
 		case NC_B_SIDESLIDE:
 			{
-				uint8 dir = (skill_id == NC_F_SIDESLIDE) ? (unit->getdir(src)+4)%8 : unit->getdir(src);
+				enum unit_dir dir = unit->getdir(src);
+				if (skill_id == NC_F_SIDESLIDE)
+					dir = unit_get_opposite_dir(dir);
 				skill->blown(src,bl,skill->get_blewcount(skill_id,skill_lv),dir,0);
 				clif->slide(src,src->x,src->y);
 				clif->skill_nodamage(src,bl,skill_id,skill_lv,1);
@@ -10024,9 +10092,9 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 				clif->skill_nodamage (src, bl, skill_id, skill_lv, 1);
 
 				if (sd != NULL) {
-					sd->state.abra_flag = 2;
-					sd->skillitem = improv_skill_id;
-					sd->skillitemlv = improv_skill_lv;
+					sd->autocast.type = AUTOCAST_IMPROVISE;
+					sd->autocast.skill_id = improv_skill_id;
+					sd->autocast.skill_lv = improv_skill_lv;
 					clif->item_skill(sd, improv_skill_id, improv_skill_lv);
 				} else {
 					struct unit_data *ud = unit->bl2ud(src);
@@ -10419,7 +10487,7 @@ static int skill_castend_nodamage_id(struct block_list *src, struct block_list *
 		case KO_KAZEHU_SEIRAN:
 		case KO_DOHU_KOUKAI:
 			if(sd) {
-				int ttype = skill->get_ele(skill_id, skill_lv);
+				enum spirit_charm_types ttype = skill->get_ele(skill_id, skill_lv);
 				clif->skill_nodamage(src, bl, skill_id, skill_lv, 1);
 				pc->add_charm(sd, skill->get_time(skill_id, skill_lv), MAX_SPIRITCHARM, ttype); // replace existing charms of other type
 			}
@@ -10795,7 +10863,7 @@ static int skill_castend_pos(int tid, int64 tick, int id, intptr_t data)
 		if (ud->walktimer != INVALID_TIMER)
 			unit->stop_walking(src, STOPWALKING_FLAG_FIXPOS);
 
-		if( !sd || sd->skillitem != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) )
+		if (sd == NULL || sd->autocast.skill_id != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) != 0)
 			ud->canact_tick = tick + skill->delay_fix(src, ud->skill_id, ud->skill_lv);
 		if (sd) { //Cooldown application
 			int i, cooldown = skill->get_cooldown(ud->skill_id, ud->skill_lv);
@@ -10824,10 +10892,10 @@ static int skill_castend_pos(int tid, int64 tick, int id, intptr_t data)
 		map->freeblock_lock();
 		skill->castend_pos2(src,ud->skillx,ud->skilly,ud->skill_id,ud->skill_lv,tick,0);
 
-		if( sd && sd->skillitem != AL_WARP ) // Warp-Portal thru items will clear data in skill_castend_map. [Inkfish]
-			sd->skillitem = sd->skillitemlv = 0;
+		if (sd != NULL && sd->autocast.skill_id != AL_WARP) // Warp-Portal thru items will clear data in skill_castend_map. [Inkfish]
+			pc->autocast_clear(sd);
 
-		unit->setdir(src, map->calc_dir(src, ud->skillx, ud->skilly));
+		unit->set_dir(src, map->calc_dir(src, ud->skillx, ud->skilly));
 
 		if (ud->skilltimer == INVALID_TIMER) {
 			if (md) md->skill_idx = -1;
@@ -10839,11 +10907,11 @@ static int skill_castend_pos(int tid, int64 tick, int id, intptr_t data)
 		return 1;
 	} while(0);
 
-	if( !sd || sd->skillitem != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) )
+	if (sd == NULL || sd->autocast.skill_id != ud->skill_id || skill->get_delay(ud->skill_id,ud->skill_lv) != 0)
 		ud->canact_tick = tick;
 	ud->skill_id = ud->skill_lv = 0;
 	if(sd)
-		sd->skillitem = sd->skillitemlv = 0;
+		pc->autocast_clear(sd);
 	else if(md)
 		md->skill_idx  = -1;
 	return 0;
@@ -10872,6 +10940,37 @@ static int skill_count_wos(struct block_list *bl, va_list ap)
 	nullpo_retr(1, src);
 	if( src->id != bl->id ) {
 		return 1;
+	}
+	return 0;
+}
+
+/**
+ * Returns the linked song/dance skill ID, if any (for the Bard/Dancer Soul Link).
+ *
+ * @param skill_id The skill ID to look up
+ *
+ * @return The linked song or dance's skill ID if any
+ * @retval 0 if the given skill_id doesn't have a linked skill ID
+ */
+static int skill_get_linked_song_dance_id(int skill_id)
+{
+	switch (skill_id) {
+		case BA_WHISTLE:
+			return DC_HUMMING;
+		case BA_ASSASSINCROSS:
+			return DC_DONTFORGETME;
+		case BA_POEMBRAGI:
+			return DC_FORTUNEKISS;
+		case BA_APPLEIDUN:
+			return DC_SERVICEFORYOU;
+		case DC_HUMMING:
+			return BA_WHISTLE;
+		case DC_DONTFORGETME:
+			return BA_ASSASSINCROSS;
+		case DC_FORTUNEKISS:
+			return BA_POEMBRAGI;
+		case DC_SERVICEFORYOU:
+			return BA_APPLEIDUN;
 	}
 	return 0;
 }
@@ -10973,7 +11072,7 @@ static int skill_castend_map(struct map_session_data *sd, uint16 skill_id, const
 					}
 				}
 
-				lv = sd->skillitem==skill_id?sd->skillitemlv:pc->checkskill(sd,skill_id);
+				lv = (sd->autocast.type > AUTOCAST_TEMP) ? sd->autocast.skill_lv : pc->checkskill(sd, skill_id);
 				wx = sd->menuskill_val>>16;
 				wy = sd->menuskill_val&0xffff;
 
@@ -10996,7 +11095,7 @@ static int skill_castend_map(struct map_session_data *sd, uint16 skill_id, const
 				}
 
 				skill->consume_requirement(sd,sd->menuskill_id,lv,2);
-				sd->skillitem = sd->skillitemlv = 0; // Clear data that's skipped in 'skill_castend_pos' [Inkfish]
+				pc->autocast_clear(sd); // Clear data which was skipped in skill_castend_pos().
 
 				if((group=skill->unitsetting(&sd->bl,skill_id,lv,wx,wy,0))==NULL) {
 					skill_failed(sd);
@@ -11245,7 +11344,7 @@ static int skill_castend_pos2(struct block_list *src, int x, int y, uint16 skill
 			FALLTHROUGH
 		case GS_GROUNDDRIFT: //Ammo should be deleted right away.
 			if ( skill_id == WM_SEVERE_RAINSTORM )
-				sc_start(src,src,SC_NO_SWITCH_EQUIP,100,0,skill->get_time(skill_id,skill_lv));
+				sc_start(src, src, type, 100, 0, skill->get_time(skill_id, skill_lv));
 			skill->unitsetting(src,skill_id,skill_lv,x,y,0);
 			break;
 		case WZ_ICEWALL:
@@ -11606,17 +11705,16 @@ static int skill_castend_pos2(struct block_list *src, int x, int y, uint16 skill
 
 		case WL_EARTHSTRAIN:
 			{
-				int i, wave = skill_lv + 4, dir = map->calc_dir(src,x,y);
+				int i;
+				int wave = skill_lv + 4;
+				enum unit_dir dir = map->calc_dir(src, x, y);
+				Assert_ret(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX);
 				int sx = x = src->x, sy = y = src->y; // Store first caster's location to avoid glitch on unit setting
 
-				for( i = 1; i <= wave; i++ )
-				{
-					switch( dir ){
-						case 0: case 1: case 7: sy = y + i; break;
-						case 3: case 4: case 5: sy = y - i; break;
-						case 2: sx = x - i; break;
-						case 6: sx = x + i; break;
-					}
+				for (i = 1; i <= wave; i++) {
+					sy = y + i * diry[dir];
+					if (dir == UNIT_DIR_WEST || dir == UNIT_DIR_EAST)
+						sx = x + i * dirx[dir];
 					skill->addtimerskill(src,timer->gettick() + (140 * i),0,sx,sy,skill_id,skill_lv,dir,flag&2);
 				}
 			}
@@ -13835,12 +13933,14 @@ static int skill_check_condition_char_sub(struct block_list *bl, va_list ap)
 	} else {
 
 		switch(skill_id) {
-			case PR_BENEDICTIO: {
-				uint8 dir = map->calc_dir(&sd->bl,tsd->bl.x,tsd->bl.y);
-				dir = (unit->getdir(&sd->bl) + dir)%8; //This adjusts dir to account for the direction the sd is facing.
-				if ((tsd->job & MAPID_BASEMASK) == MAPID_ACOLYTE && (dir == 2 || dir == 6) //Must be standing to the left/right of Priest.
-					&& sd->status.sp >= 10)
+			case PR_BENEDICTIO:
+			{
+				enum unit_dir dir = map->calc_dir(&sd->bl, tsd->bl.x, tsd->bl.y);
+				dir = (unit->getdir(&sd->bl) + dir) % UNIT_DIR_MAX; //This adjusts dir to account for the direction the sd is facing.
+				if ((tsd->job & MAPID_BASEMASK) == MAPID_ACOLYTE && (dir == UNIT_DIR_WEST || dir == UNIT_DIR_EAST) //Must be standing to the left/right of Priest.
+				    && sd->status.sp >= 10) {
 					p_sd[(*c)++]=tsd->bl.id;
+				}
 				return 1;
 			}
 			case AB_ADORAMUS:
@@ -13994,22 +14094,6 @@ static bool skill_is_combo(int skill_id)
 	return false;
 }
 
-/**
- * Checks if a skill is casted by an item (itemskill() script command).
- *
- * @param sd The charcater's session data.
- * @param skill_id The skill's ID.
- * @param skill_lv The skill's level.
- * @return true if skill is casted by an item, otherwise false.
- */
-static bool skill_is_item_skill(struct map_session_data *sd, int skill_id, int skill_lv)
-{
-	nullpo_retr(false, sd);
-
-	return (sd->skillitem == skill_id && sd->skillitemlv == skill_lv
-		&& sd->itemskill_id == skill_id && sd->itemskill_lv == skill_lv);
-}
-
 static int skill_check_condition_castbegin(struct map_session_data *sd, uint16 skill_id, uint16 skill_lv)
 {
 	struct status_data *st;
@@ -14024,13 +14108,13 @@ static int skill_check_condition_castbegin(struct map_session_data *sd, uint16 s
 	if (sd->chat_id != 0)
 		return 0;
 
-	if ((sd->state.itemskill_conditions_checked == 1 || sd->state.itemskill_no_conditions == 1)
-	    && skill->is_item_skill(sd, skill_id, skill_lv)) {
+	if (((sd->autocast.itemskill_conditions_checked || !sd->autocast.itemskill_check_conditions)
+	    && sd->autocast.type == AUTOCAST_ITEM) || sd->autocast.type == AUTOCAST_IMPROVISE) {
 		return 1;
 	}
 
-	if (pc_has_permission(sd, PC_PERM_SKILL_UNCONDITIONAL) && sd->skillitem != skill_id) {
-		//GMs don't override the skillItem check, otherwise they can use items without them being consumed! [Skotlex]
+	if (pc_has_permission(sd, PC_PERM_SKILL_UNCONDITIONAL) && sd->autocast.type != AUTOCAST_ITEM) {
+		// GMs don't override the AUTOCAST_ITEM check, otherwise they can use items without them being consumed!
 		sd->state.arrow_atk = skill->get_ammotype(skill_id)?1:0; //Need to do arrow state check.
 		sd->spiritball_old = sd->spiritball; //Need to do Spiritball check.
 		return 1;
@@ -14061,30 +14145,7 @@ static int skill_check_condition_castbegin(struct map_session_data *sd, uint16 s
 	if( !sc->count )
 		sc = NULL;
 
-	if( sd->skillitem == skill_id ) {
-		if( sd->state.abra_flag ) // Hocus-Pocus was used. [Inkfish]
-			sd->state.abra_flag = 0;
-		else {
-			int i;
-			// When a target was selected, consume items that were skipped in pc_use_item [Skotlex]
-			if( (i = sd->itemindex) == -1 ||
-				sd->status.inventory[i].nameid != sd->itemid ||
-				sd->inventory_data[i] == NULL ||
-				sd->status.inventory[i].amount < 1
-			) {
-				//Something went wrong, item exploit?
-				sd->itemid = sd->itemindex = -1;
-				return 0;
-			}
-
-			//Consume
-			sd->itemid = sd->itemindex = -1;
-			if (sd->status.inventory[i].expire_time == 0 && sd->inventory_data[i]->flag.delay_consume == 1) // Rental usable items are not consumed until expiration
-				pc->delitem(sd, i, 1, 0, DELITEM_NORMAL, LOG_TYPE_CONSUME);
-		}
-	}
-
-	if (pc_is90overweight(sd) && sd->skillitem != skill_id) { /// Skill casting items ignore the overweight restriction. [Kenpachi]
+	if (pc_is90overweight(sd) && sd->autocast.type != AUTOCAST_ITEM) { // Skill casting items ignore the overweight restriction.
 		clif->skill_fail(sd, skill_id, USESKILL_FAIL_WEIGHTOVER, 0, 0);
 		return 0;
 	}
@@ -14955,7 +15016,7 @@ static int skill_check_condition_castbegin(struct map_session_data *sd, uint16 s
 		return 0;
 	}
 
-	if (require.sp > 0 && st->sp < (unsigned int)require.sp && sd->skillitem != skill_id) { /// Skill casting items and Hocus-Pocus skills don't consume SP. [Kenpachi]
+	if (require.sp > 0 && st->sp < (unsigned int)require.sp && sd->autocast.type == AUTOCAST_NONE) { // Auto-cast skills don't consume SP.
 		clif->skill_fail(sd, skill_id, USESKILL_FAIL_SP_INSUFFICIENT, 0, 0);
 		return 0;
 	}
@@ -15013,13 +15074,13 @@ static int skill_check_condition_castend(struct map_session_data *sd, uint16 ski
 	if (sd->chat_id != 0)
 		return 0;
 
-	if ((sd->state.itemskill_conditions_checked == 1 || sd->state.itemskill_no_conditions == 1)
-	    && skill->is_item_skill(sd, skill_id, skill_lv)) {
+	if (((sd->autocast.itemskill_conditions_checked || !sd->autocast.itemskill_check_conditions)
+	    && sd->autocast.type == AUTOCAST_ITEM) || sd->autocast.type == AUTOCAST_IMPROVISE) {
 		return 1;
 	}
 
-	if( pc_has_permission(sd, PC_PERM_SKILL_UNCONDITIONAL) && sd->skillitem != skill_id ) {
-		//GMs don't override the skillItem check, otherwise they can use items without them being consumed! [Skotlex]
+	if (pc_has_permission(sd, PC_PERM_SKILL_UNCONDITIONAL) && sd->autocast.type != AUTOCAST_ITEM) {
+		// GMs don't override the AUTOCAST_ITEM check, otherwise they can use items without them being consumed!
 		sd->state.arrow_atk = skill->get_ammotype(skill_id)?1:0; //Need to do arrow state check.
 		sd->spiritball_old = sd->spiritball; //Need to do Spiritball check.
 		return 1;
@@ -15046,7 +15107,7 @@ static int skill_check_condition_castend(struct map_session_data *sd, uint16 ski
 			break;
 	}
 
-	if (pc_is90overweight(sd) && sd->skillitem != skill_id) { /// Skill casting items ignore the overweight restriction. [Kenpachi]
+	if (pc_is90overweight(sd) && sd->autocast.type != AUTOCAST_ITEM) { // Skill casting items ignore the overweight restriction.
 		clif->skill_fail(sd, skill_id, USESKILL_FAIL_WEIGHTOVER, 0, 0);
 		return 0;
 	}
@@ -15152,10 +15213,8 @@ static int skill_check_condition_castend(struct map_session_data *sd, uint16 ski
 			clif->messagecolor_self(sd->fd, COLOR_RED, e_msg);
 			return 0;
 		}
-		if (!(require.ammo&1<<sd->inventory_data[i]->subtype)) { //Ammo type check. Send the "wrong weapon type" message
-			//which is the closest we have to wrong ammo type. [Skotlex]
-			clif->arrow_fail(sd,0); //Haplo suggested we just send the equip-arrows message instead. [Skotlex]
-			//clif->skill_fail(sd, skill_id, USESKILL_FAIL_THIS_WEAPON, 0, 0);
+		if ((require.ammo & (1 << sd->inventory_data[i]->subtype)) == 0 || !battle->check_arrows(sd)) { // Ammo type check.
+			clif->arrow_fail(sd, 0); // "Please equip the proper ammunition first."
 			return 0;
 		}
 	}
@@ -15219,8 +15278,10 @@ static int skill_consume_requirement(struct map_session_data *sd, uint16 skill_i
 
 	nullpo_ret(sd);
 
-	if (sd->state.itemskill_no_conditions == 1 && skill->is_item_skill(sd, skill_id, skill_lv))
+	if ((!sd->autocast.itemskill_check_conditions && sd->autocast.type == AUTOCAST_ITEM)
+	    || sd->autocast.type == AUTOCAST_IMPROVISE) {
 		return 1;
+	}
 
 	req = skill->get_requirement(sd,skill_id,skill_lv);
 
@@ -15236,7 +15297,7 @@ static int skill_consume_requirement(struct map_session_data *sd, uint16 skill_i
 
 				break;
 			default:
-				if (sd->state.autocast == 1 || sd->skillitem == skill_id) /// Skill casting items and Hocus-Pocus skills don't consume SP. [Kenpachi]
+				if (sd->autocast.type != AUTOCAST_NONE) // Auto-cast skills don't consume SP.
 					req.sp = 0;
 
 				break;
@@ -15724,6 +15785,8 @@ static int skill_castfix_sc(struct block_list *bl, int time)
 		}
 		if (sc->data[SC_POEMBRAGI])
 			time -= time * sc->data[SC_POEMBRAGI]->val2 / 100;
+		if (sc->data[SC_SKF_CAST] != NULL)
+			time -= time * sc->data[SC_SKF_CAST]->val1 / 100;
 		if (sc->data[SC_IZAYOI])
 			time -= time * 50 / 100;
 	}
@@ -15825,6 +15888,8 @@ static int skill_vfcastfix(struct block_list *bl, double time, uint16 skill_id, 
 		}
 		if (sc->data[SC_MYSTICSCROLL])
 			VARCAST_REDUCTION(sc->data[SC_MYSTICSCROLL]->val1);
+		if (sc->data[SC_SKF_CAST] != NULL)
+			VARCAST_REDUCTION(sc->data[SC_SKF_CAST]->val1);
 
 		// Fixed cast reduction bonuses
 		if( sc->data[SC__LAZINESS] )
@@ -15976,11 +16041,11 @@ struct square {
 	int val2[5];
 };
 
-static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int16 y)
+static void skill_brandishspear_first(struct square *tc, enum unit_dir dir, int16 x, int16 y)
 {
 	nullpo_retv(tc);
 
-	if(dir == 0){
+	if (dir == UNIT_DIR_NORTH) {
 		tc->val1[0]=x-2;
 		tc->val1[1]=x-1;
 		tc->val1[2]=x;
@@ -15991,7 +16056,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=
 		tc->val2[3]=
 		tc->val2[4]=y-1;
-	} else if(dir==2){
+	} else if (dir == UNIT_DIR_WEST) {
 		tc->val1[0]=
 		tc->val1[1]=
 		tc->val1[2]=
@@ -16002,7 +16067,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=y;
 		tc->val2[3]=y-1;
 		tc->val2[4]=y-2;
-	} else if(dir==4){
+	} else if (dir == UNIT_DIR_SOUTH) {
 		tc->val1[0]=x-2;
 		tc->val1[1]=x-1;
 		tc->val1[2]=x;
@@ -16013,7 +16078,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=
 		tc->val2[3]=
 		tc->val2[4]=y+1;
-	} else if(dir==6){
+	} else if (dir == UNIT_DIR_EAST) {
 		tc->val1[0]=
 		tc->val1[1]=
 		tc->val1[2]=
@@ -16024,7 +16089,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=y;
 		tc->val2[3]=y-1;
 		tc->val2[4]=y-2;
-	} else if(dir==1){
+	} else if (dir == UNIT_DIR_NORTHWEST) {
 		tc->val1[0]=x-1;
 		tc->val1[1]=x;
 		tc->val1[2]=x+1;
@@ -16035,7 +16100,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=y-1;
 		tc->val2[3]=y;
 		tc->val2[4]=y+1;
-	} else if(dir==3){
+	} else if (dir == UNIT_DIR_SOUTHWEST) {
 		tc->val1[0]=x+3;
 		tc->val1[1]=x+2;
 		tc->val1[2]=x+1;
@@ -16046,7 +16111,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=y+1;
 		tc->val2[3]=y+2;
 		tc->val2[4]=y+3;
-	} else if(dir==5){
+	} else if (dir == UNIT_DIR_SOUTHEAST) {
 		tc->val1[0]=x+1;
 		tc->val1[1]=x;
 		tc->val1[2]=x-1;
@@ -16057,7 +16122,7 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 		tc->val2[2]=y+1;
 		tc->val2[3]=y;
 		tc->val2[4]=y-1;
-	} else if(dir==7){
+	} else if (dir == UNIT_DIR_NORTHEAST) {
 		tc->val1[0]=x-3;
 		tc->val1[1]=x-2;
 		tc->val1[2]=x-1;
@@ -16072,36 +16137,27 @@ static void skill_brandishspear_first(struct square *tc, uint8 dir, int16 x, int
 
 }
 
-static void skill_brandishspear_dir(struct square *tc, uint8 dir, int are)
+static void skill_brandishspear_dir(struct square *tc, enum unit_dir dir, int are)
 {
-	int c;
 	nullpo_retv(tc);
+	Assert_retv(dir >= UNIT_DIR_FIRST && dir < UNIT_DIR_MAX);
 
-	for( c = 0; c < 5; c++ ) {
-		switch( dir ) {
-			case 0:                   tc->val2[c]+=are; break;
-			case 1: tc->val1[c]-=are; tc->val2[c]+=are; break;
-			case 2: tc->val1[c]-=are;                   break;
-			case 3: tc->val1[c]-=are; tc->val2[c]-=are; break;
-			case 4:                   tc->val2[c]-=are; break;
-			case 5: tc->val1[c]+=are; tc->val2[c]-=are; break;
-			case 6: tc->val1[c]+=are;                   break;
-			case 7: tc->val1[c]+=are; tc->val2[c]+=are; break;
-		}
+	for (int c = 0; c < 5; c++) {
+		tc->val1[c] += dirx[dir] * are;
+		tc->val2[c] += diry[dir] * are;
 	}
 }
 
 static void skill_brandishspear(struct block_list *src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int64 tick, int flag)
 {
 	int c,n=4;
-	uint8 dir;
 	struct square tc;
 	int x, y;
 
 	nullpo_retv(bl);
 	x = bl->x;
 	y = bl->y;
-	dir = map->calc_dir(src, x, y);
+	enum unit_dir dir = map->calc_dir(src, x, y);
 	skill->brandishspear_first(&tc,dir,x,y);
 	skill->brandishspear_dir(&tc,dir,4);
 	skill->area_temp[1] = bl->id;
@@ -21627,7 +21683,6 @@ void skill_defaults(void)
 	skill->cast_fix_sc = skill_castfix_sc;
 	skill->vf_cast_fix = skill_vfcastfix;
 	skill->delay_fix = skill_delay_fix;
-	skill->is_item_skill = skill_is_item_skill;
 	skill->check_condition_castbegin = skill_check_condition_castbegin;
 	skill->check_condition_castend = skill_check_condition_castend;
 	skill->consume_requirement = skill_consume_requirement;
@@ -21653,6 +21708,7 @@ void skill_defaults(void)
 	skill->not_ok_hom = skillnotok_hom;
 	skill->not_ok_hom_unknown = skillnotok_hom_unknown;
 	skill->not_ok_mercenary = skillnotok_mercenary;
+	skill->validate_autocast_data = skill_validate_autocast_data;
 	skill->chastle_mob_changetarget = skill_chastle_mob_changetarget;
 	skill->can_produce_mix = skill_can_produce_mix;
 	skill->produce_mix = skill_produce_mix;
@@ -21793,4 +21849,5 @@ void skill_defaults(void)
 	skill->splash_target = skill_splash_target;
 	skill->check_npc_chaospanic = skill_check_npc_chaospanic;
 	skill->count_wos = skill_count_wos;
+	skill->get_linked_song_dance_id = skill_get_linked_song_dance_id;
 }

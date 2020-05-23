@@ -375,6 +375,9 @@
 - `cell_landprotector`: 5
 - `cell_novending`: 6
 - `cell_nochat`: 7
+- `cell_icewall`: 8
+- `cell_noicewall`: 9
+- `cell_noskill`: 10
 
 ### Cell checks
 
@@ -390,6 +393,9 @@
 - `cell_chklandprotector`: 11
 - `cell_chknovending`: 12
 - `cell_chknochat`: 13
+- `cell_chkicewall`: 14
+- `cell_chknoicewall`: 15
+- `cell_chknoskill`: 16
 
 ### Bonuses / Parameter IDs
 
@@ -1339,6 +1345,13 @@
 - `SC_RESIST_PROPERTY_WIND`: 667
 - `SC_CLIENT_ONLY_EQUIP_ARROW`: 668
 - `SC_MADOGEAR`: 669
+- `SC_POPECOOKIE`: 670
+- `SC_VITALIZE_POTION`: 671
+- `SC_SKF_MATK`: 672
+- `SC_SKF_ATK`: 673
+- `SC_SKF_ASPD`: 674
+- `SC_SKF_CAST`: 675
+- `SC_ALMIGHTY`: 676
 
 ### Emotes
 
@@ -4650,23 +4663,23 @@
 
 ### Server defines
 
-- `PACKETVER`: 20141022
+- `PACKETVER`: 20190530
 - `MAX_LEVEL`: 175
 - `MAX_STORAGE`: 600
 - `MAX_GUILD_STORAGE`: 600
 - `MAX_CART`: 100
-- `MAX_INVENTORY`: 100
+- `MAX_INVENTORY`: 200
 - `FIXED_INVENTORY_SIZE`: 100
 - `MAX_ZENY`: 2147483647
 - `MAX_BANK_ZENY`: 2147483647
 - `MAX_BG_MEMBERS`: 30
 - `MAX_CHAT_USERS`: 20
 - `MAX_REFINE`: 20
-- `MAX_ITEM_ID`: 65535
+- `MAX_ITEM_ID`: 2147483647
 - `MAX_MENU_OPTIONS`: 255
 - `MAX_MENU_LENGTH`: 2048
-- `MOB_CLONE_START`: 4001
-- `MOB_CLONE_END`: 5000
+- `MOB_CLONE_START`: 21001
+- `MOB_CLONE_END`: 22000
 - `MAX_NPC_PER_MAP`: 512
 
 ### status options
@@ -4990,6 +5003,9 @@
 - `ITEMINFO_ITEM_USAGE_FLAG`: 38
 - `ITEMINFO_ITEM_USAGE_OVERRIDE`: 39
 - `ITEMINFO_GM_LV_TRADE_OVERRIDE`: 40
+- `ITEMINFO_ID`: 41
+- `ITEMINFO_AEGISNAME`: 42
+- `ITEMINFO_NAME`: 43
 
 ### getmercinfo options
 
@@ -5018,6 +5034,25 @@
 - `PETINFO_ACCESSORYFLAG`: 10
 - `PETINFO_EVO_EGGID`: 11
 - `PETINFO_AUTOFEED`: 12
+
+### Pet hunger levels
+
+- `PET_HUNGER_STARVING`: 0
+- `PET_HUNGER_VERY_HUNGRY`: 10
+- `PET_HUNGER_HUNGRY`: 25
+- `PET_HUNGER_NEUTRAL`: 75
+- `PET_HUNGER_SATISFIED`: 90
+- `PET_HUNGER_STUFFED`: 100
+
+### Pet intimacy levels
+
+- `PET_INTIMACY_NONE`: 0
+- `PET_INTIMACY_AWKWARD`: 1
+- `PET_INTIMACY_SHY`: 100
+- `PET_INTIMACY_NEUTRAL`: 250
+- `PET_INTIMACY_CORDIAL`: 750
+- `PET_INTIMACY_LOYAL`: 900
+- `PET_INTIMACY_MAX`: 1000
 
 ### monster skill states
 
@@ -5075,6 +5110,12 @@
 - `MST_AROUND3`: 11
 - `MST_AROUND4`: 12
 - `MST_AROUND`: 12
+
+### Monster group constants
+
+- `ALL_MOBS_NONBOSS`: -1
+- `ALL_MOBS_BOSS`: -2
+- `ALL_MOBS`: -3
 
 ### pc block constants, use with *setpcblock* and *checkpcblock*
 
@@ -5252,9 +5293,17 @@
 ### itemskill option flags
 
 - `ISF_NONE`: 0
-- `ISF_IGNORECONDITIONS`: 1
+- `ISF_CHECKCONDITIONS`: 1
 - `ISF_INSTANTCAST`: 2
 - `ISF_CASTONSELF`: 4
+
+### Item Bound Types
+
+- `IBT_ANY`: 0
+- `IBT_ACCOUNT`: 1
+- `IBT_GUILD`: 2
+- `IBT_PARTY`: 3
+- `IBT_CHARACTER`: 4
 
 ### Renewal
 
@@ -8150,17 +8199,48 @@
 - `FATAL_DAYS`: 2958
 - `TORTUROUS_REDEEMER`: 2959
 - `E_TORTUROUS_REDEEMER`: 2961
+- `WOODIE`: 2963
+- `XM_TEDDY_BEAR`: 2995
 - `XM_CELINE_KIMI`: 2996
 - `GRIM_REAPER_ANKOU`: 3029
 - `TIMEHOLDER`: 3074
+- `ELEPHANT`: 3162
+- `GORILLA`: 3163
+- `LION`: 3164
+- `RHINO`: 3165
 - `J_REB_SHECIL1`: 3169
 - `J_REB_SHECIL2`: 3170
 - `E1_FELOCK`: 3181
 - `MM_SARAH`: 3190
 - `ORGANIC_JAKK`: 3202
 - `INORGANIC_JAKK`: 3203
+- `BLUE_UNICORN`: 3261
+- `PAD_TAMADORA`: 3306
+- `PAD_RUBYLIT`: 3317
+- `PAD_SAPPHILIT`: 3318
+- `PAD_EMELIT`: 3319
+- `PAD_TOPALIT`: 3320
+- `PAD_AMELIT`: 3321
+- `PAD_MYTHLIT`: 3349
 - `DARK_SOUL`: 3381
 - `WANDERING_SOUL`: 3382
+- `DR_EGGRING`: 3495
+- `DR_LUNATIC`: 3496
+- `LITTLE_ISIS`: 3636
+- `DIABOLIC2`: 3669
+- `DELETER_2`: 3670
+- `SCATLETON`: 3731
+- `SWEETS_DROPS`: 3790
+- `SKELION`: 3971
+- `NIGHTMARE_TERROR_H`: 20373
+- `WANDER_MAN_H`: 20420
+- `BACSOJIN2`: 20423
+- `MOONLIGHT2`: 20424
+- `PHREEONI2`: 20425
+- `ORK_HERO2`: 20571
+- `GLOOMUNDERNIGHT2`: 20619
+- `EP17_2_CHILD_ADMIN1`: 20696
+- `EP17_2_CHILD_ADMIN2`: 20697
 
 ## Items (db/re/item_db.conf)
 - `Red_Potion`: 501
@@ -12689,6 +12769,8 @@
 - `Memory_Of_Jack`: 6657
 - `Halloween_Coin`: 6658
 - `RWC_Inicializer`: 6665
+- `Emerald_Leaf`: 6669
+- `Log_`: 6670
 - `Geffen_Magic_Coin`: 6671
 - `Gray_Shard`: 6672
 - `Bossnia_Pass`: 6673
@@ -12700,6 +12782,10 @@
 - `Steel_Article`: 6746
 - `Steel_Article_`: 6747
 - `Corrupted_Charm`: 6755
+- `Banana_Can`: 6762
+- `Spicy_Rice_Cake`: 6763
+- `Hot_Dog`: 6764
+- `Ferris_Wheel_Biscuit`: 6765
 - `ORGANIC_PUMPKIN`: 6804
 - `INORGANIC_PUMPKIN`: 6805
 - `Solo_Troops_Badge`: 6821
@@ -13713,9 +13799,22 @@
 - `Brownie_Egg`: 9060
 - `Marin_Egg`: 9061
 - `Novice_Poring_Egg`: 9062
+- `Woodie_Egg`: 9063
+- `Elephant_Egg`: 9064
+- `Gorilla_Egg`: 9065
+- `Lion_Egg`: 9066
+- `Rhino_Egg`: 9067
+- `Blue_Unicorn_Egg`: 9068
 - `Mastering_Egg`: 9069
 - `Savage_Egg`: 9070
 - `Grand_Peco_Peco_Egg`: 9071
+- `Rubylit_Egg`: 9074
+- `Sapphilit_Egg`: 9075
+- `Emelit_Egg`: 9076
+- `Topalit_Egg`: 9077
+- `Amelit_Egg`: 9078
+- `Mythlit_Egg`: 9079
+- `Tamadora_Egg`: 9080
 - `High_Orc_Egg`: 9087
 - `Angeling_Egg`: 9088
 - `Am_Mut_Egg`: 9089
@@ -13742,6 +13841,16 @@
 - `Phreeoni_Egg`: 9111
 - `Moonlight_Flower_Egg`: 9112
 - `Skelion_Egg`: 9113
+- `Bacsojin2_Egg_`: 9115
+- `Rigid_Nightmare_Terror_Egg`: 9116
+- `Contaminated_Wanderer_Egg`: 9117
+- `Aliot_Egg`: 9118
+- `Alicel_Egg`: 9119
+- `Aliza_Egg`: 9120
+- `Orc_Hero_Egg_`: 9121
+- `Gloom_Under_Night_Egg`: 9122
+- `Child_Admin_Beta_Egg`: 9123
+- `Child_Admin_Alpha_Egg`: 9124
 - `Ein_Ddbox`: 9514
 - `Metal_Rifine_Ticket`: 9523
 - `Ein_Ddbox2`: 9529
@@ -13786,7 +13895,10 @@
 - `Black_Butterfly_Mask`: 10037
 - `Horn_Protector`: 10038
 - `Tw_Backpack`: 10039
+- `Red_Bell_Necklace`: 10040
 - `Dark_Mane`: 10042
+- `Little_Headdress_Beta`: 10043
+- `Little_Headdress_Alpha`: 10044
 - `Prontera_Book_01`: 11000
 - `Adventure_Story01`: 11001
 - `Great_Chef_Orleans01`: 11002
@@ -13910,6 +14022,7 @@
 - `Trance_Candy_Y`: 11594
 - `Trance_Candy_G`: 11595
 - `Catnip_Fruit`: 11602
+- `Cookie_Bat`: 11605
 - `Crepe`: 11607
 - `Chocolate_Egg`: 11608
 - `Yummy_Cookie_Egg`: 11609
@@ -13917,6 +14030,7 @@
 - `Aromatic_Pop_Corn`: 11612
 - `Fresh_Milk`: 11614
 - `Sweet_Potato_`: 11615
+- `Yummy_Meat`: 11616
 - `Bearopy`: 11620
 - `Aromatic_Pop_Corn_`: 11625
 - `Girl_Bunch_Of_Flower`: 11701
@@ -14763,6 +14877,7 @@
 - `Elf_Tear_Curse`: 12880
 - `Elf_Tear_Silence`: 12881
 - `Elf_Tear_Blind`: 12882
+- `Almighty`: 12883
 - `C_Center_Potion`: 12884
 - `C_Awakening_Potion`: 12885
 - `C_Berserk_Potion`: 12886
@@ -16631,6 +16746,7 @@
 - `Tw_Red_Scroll`: 17210
 - `Tw_Orange_Scroll`: 17211
 - `Tw_Yellow_Scroll`: 17212
+- `Almighty_Box`: 17224
 - `C_Center_Potion_Box`: 17226
 - `C_Awakening_Potion_Box`: 17227
 - `C_Berserk_Potion_Box`: 17228
@@ -18131,6 +18247,9 @@
 - `Integer_Time`: 22837
 - `Something_Candy_Holder`: 22838
 - `Old_Money_Pocket`: 22876
+- `Sap_Jelly`: 23187
+- `Unprocessed_Parts`: 23188
+- `SmallDoll_Needle`: 23189
 - `Fried_Chicken`: 23242
 - `Fried_Chicken_1`: 23243
 - `Elixir_Bandage`: 23256
@@ -18784,6 +18903,9 @@
 - `S_Genesis_Pendant`: 24582
 - `S_Genesis_Earing`: 24583
 - `Slug_Bullet`: 25187
+- `Suspicious_Bottle`: 25231
+- `Cheap_Lubricant`: 25232
+- `Cotton_Tufts`: 25233
 - `BrokenArrow`: 25258
 - `Shining_Spore`: 25265
 - `Dried_Leaf_Of_Ygg`: 25266
@@ -18793,6 +18915,7 @@
 - `Happiness_Clover`: 25295
 - `Golden_Corn`: 25340
 - `Mightysoul_Essence`: 25375
+- `Luxurious_Pet_Food`: 25377
 - `Captured_Savage`: 25390
 - `Goodly_Bough`: 25391
 - `Free_Pass_Ticket`: 25392
@@ -18944,6 +19067,8 @@
 - `Ein_1HWHIP`: 26215
 - `Faceworm_Queen_Card`: 27164
 - `Captain_Felock_Card`: 27182
+- `Rigid_Nightmare_Terror_Card`: 27352
+- `Contaminated_Wanderer_Card`: 27361
 - `Thanos_Katar`: 28000
 - `Katar_Of_Evil_Slayer`: 28001
 - `Half_BF_Katar2`: 28002
@@ -19091,6 +19216,7 @@
 - `GH_Cursed_Crystal_`: 29590
 - `Cursed_Emerald`: 29591
 - `Shinee_Opal`: 29592
+- `Abandoned_Teddy_Bear_Card`: 31022
 - `Roast_Memory`: 31172
 - `C_Black_Cat`: 31186
 - `Choco_Minihat`: 31195
@@ -19274,6 +19400,7 @@
 - `Imperial_Trip_Suit`: 450074
 - `ILL_Piece_B`: 100004
 - `Imperial_Firerain_Suit`: 450075
+- `Cloud_Cotton`: 1000227
 - `Imperial_Crimson_Robe`: 450076
 - `Imperial_Frost_Robe`: 450077
 - `Imperial_Psychic_Robe`: 450078
@@ -19396,6 +19523,7 @@
 - `Boost_Gatling`: 830000
 - `Abyss_Ddbox3`: 100144
 - `Abyss_Ddbox4`: 100145
+- `Barmil_Ticket`: 1000103
 
 > End of list
 

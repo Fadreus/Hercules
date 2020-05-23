@@ -3779,7 +3779,7 @@ struct PACKET_ZC_SE_CASHSHOP_OPEN {
 } __attribute__((packed));
 DEFINE_PACKET_HEADER(ZC_SE_CASHSHOP_OPEN, 0x0b6e);
 // for ragexeRE in some version this packet unused [4144]
-#elif PACKETVER_MAIN_NUM >= 20101123 || PACKETVER_RE_NUM >= 20120328 || PACKETVER_ZERO_NUM >= defined(PACKETVER_ZERO)
+#elif PACKETVER_MAIN_NUM >= 20101123 || PACKETVER_RE_NUM >= 20120328 || defined(PACKETVER_ZERO)
 struct PACKET_ZC_SE_CASHSHOP_OPEN {
 	int16 packetType;
 	uint32 cashPoints;
@@ -3819,8 +3819,14 @@ struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub {
 	uint32 index;
 	uint32 zeny;
 	uint32 currency_count;
-	struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub2 currencies[];
+	// Workaround for fix Visual Studio bug (error C2233). Here should be currencies[]
+	struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub2 currencies[1];
 } __attribute__((packed));
+
+// Workaround check for Visual Studio bug (error C2233)
+STATIC_ASSERT(sizeof(struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub2[1]) ==
+	sizeof(struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub2),
+	"Wrong PACKET_ZC_NPC_EXPANDED_BARTER_OPEN_sub size");
 
 struct PACKET_ZC_NPC_EXPANDED_BARTER_OPEN {
 	int16 packetType;
@@ -3884,6 +3890,42 @@ struct PACKET_ZC_AUTORUN_SKILL {
 	char up_flag;
 } __attribute__((packed));
 DEFINE_PACKET_HEADER(ZC_AUTORUN_SKILL, 0x0147);
+
+#if PACKETVER_MAIN_NUM >= 20170726 || PACKETVER_RE_NUM >= 20170621 || defined(PACKETVER_ZERO)
+struct PACKET_ZC_LAPINEUPGRADE_OPEN {
+	int16 packetType;
+#if PACKETVER_MAIN_NUM >= 20181121 || PACKETVER_RE_NUM >= 20180704 || PACKETVER_ZERO_NUM >= 20181114
+	uint32 itemId;
+#else
+	uint16 itemId;
+#endif
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(ZC_LAPINEUPGRADE_OPEN, 0x0ab4);
+
+struct PACKET_ZC_LAPINEUPGRADE_RESULT {
+	int16 packetType;
+	uint16 result;
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(ZC_LAPINEUPGRADE_RESULT, 0x0ab7);
+#endif  // PACKETVER_MAIN_NUM >= 20170726 || PACKETVER_RE_NUM >= 20170621 || defined(PACKETVER_ZERO)
+
+#if PACKETVER_MAIN_NUM >= 20170111 || PACKETVER_RE_NUM >= 20170111 || defined(PACKETVER_ZERO)
+struct PACKET_CZ_LAPINEUPGRADE_CLOSE {
+	int16 packetType;
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(CZ_LAPINEUPGRADE_CLOSE, 0x0ab5);
+
+struct PACKET_CZ_LAPINEUPGRADE_MAKE_ITEM {
+	int16 packetType;
+#if PACKETVER_MAIN_NUM >= 20181121 || PACKETVER_RE_NUM >= 20180704 || PACKETVER_ZERO_NUM >= 20181114
+	uint32 itemId;
+#else
+	uint16 itemId;
+#endif
+	uint16 index;
+} __attribute__((packed));
+DEFINE_PACKET_HEADER(CZ_LAPINEUPGRADE_MAKE_ITEM, 0x0ab6);
+#endif  // PACKETVER_MAIN_NUM >= 20170111 || PACKETVER_RE_NUM >= 20170111 || defined(PACKETVER_ZERO)
 
 #if !defined(sun) && (!defined(__NETBSD__) || __NetBSD_Version__ >= 600000000) // NetBSD 5 and Solaris don't like pragma pack but accept the packed attribute
 #pragma pack(pop)

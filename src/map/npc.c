@@ -1799,6 +1799,7 @@ static void npc_expanded_barter_fromsql(void)
 		) {
 		SqlStmt_ShowDebug(stmt);
 		SQL->StmtFree(stmt);
+		StrBuf->Destroy(&buf);
 		return;
 	}
 
@@ -3391,7 +3392,7 @@ static bool npc_viewisid(const char *viewid)
  * @param class_  The NPC view class.
  * @return A pointer to the created NPC data (ownership passed to the caller).
  */
-static struct npc_data *npc_create_npc(enum npc_subtype subtype, int m, int x, int y, uint8 dir, int class_)
+static struct npc_data *npc_create_npc(enum npc_subtype subtype, int m, int x, int y, enum unit_dir dir, int class_)
 {
 	struct npc_data *nd;
 

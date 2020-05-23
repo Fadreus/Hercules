@@ -23,6 +23,7 @@
 
 #include "map/map.h" // struct block_list
 #include "map/status.h" // enum sc_type
+#include "map/unitdefines.h" // enum unit_dir
 #include "common/hercules.h"
 #include "common/db.h"
 #include "common/mmo.h" // MAX_SKILL_DB, struct square
@@ -1723,6 +1724,15 @@ enum {
 	UNT_MAX = 0x190
 };
 
+/** Constants to identify the auto-cast type. **/
+enum autocast_type {
+	AUTOCAST_NONE = 0,
+	AUTOCAST_TEMP, // Used when type is only required during the execution of the calling instance. (For example bAutoSpell* skills.)
+	AUTOCAST_ABRA, // Used for Abracadabra (Hocus pocus).
+	AUTOCAST_IMPROVISE, // Used for Improvised Song.
+	AUTOCAST_ITEM, // Used for itemskill() script command.
+};
+
 /**
  * Structures
  **/
@@ -2002,7 +2012,7 @@ struct skill_interface {
 	int (*addtimerskill) (struct block_list *src, int64 tick, int target, int x, int y, uint16 skill_id, uint16 skill_lv, int type, int flag);
 	int (*additional_effect) (struct block_list* src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int attack_type, int dmg_lv, int64 tick);
 	int (*counter_additional_effect) (struct block_list* src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int attack_type, int64 tick);
-	int (*blown) (struct block_list* src, struct block_list* target, int count, int8 dir, int flag);
+	int (*blown) (struct block_list* src, struct block_list* target, int count, enum unit_dir dir, int flag);
 	int (*break_equip) (struct block_list *bl, unsigned short where, int rate, int flag);
 	int (*strip_equip) (struct block_list *bl, unsigned short where, int rate, int lv, int time);
 	struct skill_unit_group* (*id2group) (int group_id);
@@ -2019,7 +2029,6 @@ struct skill_interface {
 	int (*cast_fix_sc) ( struct block_list *bl, int time);
 	int (*vf_cast_fix) ( struct block_list *bl, double time, uint16 skill_id, uint16 skill_lv);
 	int (*delay_fix) ( struct block_list *bl, uint16 skill_id, uint16 skill_lv);
-	bool (*is_item_skill) (struct map_session_data *sd, int skill_id, int skill_lv);
 	int (*check_condition_castbegin) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
 	int (*check_condition_castend) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
 	int (*consume_requirement) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv, short type);
@@ -2045,6 +2054,7 @@ struct skill_interface {
 	int (*not_ok_hom) (uint16 skill_id, struct homun_data *hd);
 	int (*not_ok_hom_unknown) (uint16 skill_id, struct homun_data *hd);
 	int (*not_ok_mercenary) (uint16 skill_id, struct mercenary_data *md);
+	void (*validate_autocast_data) (struct map_session_data *sd, int skill_id, int skill_lv);
 	int (*chastle_mob_changetarget) (struct block_list *bl,va_list ap);
 	int (*can_produce_mix) ( struct map_session_data *sd, int nameid, int trigger, int qty);
 	int (*produce_mix) ( struct map_session_data *sd, uint16 skill_id, int nameid, int slot1, int slot2, int slot3, int qty );
@@ -2085,8 +2095,8 @@ struct skill_interface {
 	bool (*dance_switch) (struct skill_unit* su, int flag);
 	int (*check_condition_char_sub) (struct block_list *bl, va_list ap);
 	int (*check_condition_mob_master_sub) (struct block_list *bl, va_list ap);
-	void (*brandishspear_first) (struct square *tc, uint8 dir, int16 x, int16 y);
-	void (*brandishspear_dir) (struct square* tc, uint8 dir, int are);
+	void (*brandishspear_first) (struct square *tc, enum unit_dir dir, int16 x, int16 y);
+	void (*brandishspear_dir) (struct square* tc, enum unit_dir dir, int are);
 	int (*get_fixed_cast) (int skill_id, int skill_lv);
 	int (*sit_count) (struct block_list *bl, va_list ap);
 	int (*sit_in) (struct block_list *bl, va_list ap);
@@ -2163,7 +2173,7 @@ struct skill_interface {
 	void (*attack_display_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag, int *type, struct Damage *dmg, int64 *damage);
 	int (*attack_copy_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag);
 	int (*attack_dir_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag);
-	void (*attack_blow_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag, int *type, struct Damage *dmg, int64 *damage, int8 *dir);
+	void (*attack_blow_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag, int *type, struct Damage *dmg, int64 *damage, enum unit_dir *dir);
 	void (*attack_post_unknown) (int *attack_type, struct block_list* src, struct block_list *dsrc, struct block_list *bl, uint16 *skill_id, uint16 *skill_lv, int64 *tick, int *flag);
 	bool (*timerskill_dead_unknown) (struct block_list *src, struct unit_data *ud, struct skill_timerskill *skl);
 	void (*timerskill_target_unknown) (int tid, int64 tick, struct block_list *src, struct block_list *target, struct unit_data *ud, struct skill_timerskill *skl);
@@ -2190,6 +2200,7 @@ struct skill_interface {
 	int (*splash_target) (struct block_list* bl);
 	int (*check_npc_chaospanic) (struct block_list *bl, va_list args);
 	int (*count_wos) (struct block_list *bl, va_list ap);
+	int (*get_linked_song_dance_id) (int skill_id);
 };
 
 #ifdef HERCULES_CORE
