@@ -566,13 +566,10 @@ AC_ARG_WITH(
 	[maxconn],
 	AC_HELP_STRING(
 		[--with-maxconn@<:@=ARG@:>@],
-		[optionally set the maximum connections the core can handle (default: 16384) NOT USED YET - EXPERIMENTAL]
+		[optionally set the maximum connections the core can handle (Without epoll enabled, default: 1024. With epol enabled: 3072)]
 	),
 	[
-		if test "$withval" == "no";	 then
-			CPPFLAGS="$CPPFLAGS -DMAXCONN=16384"
-		else
-			
+		if test "$withval" != "no";	 then
 			if ! test "$withval" -ge 0 -o "$withval" -lt 0 2>&- ; then
 				AC_MSG_ERROR([Invalid argument --with-maxconn=$withval ... stopping])
 			else
@@ -581,7 +578,7 @@ AC_ARG_WITH(
 		fi
 	],
 	[
-		CPPFLAGS="$CPPFLAGS -DMAXCONN=16384"
+		AC_MSG_RESULT([Use default MAXCONN value.])
 	]
 )
 
@@ -994,6 +991,14 @@ if test "$enable_sanitize" != "no" ; then
 		AC_CHECK_SANITIZER_FLAG(bool)
 		AC_CHECK_SANITIZER_FLAG(enum)
 		AC_CHECK_SANITIZER_FLAG(vptr)
+		AC_CHECK_SANITIZER_FLAG(address-use-after-scope)
+		AC_CHECK_SANITIZER_FLAG(pointer-overflow)
+		AC_CHECK_SANITIZER_FLAG(builtin)
+		AC_CHECK_SANITIZER_FLAG(pointer-compare)
+		AC_CHECK_SANITIZER_FLAG(pointer-subtract)
+		AC_CHECK_SANITIZER_FLAG(shift-exponent)
+		AC_CHECK_SANITIZER_FLAG(shift-base)
+		AC_CHECK_SANITIZER_FLAG(sanitize-address-use-after-scope)
 	fi
 fi
 
@@ -1089,6 +1094,8 @@ AC_DEFUN([AC_CHECK_COMPILER_WNOFLAG],
 		)
 	]
 )
+
+AC_CHECK_FLAG(-fsigned-char)
 
 AC_CHECK_COMPILER_WNOFLAG(unused-parameter, [int foo(int bar) { return 0; }])
 AC_CHECK_COMPILER_WNOFLAG(clobbered)

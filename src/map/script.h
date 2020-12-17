@@ -345,7 +345,12 @@ enum {
 	MF_PAIRSHIP_STARTABLE,
 	MF_PAIRSHIP_ENDABLE,
 	MF_NOSTORAGE,
-	MF_NOGSTORAGE
+	MF_NOGSTORAGE,
+	MF_NOPET,
+	MF_NOMAPCHANNELAUTOJOIN,
+	MF_NOKNOCKBACK,
+	MF_SRC4INSTANCE,
+	MF_CVC,
 };
 
 enum navigation_service {
@@ -584,6 +589,8 @@ enum itemskill_flag {
 struct Script_Config {
 	bool warn_func_mismatch_argtypes;
 	bool warn_func_mismatch_paramnum;
+	bool functions_private_by_default;
+	bool functions_as_events;
 	int check_cmdcount;
 	int check_gotocount;
 	int input_min_value;
@@ -701,7 +708,7 @@ struct script_state {
 	int bk_npcid;
 	unsigned freeloop : 1;// used by buildin_freeloop
 	unsigned op2ref : 1;// used by op_2
-	unsigned npc_item_flag : 1;
+	unsigned npc_item_flag : 2;
 	unsigned int id;
 };
 
@@ -725,8 +732,14 @@ struct str_data_struct {
 	uint8 deprecated : 1;
 };
 
+/** a label within a script (does not use the label db) */
 struct script_label_entry {
-	int key,pos;
+	/** label name (held within str_data) */
+	int key;
+	/** position within the script  */
+	int pos;
+	/** optional flags for the label */
+	enum script_label_flags flags;
 };
 
 struct script_syntax_data {
@@ -917,7 +930,7 @@ struct script_interface {
 	void (*set_constant) (const char *name, int value, bool is_parameter, bool is_deprecated);
 	void (*set_constant2) (const char *name, int value, bool is_parameter, bool is_deprecated);
 	bool (*get_constant) (const char* name, int* value);
-	void (*label_add)(int key, int pos);
+	void (*label_add)(int key, int pos, enum script_label_flags flags);
 	void (*run) (struct script_code *rootscript, int pos, int rid, int oid);
 	void (*run_npc) (struct script_code *rootscript, int pos, int rid, int oid);
 	void (*run_pet) (struct script_code *rootscript, int pos, int rid, int oid);
@@ -948,10 +961,11 @@ struct script_interface {
 	int (*queue_create) (void);
 	bool (*queue_clear) (int idx);
 	/* */
-	const char * (*parse_curly_close) (const char *p);
-	const char * (*parse_syntax_close) (const char *p);
-	const char * (*parse_syntax_close_sub) (const char *p, int *flag);
-	const char * (*parse_syntax) (const char *p);
+	const char *(*parse_curly_close) (const char *p);
+	const char *(*parse_syntax_close) (const char *p);
+	const char *(*parse_syntax_close_sub) (const char *p, int *flag);
+	const char *(*parse_syntax) (const char *p);
+	const char *(*parse_syntax_function) (const char *p, bool is_public);
 	c_op (*get_com) (const struct script_buf *scriptbuf, int *pos);
 	int (*get_num) (const struct script_buf *scriptbuf, int *pos);
 	const char* (*op2name) (int op);
@@ -984,6 +998,7 @@ struct script_interface {
 	void (*load_parameters) (void);
 	const char* (*print_line) (StringBuf *buf, const char *p, const char *mark, int line);
 	void (*errorwarning_sub) (StringBuf *buf, const char *src, const char *file, int start_line, const char *error_msg, const char *error_pos);
+	bool (*is_permanent_variable) (const char *name);
 	int (*set_reg) (struct script_state *st, struct map_session_data *sd, int64 num, const char *name, const void *value, struct reg_db *ref);
 	void (*set_reg_ref_str) (struct script_state* st, struct reg_db *n, int64 num, const char* name, const char *str);
 	void (*set_reg_pc_ref_str) (struct script_state* st, struct reg_db *n, int64 num, const char* name, const char *str);

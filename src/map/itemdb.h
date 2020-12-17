@@ -152,6 +152,7 @@ enum item_itemid {
 	ITEMID_BUBBLE_GUM            = 12210,
 	ITEMID_GIANT_FLY_WING        = 12212,
 	ITEMID_NEURALIZER            = 12213,
+	ITEMID_MEGAPHONE             = 12221,
 	ITEMID_M_CENTER_POTION       = 12241,
 	ITEMID_M_AWAKENING_POTION    = 12242,
 	ITEMID_M_BERSERK_POTION      = 12243,
@@ -606,7 +607,6 @@ struct item_data {
 #define itemid_isgemstone(n)     ((n) >= ITEMID_YELLOW_GEMSTONE && (n) <= ITEMID_BLUE_GEMSTONE)
 #define itemdb_is_GNbomb(n)      ((n) >= ITEMID_APPLE_BOMB && (n) <= ITEMID_VERY_HARD_LUMP)
 #define itemdb_is_GNthrowable(n) ((n) >= ITEMID_MYSTERIOUS_POWDER && (n) <= ITEMID_BLACK_THING_TO_THROW)
-#define itemid_is_pilebunker(n)  ((n) == ITEMID_PILEBUNCKER || (n) == ITEMID_PILEBUNCKER_P || (n) == ITEMID_PILEBUNCKER_S || (n) == ITEMID_PILEBUNCKER_T)
 #define itemdb_is_shadowequip(n) ((n) & (EQP_SHADOW_ARMOR|EQP_SHADOW_WEAPON|EQP_SHADOW_SHIELD|EQP_SHADOW_SHOES|EQP_SHADOW_ACC_R|EQP_SHADOW_ACC_L))
 #define itemdb_is_costumeequip(n) ((n) & (EQP_COSTUME_HEAD_TOP|EQP_COSTUME_HEAD_MID|EQP_COSTUME_HEAD_LOW|EQP_COSTUME_GARMENT))
 

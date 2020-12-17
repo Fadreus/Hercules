@@ -329,6 +329,14 @@ enum bl_type {
 
 enum npc_subtype { WARP, SHOP, SCRIPT, CASHSHOP, TOMB };
 
+/** optional flags for script labels, used by the label db */
+enum script_label_flags {
+	/** the label can be called from outside the local scope of the NPC */
+	LABEL_IS_EXTERN   = 0x1,
+	/** the label is a public or private local NPC function */
+	LABEL_IS_USERFUNC = 0x2,
+};
+
 /**
  * Race type IDs.
  *
@@ -549,6 +557,7 @@ enum status_point_types { //we better clean up this enum and change it name [Hem
 	SP_SKILL_USE_SP,SP_MAGIC_ATK_ELE, SP_ADD_FIXEDCAST, SP_ADD_VARIABLECAST,  //2055-2058
 	SP_SET_DEF_RACE,SP_SET_MDEF_RACE, //2059-2060
 	SP_RACE_TOLERANCE,SP_ADDMAXWEIGHT, //2061-2062
+	SP_SUB_DEF_ELE, SP_MAGIC_SUB_DEF_ELE, // 2063-2064
 
 	/* must be the last, plugins add bonuses from this value onwards */
 	SP_LAST_KNOWN,
@@ -791,6 +800,7 @@ struct map_data {
 		unsigned pairship_endable : 1;
 		unsigned nostorage : 2;
 		unsigned nogstorage : 2;
+		unsigned nopet : 1;
 		uint32 noviewid; ///< noviewid (bitmask - @see enum equip_pos)
 	} flag;
 	struct point save;
@@ -1222,6 +1232,8 @@ END_ZEROED_BLOCK;
 
 	int (*check_dir) (enum unit_dir s_dir, enum unit_dir t_dir);
 	enum unit_dir (*calc_dir) (const struct block_list *src, int16 x, int16 y);
+	int (*get_random_cell) (struct block_list *bl, int16 m, int16 *x, int16 *y, int16 min_dist, int16 max_dist);
+	int (*get_random_cell_in_range) (struct block_list *bl, int16 m, int16 *x, int16 *y, int16 x_range, int16 y_range);
 	int (*random_dir) (struct block_list *bl, short *x, short *y); // [Skotlex]
 
 	int (*cleanup_sub) (struct block_list *bl, va_list ap);

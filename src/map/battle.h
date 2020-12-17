@@ -46,7 +46,7 @@ struct status_data;
 #define MIN_BODY_STYLE (battle->bc->min_body_style)
 #define MAX_BODY_STYLE (battle->bc->max_body_style)
 
-#define is_boss(bl)     (status_get_mode(bl)&MD_BOSS) // Can refine later [Aru]
+#define is_boss(bl)     ((status_get_mode(bl) & MD_BOSS) != 0x0) // Can refine later [Aru]
 
 /**
  * Enumerations
@@ -228,8 +228,8 @@ struct Battle_Config {
 	int pet_max_stats; //[Skotlex]
 	int pet_max_atk1; //[Skotlex]
 	int pet_max_atk2; //[Skotlex]
-	int pet_no_gvg; //Disables pets in gvg. [Skotlex]
 	int pet_equip_required;
+	int pet_remove_immediately;
 
 	int skill_min_damage;
 	int finger_offensive_type;
@@ -250,6 +250,7 @@ struct Battle_Config {
 	int summer2_ignorepalette;
 	int natural_healhp_interval;
 	int natural_healsp_interval;
+	int natural_heal_cap;
 	int natural_heal_skill_interval;
 	int natural_heal_weight_rate;
 	int arrow_decrement;
@@ -471,6 +472,7 @@ struct Battle_Config {
 	int searchstore_querydelay;
 	int searchstore_maxresults;
 	int display_party_name;
+	int send_party_options;
 	int cashshop_show_points;
 	int mail_show_status;
 	int client_limit_unit_lv;
@@ -580,6 +582,8 @@ struct Battle_Config {
 
 	int magicrod_type;
 
+	int skill_enabled_npc;
+
 	int feature_enable_achievement;
 
 	int ping_timer_interval;
@@ -588,6 +592,10 @@ struct Battle_Config {
 	int option_drop_max_loop;
 
 	int drop_connection_on_quit;
+	int display_rate_messages;
+	int display_config_messages;
+	int display_overweight_messages;
+	int show_tip_window;
 	int enable_refinery_ui;
 	int replace_refine_npcs;
 
@@ -607,6 +615,20 @@ struct Battle_Config {
 	int hit_max;
 
 	int autoloot_adjust;
+	int allowed_actions_when_dead;
+	int teleport_close_storage;
+
+	int show_attendance_window;
+
+	int elem_natural_heal_hp;
+	int elem_natural_heal_sp;
+	int elem_natural_heal_cap;
+	int hom_natural_heal_hp;
+	int hom_natural_heal_sp;
+	int hom_natural_heal_cap;
+	int merc_natural_heal_hp;
+	int merc_natural_heal_sp;
+	int merc_natural_heal_cap;
 };
 
 /* criteria for battle_config.idletime_critera */

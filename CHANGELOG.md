@@ -8,7 +8,385 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/spec
 
 <!--
 If you are reading this in a text editor, simply ignore this section
+
+## [vYYYY.MM.DD] `MMMM DD YYYY`
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Deprecated
+
+### Removed
 -->
+
+## [v2020.12.14] `December 14 2020`
+
+### Added
+
+- Added a warning when `setnpcdisplay()` or `setunitdata()` is called on a floating NPC. (#2907)
+- Added support for RSW formats up to 2.5 for reading map water level. (#2916)
+- Added a `status->check_skilluse_mapzone()` function, simplifying `status->check_skilluse()` and adding a useful plugin hooking point. (#2893)
+
+### Changed
+
+- Second part of the refactoring of the functions in `unit.c`, adding code documentation and following the code style guidelines. Functions have been renamed when backward compatible changes to the arguments or return values were made. (#2783)
+  - Added proper documentation in doxygen-format.
+  - Moved variables declaration closer to their first use
+  - Corrected mistreatment on checks of non-boolean variables
+  - Renamed some variables to clarify their use
+  - Saved re-used calculations in variables or create local macros for them
+  - Simplified logical checks / conditions when possible
+  - Changed returning error-code in functions to obey code-style guidelines (Functions that are affected by this are renamed so that custom code fails to compile as to point at that change of behavior.)
+  - Split too long lines according to code-style guidelines
+  - Made functions use enums for directions (`enum unit_dir`), when dealing with a direction context
+  - Reduced code-repetition by separating code-chunks into new functions
+  - Fixed remaining code-style after applying all these changes if necessary
+  - The following functions have been refactored:
+    - `unit->walktobl()` (renamed to `unit->walk_tobl()`)
+    - `unit->run_hit()`
+    - `unit->run()`
+    - `unit->escape()` (renamed to `unit->attempt_escape()`)
+    - `unit->movepos()`
+    - `unit->walk_toxy_timer()` (return value fix)
+    - `unit->blown()` (renamed to `unit->push()`)
+    - `path->blownpos()` (related to the `unit->blown()` change)
+    - added `npc->handle_touch_events()` function
+    - the `is_boss()` macro now returns a boolean
+- Added static assertion checks to prevent `MAX_STORAGE` and `MAX_GUILD_STORAGE` from causing oversized inter-server packets (#2904)
+- Disabled the HP bar on Emperium and MVP monsters by default. The configuration flag `show_monster_hp_bar` has been extended to a bitmask, to allow specifying different setting for normal monsters, Emperium and MVPs. The new default value is 1 (normal monsters only), while the value corresponding to the previous behavior is 7 (`4|2|1`). (#2821)
+
+### Fixed
+
+- Fixed a walk delay error in `unit_stop_walking()`. (part of #2783)
+- Fixed homunculi and mercenaries not warping back to their master in time. (part of #2783)
+- Reverted an unintended logical change in `unit->walk_toxy_timer()` done during the first part of the `unit.c` refactoring. (#2783)
+- Fixed a warning (`Warning: #1681 Integer display width is deprecated and will be removed in a future release.`) when importing the database schema in recent versions of MySQL. (#2903)
+- Fixed compilation with recent versions of the MySQL/MariaDB client libraries. (#2917)
+- Fixed a farming exploit at the Cursed Spirit NPC. (#2883)
+- Fixed the configuration flag `monster_loot_type` not working as intended. (#2855, issue #2834)
+
+### Removed
+
+- Removed the unused function `skill->get_linked_song_dance_id()`. (#2906)
+
+## [v2020.11.16] `November 16 2020`
+
+### Added
+
+- Added a new script command `waitingroomkick()` offering better control than `kickwaitingroomall()`. (#2048)
+- Added a new function `map->get_random_cell_in_range()` to get a random cell in a square around a center cell. (part of #2882)
+- Added a new function `map->get_random_cell()` imitating an official cell randomization behavior, returning a cell between a minimum and a maximum distance away from the center, in a square area. (part of #2882)
+- Added `pc->calc_pvprank_sub()` to the `pc` interface to allow plugins to hook into it. (#2894)
+
+### Changed
+
+- Updated the list of Hat Effect ID constants with new values. (#2878)
+- Updated the list of NPC Sprite ID constants with new values. (#2879)
+- Renamed the `PARTY_BOOKING_JOBS` and `PARTY_BOOKING_RESULTS` macros to `MAX_PARTY_BOOKING_JOBS` and `MAX_PARTY_BOOKING_RESULTS` respectively to better suit their purpose, and refactored some related code. The macros can now also be redefined externally. (#2231)
+- Extended the `warpwaitingpc()` and `waitingroom()` script commands with an argument to specify which NPC to execute the commands on, for consistency with other waitingroom commands. (part of #2048)
+- Refactored `map->random_dir()`, fixed a possible runtime error and added/clarified the function documentation. (#2882)
+- Changed the libconfig directive `@include "FILENAME"` directive to search inside `conf/import/include/{SERVERNAME}/{FILEPATH}` before `{FILEPATH}` allowing for example to easily override `sql_connection.conf` on a server by server basis without editing other files. (#2881)
+- Improved the error messages in the mob skill DB parser to include the monster ID constants instead of just the numeric IDs. (#2884)
+- Corrected the return values in the null pointer checks of `mob->skill_use()` and renamed it to `mob->use_skill()` due to the changed API. (part of #2887)
+- Corrected the return values in the null pointer checks of `mob->skill_event()` and renamed it to `mob->use_skill_event()` due to the changed API. (part of #2887)
+- Removed an unnecessary call to `unit->set_dir()` when the direction doesn't change in the busy `unit->attack_timer_sub()`, preventing a needless `clif->changed_dir()` broadcast. (#2891)
+- Added data validation to the `rodex_sendmail*()` commands to ensure that the item amount is valid. (#2901, issue #2897)
+- Added data validation to the `rodex_sendmail_acc*()` commands to ensure that the receiver ID is in a valid range. (#2901, issue #2898)
+
+### Fixed
+
+- Added checks to the waitingroom script commands to ensure that their related waiting room and NPC exist. (part of #2048)
+- Fixed the random cell selection of Confusion and Chaos according to their official behavior (random cell in a square area). (part of #2882)
+- Fixed the random cell selection of `WE_CALLPARTNER`, `WE_CALLPARENT`, `WE_CALLBABY`, `AM_RESURRECTION` according to their official behavior (random cell in a quare area with minimum and maximum distance). (part of #2882)
+- Fixed the damage buff effect of Watery Evasion when using Freezing Spear. (#2873)
+- Fixed a missing scoreboard UI for battleground type 2. (#2849, issue #2848)
+- Fixed a null pointer error in the search store function when trying to search with an empty list or with an empty card list. (#2885)
+- Fixed the handling of the return value of `mob->skill_use()` and `mob->ai_sub_hard()`. (#2887)
+- Fixed summoned monsters not following their master if it's a `BL_PC`. (#2888, issue #2808)
+- Fixed the Impositio Manus behavior to always overwrite itself regardless of level. (#2890, issue #695)
+- Fixed a possible crash when changing the display class of a floating NPC, caused by missing data validation. (#2900, issue #2899)
+- Fixed the name of the `Fruit Pom Spider Card` item. (#2902, issue #2896)
+- Fixed the `KO_GENWAKU` skill effect, swapping the position of the caster and the target. (#2831)
+
+### Deprecated
+
+- Deprecated the `HAT_DIGITAL_SPACE` constant in favor of `HAT_EF_DIGITAL_SPACE`. (part of #2878)
+- Deprecated the `kickwaitingroomall()` script command in favor of `waitingroomkick()`. (part of #2048)
+
+## [v2020.10.19] `October 19 2020`
+
+### Added
+
+- Added a `HERCULES_VERSION` constant with the identifier of the current Hercules release, exposed to source and script engine. (#2868)
+- Added a CI script to run a `CodeQL` analysis. (#2861)
+
+### Changed
+
+- Removed `SC_FRIGG_SONG` from the Group A Song Skills list, since it is no longer part of it. (#2864)
+- Improved, clarified and corrected the documentation comments of the `client.conf` configuration file. (#2870)
+- Moved some messages to `messages.conf`. (#2866)
+- Updated the `F_InsertComma()` function to work with numbers that are too large to fit in a numeric variable (such as numbers, larger than a 32 bit signed integer, returned by SQL queries). (#2860)
+- Extended `getcharid()` to optionally accept a character ID as an alternative to the character name. (#2876)
+
+### Fixed
+
+- Fixed a failed assertion in the char server when trying to save a plagiarized skill. (#2877)
+- Fixed the `KO_ZENKAI` AoE, to only trigger one of its status effects per tick. (#2863)
+- Removed duplicated code from the mapflag parser function. (#2857)
+- Fixed incorrect job class checks in several scripts. This fixes the special discount for assassins in the Morocc pub as well as a number of class-specific flavor text that wasn't displayed in various other scripts. (#2856)
+- Fixed a wrong variable name in the `getcartinventorylist()` documentation. (#2850, part of issue #2843)
+- Fixed the effect of Convex Mirror, now properly showing the position of the boss monsters on the map, if any are present. (#2862)
+- Fixed the Dancer Soul Link not granting the associated Bard skills. (#2852, issue #2815)
+
+## [v2020.09.20] `September 20 2020`
+
+### Added
+
+- Added a configure option `--with-maxconn=VALUE` to change the maximum number of allowed concurrent connections. (#2837)
+- Added a new script command `mercenary_delete()`, to remove the mercenary from a character. (#2818)
+- Added the `MDAMAGE_SIZE_SMALL_TARGET`, `MDAMAGE_SIZE_MIDIUM_TARGET`, `MDAMAGE_SIZE_LARGE_TARGET` item options to the db. (#2816)
+- Added a configuration flag `features/show_attendance_window` to control whether the attendance window should pop up on login when there are unclaimed rewards. (part of #2812, issue #2101)
+
+### Changed
+
+- Increased the maximum number of concurrent connections to be 3072 by default when epoll is enabled. (part of #2837)
+- Converted the mapcache documentation to the Markdown format and updated to reflect the way the mapcache currently works and is generated. (#2274, issue #2060)
+- Improved, clarified and corrected the documentation comments of the configuration files. (#2827)
+- Changed the attendance system from character bound to account bound. This includes an irreversible database migration, a backup is strongly advised. (#2812, issue #2704)
+- Refactored and improved the natural HP/SP regeneration code. (#2594, cc7e1ecf0a, #2841)
+  - Removed several unused variables from `struct regen_data`.
+  - Renamed the members of `struct regen_data` to be more clear.
+  - Changed the HP/SP heal frequency rate modifiers from a base of 1 to a base of 100 to reduce precision loss due to truncation.
+  - Fixed the natural healing bonus of castle owners, to be correctly applied and removed when a castle changes ownership.
+  - Extended the range of the variables in the regen data structures to int to reduce the possibility of overflows and underflows.
+  - Split the `status_calc_regen` and `status_calc_regen_rate` functions into specialized functions for each affected bl type.
+  - Limited various regeneration related status effects to the bl types that can be affected by them.
+  - Fixed various regeneration related bonuses that were affecting the regeneration rate (time) instead of the regeneration power (amount healed).
+  - Fixed the way different regeneration bonuses are stacked, to match the official behavior.
+  - Added support for different and configurable regeneration rates for different bl types. This can be configured through the `elem_natural_heal_hp`, `elem_natural_heal_sp`, `hom_natural_heal_hp`, `hom_natural_heal_sp`, `merc_natural_heal_hp`, `merc_natural_heal_sp` configuration flags.
+  - Fixed the `HLIF_BRAIN` and `HAMI_SKIN` regeneration bonuses to affect the regeneration rates instead of the regeneration powers.
+  - Added a configurable cap to the regeneration rate. This can be configured through the `elem_natural_heal_cap`, `hom_natural_heal_cap`, `merc_natural_heal_cap`, `natural_heal_cap` configuration flags.
+  - Fixed the behavior or Tension Relax when overweight, to just allow regeneration instead of increasing the regeneration rate and removed its effect on the SP regeneration.
+  - Fixed the Magnificat effect in pre-renewal to only affect SP instead of both HP and SP. It was originally affecting both officially, but it was removed very early (Comodo update).
+  - Made the regeneration data get recalculated on status changes that set the `SCB_REGEN` flag and added it to the 50% and 90% overweight SCs.
+
+### Fixed
+
+- Fixed GitLab and GitHub CI builds broken due to upstream package changes. (#2838)
+- Fixed the `generate_translations` plugin on windows, not generating the output directories correctly. (#2836)
+- Fixed the MDEF and DEF reduction of Odin's Power to depend on the skill level. (#2833)
+- Fixed some skills (such as `MO_EXTREMITYFIST` `TK_JUMPKICK`, `SR_DRAGONCOMBO`, `SR_GATEOFHELL`) not sending the correct target type to the client when used as part of a combo. (#2829)
+- Fixed typos in the documentation comments of several db files. (#2828)
+- Removed duplicate lines in `cash_hair.txt` and `clif.c`. (#2840)
+- Fixed an issue that prevented the "night mode" effect to be displayed. (#2839)
+- Fixed a dangling pointer causing memory corruption when using `@unloadnpc` or any other way to unload NPCs. (#2835)
+- Fixed a wrong IP check in the geoip code. (#2842)
+
+## [v2020.08.23] `August 23 2020`
+
+### Added
+
+- Added the missing mapflag constants `MF_NOMAPCHANNELAUTOJOIN`, `MF_NOKNOCKBACK`, `MF_CVC`, `MF_SRC4INSTANCE`. (part of #2654)
+- Added official item script for Rune Boots. (#2806)
+
+### Changed
+
+- Refactored the mapflag related code to reduce repetition. The mapflag constants exposed to the script engine `mf_*` have been changed to uppercase `MF_*` to match their source counterparts. Custom scripts may need to be updated to follow. (#2654)
+
+### Fixed
+
+- Corrected the >10+ refine success chance with HD ores to match the normal ores. (#2772, issue #2771)
+- Corrected the duration of the Tao Gunka Scroll to be 3 minutes. (#2804)
+- Updated the Flying Galapago item script to match the official version. (#2799)
+- Fixed a duplicate path separator in the `item_combo_db.conf` loader console messages. (#2814)
+- Fixed an exploit in the autocast system, allowing to bypass the deletion of skill requirements under certain conditions. (#2819)
+- Fixed a typo that made the `MERCINFO_ID` constant unusable from the script engine. (#2817)
+
+## [v2020.07.26] `July 26 2020`
+
+### Added
+
+- Added information about the Random Item Options to the `OnSellItem` array list. (#2794, part of issue #2379)
+- Added a new `mf_nopet` mapflag to control pet restrictions on a map by map basis. This supersedes the `pet_disable_in_gvg` battleconf setting. (#2652)
+- Added/updated packets, encryption keys and message tables for clients up to 2020-07-15. (#2788)
+- Added a new pair of item bonuses `bSubDefEle` and `bMagicSubDefEle` to reduce damage (physical and magical respectively) against a specific defense element. (#2790)
+
+### Changed
+
+- Changed the script command `gettimetick(0)` to never return negative values. The tick loop interval is reduced from about 50 to about 25 days, but the values are guaranteed to be positive. Since `gettimetick(0)` is only intended to be used for precise calculation of short durations, it is care of the scripter to account for overflows of the counter, treating it as a 31 bit unsigned integer operating in modulo `2**31`. For most uses, `gettimetick(2)` should be preferred. (#2791, issue #2779)
+- Updated the Renewal formula for the `RG_SNATCHER` skill. (#2802)
+- Refactored the scripts that use `OnTouch` areas and `enablednpc()`/`disablenpc()` logic to warp characters, to use `areawarp()` instead, simplifying the scripts and resolving some possible exploits and issues. (#2798)
+- Changed the `@item2` atcommand's parameters to be optional, except the item ID. Default values of 1 for the Identified and Quantity parameters and 0 for everything else will be used, when not specified. (#2795)
+- Updated/added the script for items that use `bSubDefEle` and `bMagicSubDefEle`. (part of #2790, issue #548)
+
+### Fixed
+
+- Fixed a possible exploit in the Dokebi Battle Quest allowing to spawn a higher than expected amount of Am Muts. (#2797)
+- Fixed the Dokebi Battle Quest becoming impossible to complete until server restart under certain circumstances. (part of #2797)
+- Fixed the `@changecharsex` command not correctly saving the updated gender to the database. (#2796, issue #2789)
+- Fixed an issue that made the Moscovia Whale Island Quest impossible to complete. (#2792, issue #2715)
+- Fixed a missing cleanup of the `dnsbl` vectors on shutdown. (part of #2788)
+- Fixed the experience gain messages printing a literal `%"PRIu64"` instead of the gained amount of experience. (#2647)
+- Fixed several typos in the configuration files. (#2769)
+
+### Removed
+
+- Removed the `pet_disable_in_gvg` battleconf setting in favor of the new `mf_nopet` mapflag. (part of #2652)
+
+## [v2020.06.28] `June 28 2020`
+
+### Added
+
+- Added support to display a pet's intimacy in the egg's item description window. (#2781)
+- Added a convenience macro `pc_has_pet()` to check whether a character has a pet. (part of #2781)
+- Added convenience macros `pc_istrading_except_npc()` and `pc_cant_act_except_npc_chat()`. (part of #2775)
+- Added support for `PACKET_ZC_PERSONAL_INFOMATION`, to replace the old custom status messages about rates and penalties. (#2757)
+- Added a new configuration flag `display_rate_messages` (`conf/map/battle/client.conf`) to control whether and when to display the rate modifiers to players. (part of #2757)
+- Added a new configuration flag `display_config_messages` (`conf/map/battle/client.conf`) to control whether and when to display the configuration messages to players as well as which messages to display. By default, now the pet autofeed and guild urgent call setting are also displayed, along with the others. (part of #2757)
+- Added a new configuration flag `send_party_options` (`conf/map/battle/client.conf`) to control whether and when to display the party option messages to players, including some cases (on login, when options are changed, when a party member is added or removed) that were previously not available. (part of #2757)
+- Added a new configuration flag `display_overweight_messages` (`conf/map/battle/client.conf`) to control whether and when to display the overweight notification message to players. (part of #2757)
+- Added support to display the Tip of the Day message box on login. A new configuration flag `show_tip_window` (`conf/map/battle/client.conf`) is provided, in order to disable this feature. (part of #2757)
+- Added missing plugins to the makefiles. (part of #2778)
+- Added missing mobs and items in the pre-re database, necessary for loading custom scripts. (part of #2778)
+- Added support for GitHub actions and added builds to test different flags and compilers and different MySQL/MariaDB versions. (part of #2778 and 9b89425550)
+- Added/updated packets, encryption keys and message tables for clients up to 2020-06-03. (#2763)
+
+### Changed
+
+- Updated the documentation of the `instance_create()` to clarify the type of ID required to create each type of instance. Notably, instances of type `IOT_CHAR` require an account ID and not a character ID. (part of #2732, issue #2326)
+- Updated the instancing system so that the instance information window is also displayed on login for instances of type `IOT_CHAR`, `IOT_PARTY`, `IOT_GUILD`, even if the instance state is `INSTANCE_IDLE`. (part of #2732)
+- Changed the chatroom creation and trade checks to allow dead characters to perform them. A new configuration flag `allowed_actions_when_dead` (`conf/map/battle/player.conf`) is now available, to allow neither, either or both. (#2755, issue #2740)
+- Changed the behavior when a pet's intimacy drops to 0 to immediately remove the pet rather than leaving it free to roam on the map. A new configuration flag `pet_remove_immediately` (`conf/map/battle/pet.conf`) has been added, to restore the old behavior. (part of #2781)
+- Centralized some repeated code related to pet spawning and consolidated the sending of the pet's intimacy and hunger information to the client when appropriate. (part of #2781)
+- Extended the `guild_notice_changemap` configuration flag with more fine grained settings on when to display the guild notice. Note: if you are currently overriding this setting, you'll need to update its value with the new meaning. (part of #2757)
+- Enforced the use of signed characters on platforms where `char` is unsigned. (part of #2778)
+- Travis-CI scripts and configuration updates: (part of #2778)
+  - Improved the build speed by reducing the clone depth to 1.
+  - Improved error reporting if an error occurs during tests.
+  - Added configurations targeting the arm64 and ppc64le cpu architectures as well as the gcc-10 compiler.
+  - Reduced the total amount of build configurations to improve the CI build time.
+  - Added execution of the servers with all the plugins enabled in order to detect memory violations and errors.
+  - Fixed some build failures caused by a false positive odr violation.
+  - Added execution of the map server with all the custom scripts uncommented.
+  - Disabled asan in the gcc-7 builds, as it's too slow.
+- Converted `validateinterfaces.py` to Python 3. (part of #2778)
+- Changed the plugin handler to call all plugin events even when the server is running in minimal mode. (part of #2778)
+- Updated the friend list related packets for Zero clients. (part of #2763)
+- Changed the storage (account and guild storage) to automatically close when using the teleport skill. A configuration flag `teleport_close_storage` (`conf/map/battle/skill.conf`) has been added to restore the previous behavior. (#2756, issue #1762)
+
+### Fixed
+
+- Fixed an issue when deleting instances of type `IOT_CHAR`. (part of #2732)
+- Fixed an issue that prevented the removal of offline characters from parties to get correctly saved to the database. (#2762)
+- Fixed the deletion of skill units belonging to an NPC when it gets unloaded. (#2712, issue #768)
+- Fixed the selection of required items for various skills, such as Slim Potion Pitcher, for skill levels greater than 2. Required items are now selected through the `skill->get_item_index()` function. (#2774)
+- Fixed the description of the meaning of rows and columns in the documentation for `db/*/attr_fix.txt`. (#2765)
+- Fixed the behavior of the Megaphone item script to remove the normal script restrictions (walking, attacking, using skills and items, dropping and picking up items, trading, etc) while the message input box is present and not to be cancelled on death. (#2775, issue #2751)
+- Fixed a client freeze when talking with an NPC or using a Megaphone while the Rodex window is open. Rodex and NPC scripts (or megaphones) are now mutually exclusive. (part of #2775)
+- Added a workaround in the CI scripts to support MySQL/MariaDB setups where the normal grant code does not work. (part of #2778)
+- Fixed a memory violation between core and plugins in the HPMDataCheck code. (part of #2778)
+- Fixed warnings in the skill database parser when running in minimal mode. The battle configuration is now read in minimal mode. (part of #2778, issue #2776)
+- Fixed warnings about missing maps that were present in the map index and scripts. (part of #2778)
+- Fixed a duplicated `fclose()` call in the mapcache plugin. (part of #2778)
+- Fixed conflicting NPC names in `re/merchants/hd_refiner.txt` and in various custom scripts. (part of #2778)
+- Fixed builds on ARMv8, some ARMv7 versions and PPC64. (part of #2778)
+- Fixed the field size of `struct script_state::npc_item_flag` to support all the possible values and reduced the maximum value of the `item_enabled_npc` configuration flag to 3. (#2784)
+- Fixed the width of the path affected by Focused Arrow Strike to be 1 cell wide instead of 2 on each side. (part of #2785)
+- Fixed a missing character ID in name requests. (part of #2763)
+- Fixed an issue that caused loss of items when selling items to an NPC fails because of the character zeny cap. (#2782, issue #2780)
+- Fixed the disappearance of status icon timers when the character spawns. (#2786, issue #580)
+
+### Removed
+
+- Removed a duplicated function `time2str` from `bg_common.txt`. (part of #2778)
+
+## [v2020.05.31+1] `May 31 2020` `PATCH 1`
+
+### Fixed
+
+- Fixed a crash in the db2sql plugin with the MariaDB client library. (#2748)
+- Fixed the job level stat bonuses for the Novice class to match the official servers. (#2747)
+- Fixed an issue that caused the walk-path check to be never executed for skills that require the caster to be able to move. (#2761)
+- Fixed an issue that caused "Unknown Skill" errors to appear while casting skills. The default value for the skill damage type field of the skill database is now `NK_NONE` instead of `NK_NO_DAMAGE`. (#2761, issue #2760)
+
+## [v2020.05.31] `May 31 2020`
+
+### Added
+
+- Added the possibility to declare local NPC functions as public or private. (#2142)
+  - Functions declared as private can be called from other scripts with the syntax `"npc name"::function_name()`.
+  - The configuration option `script_configuration.functions_private_by_default` controls whether functions are public or private when not specified.
+- Added a new cast condition `MSC_MAGICATTACKED` to the mob skill database, allowing mobs to react to magical attacks. (#2733, issue #2578)
+- Added support for level-specific values in the skill database fields `Hit`, `AttackType`, `InterruptCast`, `CastDefRate`, `Requirement.State`, `Unit.Id`, `Unit.Interval`, `Unit.Target`, `Requirements.Items.Amount` (part of #2731)
+  - Removed hardcoded required item amounts for various skills, moving them to the skill database.
+- Added support for `Requirements.Items.Any` in the skill database, allowing skills that require any one of their item conditions to be verified (as opposed to all). (part of #2731, issue #1250)
+- Added support for `Requirements.Equip` in the skill database, allowing to specify a required equipment to cast a skill. (part of #2731)
+  - Removed hardcoded equip requirements for various skills, moving them to the skill database.
+- Added support for `Requirements.MaxSPTrigger` in the skill database, allowing to specify a maximum SP percentage that allows to cast a skill. (part of #2731)
+- Added/updated packets, encryption keys and message tables for clients up to 2020-05-20. (#2713)
+- Added support for the gcc sanitizer flags `address-use-after-scope`, `pointer-overflow`, `builtin`, `pointer-compare`, `pointer-subtract`, `shift-exponent`, `shift-base`, `sanitize-address-use-after-scope`. (part of #2713)
+- Added support for binary and octal number literals in scripts and libconfig configuration files, using the syntax 0b000 / 0o000. (#2671)
+- Added support for number separators in number literals in scripts and libconfig configuration files. The symbol `_` can be used as grouping separator (`1_000_000`, `0x_ffff_ffff`, etc). (part of #2671)
+- Added support for overriding `ENABLE_SC_SAVING`, `MAX_CARTS`, `MAX_SLOTS`, `MAX_AMOUNT`, `MAX_ZENY`, `MAX_BANK_ZENY`, `MAX_FAME`, `MAX_CART` through CFLAGS. (#2220)
+- Added a `skill_enabled_npc` battle flag allowing to specify whether self-targeted or targeted skills can be used while interacting with NPCs. (part of #2718, issue #862)
+- Added the `loudhailer()` script command, as used by the `Megaphone_` item. (#2758, issue #2751)
+
+### Changed
+
+- Added validation for the maximum length of permanent string variables and consolidated it to 255 characters. This requires a database migration. (#2705, issue #1037)
+- Split the `mapreg` SQL table into separate tables for integer and string variables. This requires a database migration. (#2720)
+- Updated the AUTHORS file to include names and emails from every commit so far. A helper script `tools/authors.sh` to extract them has been added. (#2729, issue #245)
+- Updated the drop chance of the Black and White Wing Suits. (#2739, issue #562)
+- Improved validation and bounds checking in the skill database loader. (#2731)
+  - Increased the maximum length of the skill descriptions (display names) to 50. (part of #2731)
+  - Increased the maximum skill level to 20 (to support `NPC_RUN`). (part of #2731)
+  - Capped the SkillInstances values to 25 (`MAX_SKILLUNITGROUP`) in the skill database. (part of #2731)
+- Extended the `item_enabled_npc` battle flag and the `enable_items()`/`disable_items()` script commands with finer grained options to allow the use of usable items or equipment while interacting with NPCs. (#2718)
+- Changed the default setting of `player_warp_keep_direction` to match the official servers' setting. (#2752)
+- Replaced the (failing) gitlab-ci centos6 builds with centos8 (released in september 2019). (#2759)
+
+### Fixed
+
+- Fixed the logic and interaction between the (element)proof Potions and Undead Scrolls and their status icons. (#2708)
+- Fixed an issue in the Lost Puppies quest causing the dogs to be unable to reappear. (#2698)
+- Fixed a possible data corruption caused by gender mismatch after a changesex/changecharsex operation. (#2714, issue #985)
+- Fixed a warning and name truncation when receiving a whisper message with a recipient name with a length of 24 characters. This allows to whisper to scripts with a name length up to 20 (through the `NPC:name` syntax). (#2721, issue #718)
+- Fixed interaction between `itemskill()` other item/skill uses, including other `itemskill()`. The autocast code has been changed to use a vector, to allow multiple concurrent skills. (#2699)
+  - It's now possible to use multiple `itemskill()` calls in the same item, as long there is at most one targeted skill, and it's the last one used.
+  - It's now possible to use items while the target cursor for a previously activated skill is visible, without aborting it. (issue #816)
+  - It's now possible to use a scroll while casting another skill (and the provided skill will be cast after the current one finishes). (issue #1026)
+- Fixed use of Fly Wing/Butterfly Wing while riding a cash shop mount (Boarding Halter) and having a falcon. (part of #2699, issue #2750)
+- Fixed the `Requirements.MaxHPTrigger` conditions for mercenary skills. (part of #2731)
+- Fixed a possible memory corruption or crash in the mob delayed removal function. (part of #2713, issue #2719)
+- Fixed a crash in the `npcshopdelitem()` script command. (part of #2713)
+- Fixed a crash in the achievement progress update code. (part of #2713)
+- Fixed a possible crash in the RODEX check name function. (part of #2713)
+- Added null pointer checks for missing view data in clif and status code. (part of #2713)
+- Added a check for the current map in mob and map code. (part of #2713)
+- Fixed an error or possible crash when a mob dies on an invalid map. (part of #2713)
+- Fixed an incorrect npc ID for the MOTD script after reloading or unloading scripts. (part of #2713)
+- Fixed an use after free in `party->broken()`. (part of #7213)
+- Fixed a possible crash in `mapif->guild_withdraw()`. (part of #2713)
+- Fixed a null pointer error in `unit->steptimer()`. (#2723, issue #2707)
+- Fixed the left-shift of a negative value in `GN_CRAZYWEED_ATK`. (#2734, issue #1151)
+- Fixed a missing "Beloved" attribute on the eggs of renamed pets. (#2744, issue #2743)
+- Fixed an inverted logic in the `storage_use_item` battle flag. (#2746)
+- Fixed the mineffect map property flag so that it's not affected by the character's minimized effects but only by the map type. It's enabled on all the guild castles, regardless of whether WoE is running. (#2754, issue #803)
+- Fixed a crash in the equip check code if a character logs wearing an item that was previously, but is no longer, equippable. (#2745)
+- Fixed a compiler warnings in 32 bit builds. (#2759)
+
+### Deprecated
+
+- Deprecated the (unintended and undocumented) possibility of calling local NPC functions as event labels if their name started with `On`. (part of #2142, issue #2137)
+  - The functionality is now disabled by default, and can be enabled by changing the `script_configuration.functions_as_events` setting.
+
+### Removed
+
+- Removed old debug code from the `SC_DANCING` case of `status_change_end_()`. (#2736, issue #2716)
+- Removed useless `FixedCastTime` values from the pre-re skill database. (part of #2731)
 
 ## [v2020.05.03] `May 03 2020`
 
@@ -1360,6 +1738,15 @@ If you are reading this in a text editor, simply ignore this section
 - New versioning scheme and project changelogs/release notes (#1853)
 
 [Unreleased]: https://github.com/HerculesWS/Hercules/compare/stable...master
+[v2020.12.14]: https://github.com/HerculesWS/Hercules/compare/v2020.11.16...v2020.12.14
+[v2020.11.16]: https://github.com/HerculesWS/Hercules/compare/v2020.10.19...v2020.11.16
+[v2020.10.19]: https://github.com/HerculesWS/Hercules/compare/v2020.09.20...v2020.10.19
+[v2020.09.20]: https://github.com/HerculesWS/Hercules/compare/v2020.08.23...v2020.09.20
+[v2020.08.23]: https://github.com/HerculesWS/Hercules/compare/v2020.07.26...v2020.08.23
+[v2020.07.26]: https://github.com/HerculesWS/Hercules/compare/v2020.06.28...v2020.07.26
+[v2020.06.28]: https://github.com/HerculesWS/Hercules/compare/v2020.05.31+1...v2020.06.28
+[v2020.05.31+1]: https://github.com/HerculesWS/Hercules/compare/v2020.05.31...v2020.05.31+1
+[v2020.05.31]: https://github.com/HerculesWS/Hercules/compare/v2020.05.03...v2020.05.31
 [v2020.05.03]: https://github.com/HerculesWS/Hercules/compare/v2020.04.05+1...v2020.05.03
 [v2020.04.05+1]: https://github.com/HerculesWS/Hercules/compare/v2020.04.05...v2020.04.05+1
 [v2020.04.05]: https://github.com/HerculesWS/Hercules/compare/v2020.03.08+2...v2020.04.05

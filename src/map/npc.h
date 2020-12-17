@@ -56,9 +56,15 @@ enum npc_shop_types {
 struct npc_timerevent_list {
 	int timer,pos;
 };
+
+/** list of labels within a NPC (used internally by the label db) */
 struct npc_label_list {
+	/** label name */
 	char name[NAME_LENGTH];
+	/** start point within the script */
 	int pos;
+	/** optional label flags */
+	enum script_label_flags flags;
 };
 
 struct npc_barter_currency {
@@ -160,7 +166,7 @@ enum actor_classes {
 #define MAX_NPC_CLASS 1000
 // New NPC range
 #define MAX_NPC_CLASS2_START 10001
-#define MAX_NPC_CLASS2_END 10344
+#define MAX_NPC_CLASS2_END 10376
 
 //Script NPC events.
 enum npce_event {
@@ -248,6 +254,7 @@ struct npc_interface {
 	int64 (*gettimerevent_tick) (struct npc_data *nd);
 	int (*settimerevent_tick) (struct npc_data *nd, int newtimer);
 	int (*event) (struct map_session_data *sd, const char *eventname, int ontouch);
+	int (*handle_touch_events) (struct map_session_data *sd, int x, int y, bool check_if_warped);
 	int (*touch_areanpc_sub) (struct block_list *bl, va_list ap);
 	int (*touchnext_areanpc) (struct map_session_data *sd, bool leavemap);
 	int (*touch_areanpc) (struct map_session_data *sd, int16 m, int16 x, int16 y);

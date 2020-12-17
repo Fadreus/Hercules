@@ -146,6 +146,8 @@ typedef enum broadcast_flags {
 	BC_WOE         = 0x20,
 	BC_COLOR_MASK  = 0x30, // BC_YELLOW|BC_BLUE|BC_WOE
 
+	BC_MEGAPHONE   = 0x40,
+
 	BC_DEFAULT     = BC_ALL|BC_PC|BC_YELLOW
 } broadcast_flags;
 
@@ -748,6 +750,24 @@ enum removeGear_flag {
 	REMOVE_MOUNT_CART = 6,
 };
 
+/** Info types for PACKET_ZC_PERSONAL_INFOMATION (0x097b). **/
+enum detail_exp_info_type {
+	PC_EXP_INFO = 0x0,	//!< PCBang internet cafe modifiers. (http://pcbang.gnjoy.com/) (Unused.)
+	PREMIUM_EXP_INFO = 0x1, //!< Premium user modifiers. Values aren't displayed in 20161207+ clients.
+	SERVER_EXP_INFO = 0x2,	//!< Server rates.
+	TPLUS_EXP_INFO = 0x3,	//!< Unknown. Values are displayed as "TPLUS" in kRO. (Unused.)
+};
+
+/**
+ * Convex Mirror (ZC_BOSS_INFO)
+ **/
+enum bossmap_info_type {
+	BOSS_INFO_NONE = 0,      // No Boss within the map
+	BOSS_INFO_ALIVE,         // Boss is still alive
+	BOSS_INFO_ALIVE_WITHMSG, // Boss is alive (on item use)
+	BOSS_INFO_DEAD,          // Boss is dead
+};
+
 /**
  * Clif.c Interface
  **/
@@ -864,7 +884,7 @@ struct clif_interface {
 	void (*map_property) (struct map_session_data* sd, enum map_property property);
 	void (*pvpset) (struct map_session_data *sd, int pvprank, int pvpnum,int type);
 	void (*map_property_mapall) (int mapid, enum map_property property);
-	void (*bossmapinfo) (int fd, struct mob_data *md, short flag);
+	void (*bossmapinfo) (int fd, struct mob_data *md, enum bossmap_info_type flag);
 	void (*map_type) (struct map_session_data* sd, enum map_type type);
 	void (*maptypeproperty2) (struct block_list *bl,enum send_target t);
 	/* multi-map-server */
@@ -960,7 +980,8 @@ struct clif_interface {
 	void (*skillname_ack) (int fd, struct block_list *bl);
 	void (*itemname_ack) (int fd, struct block_list *bl);
 	void (*unknownname_ack) (int fd, struct block_list *bl);
-	void (*monster_hp_bar) ( struct mob_data* md, struct map_session_data *sd );
+	void (*monster_hp_bar) (struct mob_data *md, struct map_session_data *sd);
+	bool (*show_monster_hp_bar) (struct block_list *bl);
 	int (*hpmeter) (struct map_session_data *sd);
 	void (*hpmeter_single) (int fd, int id, unsigned int hp, unsigned int maxhp);
 	int (*hpmeter_sub) (struct block_list *bl, va_list ap);
@@ -1648,6 +1669,7 @@ struct clif_interface {
 	bool (*attendance_timediff) (struct map_session_data *sd);
 	time_t (*attendance_getendtime) (void);
 	void (*pOpenUIRequest) (int fd, struct map_session_data *sd);
+	void (*open_ui_send) (struct map_session_data *sd, enum zc_ui_types ui_type);
 	void (*open_ui) (struct map_session_data *sd, enum cz_ui_types uiType);
 	void (*pAttendanceRewardRequest) (int fd, struct map_session_data *sd);
 	void (*ui_action) (struct map_session_data *sd, int32 UIType, int32 data);

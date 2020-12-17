@@ -434,16 +434,38 @@ marked as usable in pet scripts to work in there reliably.
 Numbers
 -------
 
+The Hercules scripting engine supports 4 types of number literals:
+
+type          base      syntax
+----------------------------------------------
+decimal       10        255
+hexadecimal   16        0xFF
+octal         8         0o377
+binary        2         0b11111111
+
 Beside the common decimal numbers, which are nothing special whatsoever
 (though do not expect to use fractions, since ALL numbers are integer in
 this language), the script engine also handles hexadecimal numbers, which
 are otherwise identical. Writing a number like '0x<hex digits>' will make
 it recognized as a hexadecimal value. Notice that 0x10 is equal to 16.
-Also notice that if you try to 'mes 0x10' it will print '16'.
+Also notice that if you try to 'mes 0x10' it will print '16'. If you wish
+to make calculations in base 8, you can also use the octal notation like
+'0o<octal digits>'. To make calculations in base 2 (binary), you can use
+the binary notation like '0b<binary digits>'.
+
+The following are all equivalent:
+	255 == 0xFF == 0o377 == 0b11111111
 
 Number values can't exceed the limits of an integer variable: Any number
 greater than INT_MAX (2147483647) or smaller than INT_MIN (-2147483648) will
 be capped to those values and will cause a warning to be reported.
+
+Underscores can also be used as visual separators for digit grouping purposes:
+	2_147_483_647
+	0x7FFF_FFFF
+
+Keep in mind that number literals cannot start or end with a separator and no
+more than one separator can be used in a row (so 12_3___456 is illegal).
 
 Variables
 ---------
@@ -536,7 +558,9 @@ variables or an empty string ("", nothing between the quotes) for string
 variables. Once you set it to that, the variable is as good as forgotten
 forever, and no trace remains of it even if it was stored with character
 or account data. The maximum length of variable name including prefix and
-suffix is 32.
+suffix is 32. Permanent string variables (name$, $name$, #name$, ##name$)
+can store text with a maximum length of 255 characters. All other string
+type variables have no such limitation.
 
 Some variables are special, that is, they are already defined for you by
 the scripting engine. You can see the full list somewhere in
@@ -1710,7 +1734,8 @@ The default value of 'min' and 'max' can be set with 'input_min_value' and
 For numeric inputs the value is capped to the range [min, max]. Returns 1
 if the value was higher than 'max', -1 if lower than 'min' and 0 otherwise.
 For string inputs it returns 1 if the string was longer than 'max', -1 is
-shorter than 'min' and 0 otherwise.
+shorter than 'min' and 0 otherwise. Note that an input string has a maximum
+length of 70 characters.
 
 ---------------------------------------
 
@@ -1942,58 +1967,64 @@ will result in error and termination of the script.
 
 ---------------------------------------
 
-*function <function name>;
-*<function name>{(<argument>, ...<argument>)};
-*function <function name> {
+{public | private} *function <function name>;
+{public | private} *function <function name> {
 <code>
 }
 
-This works like callfunc(), and is used for cleaner and faster scripting.
-The function must be defined and used within a script, and works like a
-label with arguments.
-Note that the name may only contain alphanumeric characters and underscore.
+In its first form, this syntax declares a local function so it can later be
+defined. In its second form, the syntax both declares and defines a local
+function. Local functions must be defined before being used. Note that the name
+may only contain alphanumeric characters and underscore. Once defined, they can
+be called from the current script as if they were regular built-in commands, and
+can also be called from other scripts if they are marked as public. Local
+functions may be marked as public by simply adding "public" prior to the
+function definition. Functions not marked as public are private by default and
+cannot be called from another script.
 
 Usage:
 
     1. Declare the function.
 	function <function name>;
     2. Call the function anywhere within the script.
-       It can also return a value when used with parentheses.
-	<function name>;
-    3. Define the function within the script.
+	<function name>();
+    3. Define the function by adding its script.
 	<function name> {<code>}
+
+    Step 1 is optional if the function is defined prior to being called.
 
 Example:
 
-prontera,154,189,4	script	Item Seller	767,{
 	/* Function declaration */
-	function SF_Selling;
+	function MyFunction;
 
-	if (Zeny > 50) {
-		mes("Welcome!");
-		/* Function call */
-		SF_Selling();
-	} else {
-		mes("You need 50z, sorry!");
-	}
-	close();
+	/* Function call */
+	MyFunction();
 
 	/* Function definition */
-	function SF_Selling {
-		mes("Would you like to buy a phracon for 50z?");
-		next();
-		if (select("Yes", "No, thanks") == 1) {
-			Zeny -= 50;
-			getitem(Phracon, 1);
-			mes("Thank you!");
-		}
+	function MyFunction {
+		// (do something)
 		return;
 	}
-}
+
+
+Example with public functions:
+
+	/* Function declaration + definition */
+	public function myFunction {
+		/* notice the "public" before the "function" keyword */
+		return;
+	}
+
+	/* Local call */
+	myFunction();
+
+	/* Call from another script */
+	"npc name"::myFunction();
+
 
 Example with parameters and return value:
 
-prontera,150,150,0	script	TestNPC	123,{
 	/* Function declaration */
 	function MyAdd;
 
@@ -2002,15 +2033,32 @@ prontera,150,150,0	script	TestNPC	123,{
 	input(.@a);
 	input(.@b);
 	/* Function call */
-	mes(.@a+" + "+.@b+" = "+MyAdd(.@a, .@b));
+	mesf("%i + %i = %i", .@a, .@b, MyAdd(.@a, .@b));
 	close();
 
 	/* Function definition */
 	function MyAdd {
-		return(getarg(0)+getarg(1));
+		return (getarg(0) + getarg(1));
 	}
-}
 
+
+---------------------------------------
+
+*<function name>({<arg>...})
+*"<npc name>"::<function name>({<arg>...})
+*callfunctionofnpc("<function name>", "<npc name>"{, <arg>...});
+
+In its first form, calls a previously defined local function. In its second
+form, calls a previously defined public local function of another NPC. If the
+name of the target NPC or the name of the local function is not known
+beforehand, callfunctionofnpc() can be used instead of the second form.
+See function() above for more details.
+
+Example:
+
+	MyFunction(arg1, arg2, arg3);
+	"MyNPC"::MyFunction(arg1, arg2, arg3);
+	callfunctionofnpc("MyNPC", "MyFunction", arg1, arg2, arg3);
 
 ---------------------------------------
 
@@ -2584,18 +2632,19 @@ bStr, bInt, bLuk
 ---------------------------------------
 
 *getcharid(<type>{, "<character name>"})
+*getcharid(<type>{, <account id>})
 
 This function will return a unique ID number of the invoking character,
 or, if a character name is specified, of that player.
 
 Type is the kind of associated ID number required:
 
-(0) CHAR_ID_CHAR - Character ID number.
-(1) CHAR_ID_PARTY - Party ID number.
-(2) CHAR_ID_GUILD - Guild ID number.
+(0) CHAR_ID_CHAR    - Character ID number.
+(1) CHAR_ID_PARTY   - Party ID number.
+(2) CHAR_ID_GUILD   - Guild ID number.
 (3) CHAR_ID_ACCOUNT - Account ID number.
-(4) CHAR_ID_BG - Battle ground ID
-(5) CHAR_ID_CLAN - Clan ID number.
+(4) CHAR_ID_BG      - Battle ground ID
+(5) CHAR_ID_CLAN    - Clan ID number.
 
 For most purposes other than printing it, a number is better to have than
 a name (people do horrifying things to their character names).
@@ -3147,23 +3196,24 @@ This command sets a bunch of arrays with a complete list of whatever the
 invoking character has in its inventory, including all the data needed to
 recreate these items perfectly if they are destroyed. Here's what you get:
 
-@inventorylist_id[]        - array of item ids.
-@inventorylist_idx[]       - array of item inventory index.
-@inventorylist_amount[]    - their corresponding item amounts.
-@inventorylist_equip[]     - will return the slot the item is equipped on, if at all.
-@inventorylist_refine[]    - for how much it is refined.
-@inventorylist_identify[]  - whether it is identified.
-@inventorylist_attribute[] - whether it is broken.
-@inventorylist_card1[]     - These four arrays contain card data for the
-@inventorylist_card2[]       items. These data slots are also used to store
-@inventorylist_card3[]       names inscribed on the items, so you can
-@inventorylist_card4[]       explicitly check if the character owns an item
-                             made by a specific craftsman.
-@inventorylist_expire[]    - expire time (Unix time stamp). 0 means never
-                             expires.
-@inventorylist_bound[]     - whether it is an account bounded item or not.
-@inventorylist_favorite[]  - whether it is favorite (inside favorite tab) or not.
-@inventorylist_count       - the number of items in these lists.
+@inventorylist_id[]            - array of item ids.
+@inventorylist_idx[]           - array of item inventory index.
+@inventorylist_amount[]        - their corresponding item amounts.
+@inventorylist_equip[]         - will return the slot the item is equipped on, if at all.
+@inventorylist_refine[]        - for how much it is refined.
+@inventorylist_identify[]      - whether it is identified.
+@inventorylist_attribute[]     - whether it is broken.
+@inventorylist_card1[]         - These four arrays contain card data for the items.
+@inventorylist_card2[]           These data slots are also used to store names inscribed
+@inventorylist_card3[]           on the items, so you can explicitly check if the character 
+@inventorylist_card4[]           owns an item made by a specific craftsman.
+@inventorylist_expire[]        - expire time (Unix time stamp). 0 means never expires.
+@inventorylist_bound[]         - whether it is an account bounded item or not.
+@inventorylist_favorite[]      - whether it is favorite (inside favorite tab) or not.
+@inventorylist_opt_id1~5[]     - array of random option id.
+@inventorylist_opt_val1~5[]    - array of random option val.
+@inventorylist_opt_param1~5[]  - array of random option param.
+@inventorylist_count           - the number of items in these lists.
 
 This could be handy to save/restore a character's inventory, since no
 other command returns such a complete set of data, and could also be the
@@ -3186,20 +3236,21 @@ This command sets a bunch of arrays with a complete list of whatever the
 invoking character has in its cart_inventory, including all the data needed to
 recreate these items perfectly if they are destroyed. Here's what you get:
 
-@cartinventorylist_id[]        - array of item ids.
-@cartinventorylist_amount[]    - their corresponding item amounts.
-@cartinventorylist_refine[]    - for how much it is refined.
-@cartinventorylist_identify[]  - whether it is identified.
-@cartinventorylist_attribute[] - whether it is broken.
-@cartinventorylist_card1[]     - These four arrays contain card data for the
-@cartinventorylist_card2[]       items. These data slots are also used to store
-@cartinventorylist_card3[]       names inscribed on the items, so you can
-@cartinventorylist_card4[]       explicitly check if the character owns an item
-                                 made by a specific craftsman.
-@cartinventorylist_expire[]    - expire time (Unix time stamp). 0 means never
-                                 expires.
-@cartinventorylist_bound       - whether it is an account bound item or not.
-@cartinventorylist_count       - the number of items in these lists.
+@cartinventorylist_id[]            - array of item ids.
+@cartinventorylist_amount[]        - their corresponding item amounts.
+@cartinventorylist_refine[]        - for how much it is refined.
+@cartinventorylist_identify[]      - whether it is identified.
+@cartinventorylist_attribute[]     - whether it is broken.
+@cartinventorylist_card1[]         - These four arrays contain card data for the items.
+@cartinventorylist_card2[]           These data slots are also used to store names inscribed on the items,
+@cartinventorylist_card3[]           so you can explicitly check if the character owns an item
+@cartinventorylist_card4[]           made by a specific craftsman.
+@cartinventorylist_expire[]        - expire time (Unix time stamp). 0 means never expires.
+@cartinventorylist_bound           - whether it is an account bound item or not.
+@cartinventorylist_opt_id1~5[]     - array of random option id.
+@cartinventorylist_opt_val1~5[]    - array of random option val.
+@cartinventorylist_opt_param1~5[]  - array of random option param.
+@cartinventorylist_count           - the number of items in these lists.
 
 This could be handy to save/restore a character's cart_inventory, since no
 other command returns such a complete set of data, and could also be the
@@ -3578,7 +3629,7 @@ If the player is not found, returns -1.
 *gettimetick(<type>)
 
 Valid types are :
-	0 - server's tick (milleseconds), unsigned int, loops every ~50 days
+	0 - server's tick (milleseconds), unsigned int, loops every ~25 days
 	1 - time since the start of the current day in seconds
 	2 - UNIX epoch time (number of seconds elapsed since 1st of January 1970)
 
@@ -3643,7 +3694,7 @@ the format string.
 
 This uses the C function 'strftime', which obeys special format
 characters. For a full description see, for example, the description of
-'strftime' at http://www.delorie.com/gnu/docs/glibc/libc_437.html
+'strftime' at <https://man7.org/linux/man-pages/man3/strftime.3.html>
 All the format characters given in there should properly work.
 Max length is the maximum length of a time string to generate.
 
@@ -4501,7 +4552,7 @@ Name is optional, and defaults to the attached player if omitted.
 *agitcheck()
 *agitcheck2()
 
-These function will let you check whether the server is currently in WoE
+These functions will let you check whether the server is currently in WoE
 mode (or WoE SE mode if the second function is called) and will return true
 if War of Emperium is on and false if it isn't.
 
@@ -5637,21 +5688,32 @@ Example:
 
 ---------------------------------------
 
-*enable_items()
-*disable_items()
+*enable_items({<flag>})
+*enableitemuse({<flag>})
+*disable_items({<flag>})
+*disableitemuse({<flag>})
 
-These commands enable/disable changing of equipments while an NPC is
-running. When disable_items() is run, equipments cannot be changed
-during scripts until enable_items() is called or the script has
-terminated. To avoid possible exploits, when disable_items() is invoked,
-it will only disable changing equips while running that script in
-particular. Note that if a different script also calls disable_items(),
-it will override the last call (so you may want to call this command at
-the start of your script without assuming the effect is still in
-effect).
-If 'item_enabled_npc' option is set to true in 'conf/map/battle/items.conf' all
-NPC are allowing changing of equipment by default except for those have been
-set with 'disable_items'.
+These commands enable/disable item actions while interacting with a NPC.
+When disable_items() is invoked, item actions defined by <flag> are disabled
+during scripts until enable_items() is called or the script has terminated.
+To avoid possible exploits, when disable_items() is invoked, it will only
+disable item actions while running that script in particular.
+Note that if a different script also invokes disable_items(), it will override
+the last call so you may want to call this command at the start of your
+script without assuming the effect is still in effect.
+If <flag> is omitted all item actions will be disabled.
+The enable_items() command enables item actions defined by <flag> during
+scripts until disable_items() is invoked or the script has terminated.
+If <flag> is omitted it defaults to 'item_enabled_npc' battle flag.
+For a list of supported flags have a look at the description of
+'item_enabled_npc' battle flag in 'conf/map/battle/items.conf'.
+Unless disable_items() or enable_items() is invoked the script will use
+'item_enabled_npc' battle flag by default.
+
+Example:
+
+	// This will disable changing equipment during this script.
+	disable_items(ITEMENABLEDNPC_EQUIP);
 
 ---------------------------------------
 
@@ -7219,7 +7281,7 @@ the message, otherwise the npc name will not be shown.
 *setnpcdisplay("<npc name>", <class id>)
 
 Changes the display name and/or display class of the target NPC.
-Returns 0 is successful, 1 if the NPC does not exist.
+Returns 0 is successful, 1 if the NPC does not exist or is a floating npc.
 Size is 0 = normal 1 = small 2 = big.
 
 ---------------------------------------
@@ -7468,6 +7530,16 @@ if GID is not given use the attached player.
 //=====================================
 ---------------------------------------
 
+*loudhailer("<message>"{, "<color>"})
+
+Announces a colored text in '<char_name> Shouts : <message>' format.
+<color> must be a string in "RRGGBB" format. If <color> is omitted,
+white ("FFFFFF") will be used.
+This command is specially created for the Megaphone_ item (12221),
+but will work in NPCs, too.
+
+---------------------------------------
+
 *announce("<text>", <flag>{, <fontColor>{, <fontType>{, <fontSize>{, <fontAlign>{, <fontY>}}}}})
 
 This command will broadcast a message to all or most players, similar to
@@ -7587,7 +7659,8 @@ In the OnBuyItem, two arrays are filled (@bought_nameid and
 and the amount sold of it. Same goes for the OnSellItem label, only the
 variables are named different (@sold_nameid, @sold_quantity, @sold_refine,
 @sold_attribute, @sold_identify, @sold_card1, @sold_card2, @sold_card3,
-@sold_card4). An example on a shop comes with Hercules, and can be found
+@sold_card4, @sold_opt_id1~5, @sold_opt_val1~5, @sold_opt_param1~5). 
+An example on a shop comes with Hercules, and can be found
 in the doc/sample/npc_dynamic_shop.txt file.
 
 This example shows how to use the labels and their set variables to create
@@ -7654,7 +7727,7 @@ The function returns false if the shop was not found, true otherwise.
 
 ---------------------------------------
 
-*waitingroom("<chatroom name>", <limit>{, <event label>, <trigger>, <required zeny>, <min lvl>, <max lvl>})
+*waitingroom("<chatroom name>", <limit>{, <event label>, <trigger>, <required zeny>, <min lvl>, <max lvl>, "<NPC Object Name>"})
 
 This command will create a chat room, owned by the NPC object running this
 script and displayed above the NPC sprite.
@@ -7753,7 +7826,7 @@ The valid information types are:
 
 ---------------------------------------
 
-*warpwaitingpc("<map name>", <x>, <y>{, <number of people>})
+*warpwaitingpc("<map name>", <x>, <y>{, <number of people>{, "<NPC object name>"}})
 
 This command will warp the amount of characters equal to the trigger
 number of the waiting room chat attached to the NPC object running this
@@ -7784,8 +7857,27 @@ one-on-one duel, for example.
 
 *kickwaitingroomall({"<NPC object name>"})
 
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	@ /!\ This command is deprecated @
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 This command kicks everybody out of a specified waiting room chat.
 
+---------------------------------------
+
+*waitingroomkick({"<NPC object name>"{,"<player name>"|<account_id>}})
+
+This command kicks target player(s) out of a waiting room chat of specific NPC if any.
+
+Example 1:
+	// This will kick all players in the waitingroom
+	waitingroomkick();
+
+Example 2:
+	// Kick the last player enter the waitingroom
+	.@num = getwaitingroomstate(0);
+	waitingroomkick(strnpcinfo(NPC_NAME), $@chatmembers[.@num - 1]);
+	
 ---------------------------------------
 
 *setmapflagnosave("<map name>", "<alternate map name>", <x>, <y>)
@@ -9569,25 +9661,17 @@ This will open a book item at the specified page.
 ---------------------------------------
 
 *rodex_sendmail(<char id>, "<sender name>", "<title>", "<body>"{, <zeny>{, <item1>, <amount1>{, <item2>, <amount2>{, <item3>, <amount3>{, <item4>, <amount4>{, <item5>, <amount5>}}}}}})
-*rodex_sendmail_acc(<account id>, "<sender name>", "<title>", "<body>"{, <zeny>{, <item1>, <amount1>{, <item2>, <amount2>{, <item3>, <amount3>{, <item4>, <amount4>{, <item5>, <amount5>}}}}}})
-
-This will send a mail using the RoDEX mail system, in newer clients the message will be marked as a NPC mail (that you can't reply).
-If items and zeny are specified, they will be added as attachments to the message.
-
-For examples of usage, see /doc/sample/npc_rodex.txt
-
----------------------------------------
-
 *rodex_sendmail2(<char id>, "<sender name>", "<title>", "<body>"{, <zeny>{, <item1>, <amount1>, <refine1>, <attribute1>, <card0_1>, <card1_1>, <card2_1>, <card3_1>{,<item2>, <amount2>, <refine2>, <attribute2>, <card0_2>, <card1_2>, <card2_2>, <card3_2>{,<item3>, <amount3>, <refine3>, <attribute3>, <card0_3>, <card1_3>, <card2_3>, <card3_3>{,<item4>, <amount4>, <refine4>, <attribute4>, <card0_4>, <card1_4>, <card2_4>, <card3_4>{,<item5>, <amount5>, <refine5>, <attribute5>, <card0_5>, <card1_5>, <card2_5>, <card3_5>}}}}}})
+
+*rodex_sendmail_acc(<account id>, "<sender name>", "<title>", "<body>"{, <zeny>{, <item1>, <amount1>{, <item2>, <amount2>{, <item3>, <amount3>{, <item4>, <amount4>{, <item5>, <amount5>}}}}}})
 *rodex_sendmail_acc2(<account id>, "<sender name>", "<title>", "<body>"{, <zeny>{, <item1>, <amount1>, <refine1>, <attribute1>, <card0_1>, <card1_1>, <card2_1>, <card3_1>{,<item2>, <amount2>, <refine2>, <attribute2>, <card0_2>, <card1_2>, <card2_2>, <card3_2>{,<item3>, <amount3>, <refine3>, <attribute3>, <card0_3>, <card1_3>, <card2_3>, <card3_3>{,<item4>, <amount4>, <refine4>, <attribute4>, <card0_4>, <card1_4>, <card2_4>, <card3_4>{,<item5>, <amount5>, <refine5>, <attribute5>, <card0_5>, <card1_5>, <card2_5>, <card3_5>}}}}}})
 
-These are more flexible versions of rodex_sendmail and rodex_sendmail_acc.
-
 This will send a mail using the RoDEX mail system, in newer clients the message will be marked as a NPC mail (that you can't reply).
 If items and zeny are specified, they will be added as attachments to the message.
-Check getitem2 command for more information of the extra parameters.
-
 For examples of usage, see /doc/sample/npc_rodex.txt
+
+rodex_sendmail2 and rodex_sendmail_acc2 are more flexible versions.
+Check getitem2 command for more information of the extra parameters.
 
 ---------------------------------------
 //=====================================
@@ -9595,12 +9679,18 @@ For examples of usage, see /doc/sample/npc_rodex.txt
 //=====================================
 ---------------------------------------
 
-*instance_create("<instance name>", <owner id>{, <optional owner_type>})
+*instance_create("<instance_name>", <owner_id>{, <owner_type>})
 
-Create an instance using the name "<instance name>" for the <owner_id> of
-owner_type (when not provided, defaults to IOT_PARTY). Most instance_*
+Creates an instance using the name "<instance_name>" for the <owner_id> of
+<owner_type> (when not provided, defaults to IOT_PARTY). Most instance_*
 commands are used in conjunction with this command and depend on the
 ID this command returns.
+
+Valid <owner_type> values:
+- IOT_NONE  (0) - <owner_id> can be any arbitrary number.
+- IOT_CHAR  (1) - <owner_id> is account ID.
+- IOT_PARTY (2) - <owner_id> is party ID.
+- IOT_GUILD (3) - <owner_id> is guild ID.
 
 Example:
 	// Store the Party ID of the invoking character.
@@ -9612,11 +9702,9 @@ Example:
 		// ...
 	} else if (.@id == -2) { // Invalid Party ID
 		// ...
-	} else if (.@id == -3) { // No free instances (MAX_INSTANCE exceeded)
-		// ...
 	} else if (.@id == -4) { // Already exists
 		// ...
-	} else (.@id < 0) { // Unspecified error while queuing instance.
+	} else if (.@id < 0) { // Unspecified error while queuing instance.
 		// ...
 	}
 
@@ -10185,6 +10273,15 @@ This command summons a mercenary of given class, for given amount of time
 in milliseconds. Typically used in item scripts of mercenary scrolls.
 
 ----------------------------------------
+
+*mercenary_delete({<char_id>, <update>})
+
+Remove mercenary of the attached character.
+Mercenary Loyalty are updated depend on value of <update>:
+    0 - Mercenary Loyalty increase by 1, similar to contract ends (default).
+    1 - Mercenary Loyalty decrease by 1, similar to mercenary killed.
+
+---------------------------------------
 
 *mercenary_heal(<hp>, <sp>)
 

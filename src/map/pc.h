@@ -103,6 +103,13 @@ enum pc_checkitem_types {
 	PCCHECKITEM_GSTORAGE  = 0x8
 };
 
+/** Bit flags for allowed item actions while interacting with NPC. **/
+enum item_enabled_npc_flags {
+	ITEMENABLEDNPC_NONE    = 0x0, //!< Don't allow any item actions while interacting with NPC.
+	ITEMENABLEDNPC_EQUIP   = 0x1, //!< Allow changing equipment while interacting with NPC.
+	ITEMENABLEDNPC_CONSUME = 0x2, //!< Allow consuming usable items while interacting with NPC.
+};
+
 struct weapon_data {
 	int atkmods[3];
 BEGIN_ZEROED_BLOCK; // all the variables within this block get zero'ed in each call of status_calc_pc
@@ -191,8 +198,10 @@ struct map_session_data {
 	struct status_data base_status, battle_status;
 	struct status_change sc;
 	struct regen_data regen;
-	struct regen_data_sub sregen, ssregen;
-	struct autocast_data autocast;
+	struct regen_data_sub skill_regen;
+	struct regen_data_sub sitting_regen;
+	struct autocast_data auto_cast_current; // Currently processed auto-cast skill.
+	VECTOR_DECL(struct autocast_data) auto_cast; // Auto-cast vector.
 	//NOTE: When deciding to add a flag to state or special_state, take into consideration that state is preserved in
 	//status_calc_pc, while special_state is recalculated in each call. [Skotlex]
 	struct {
@@ -216,6 +225,7 @@ struct map_session_data {
 		unsigned int size :2; // for tiny/large types
 		unsigned int night :1; //Holds whether or not the player currently has the SI_NIGHT effect on. [Skotlex]
 		unsigned int using_fake_npc :1;
+		unsigned int using_megaphone : 1; //!< Whether the character is currently using a Megephone (ID=12221).
 		unsigned int rewarp :1; //Signals that a player should warp as soon as he is done loading a map. [Skotlex]
 		unsigned int killer : 1;
 		unsigned int killable : 1;
@@ -386,6 +396,10 @@ BEGIN_ZEROED_BLOCK; // this block will be globally zeroed at the beginning of st
 		int value;
 		int rate, tick;
 	} def_set_race[RC_MAX], mdef_set_race[RC_MAX];
+	struct {
+		int rate_mob; //!< Damage reduction rate against monster's defense element.
+		int rate_pc;  //!< Damage reduction rate against player's defense element.
+	} sub_def_ele[ELE_MAX], magic_sub_def_ele[ELE_MAX]; //!< Bonus bSubDefEle/bMagicSubDefEle data structure.
 	struct {
 		int atk_rate;
 		int arrow_atk,arrow_ele,arrow_cri,arrow_hit;
@@ -629,10 +643,6 @@ END_ZEROED_BLOCK;
 
 	uint8 lang_id;
 
-	// temporary debugging of bug #3504
-	const char* delunit_prevfile;
-	int delunit_prevline;
-
 	// HatEffect
 	VECTOR_DECL(int) hatEffectId;
 
@@ -677,8 +687,11 @@ END_ZEROED_BLOCK;
 #define pc_issit(sd)          ( (sd)->vd.dead_sit == 2 )
 #define pc_isidle(sd)         ( (sd)->chat_id != 0 || (sd)->state.vending || (sd)->state.buyingstore || DIFF_TICK(sockt->last_tick, (sd)->idletime) >= battle->bc->idle_no_share )
 #define pc_istrading(sd)      ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->state.trading )
+#define pc_istrading_except_npc(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || (sd)->state.trading != 0 )
 #define pc_cant_act(sd)       ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
 #define pc_cant_act_except_lapine(sd) ((sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1)
+#define pc_cant_act_except_npc(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || (sd)->chat_id != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
+#define pc_cant_act_except_npc_chat(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
 
 /* equals pc_cant_act except it doesn't check for chat rooms */
 #define pc_cant_act2(sd)       ( (sd)->npc_id || (sd)->state.buyingstore || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
@@ -721,6 +734,9 @@ END_ZEROED_BLOCK;
 #define pc_ismadogear(sd) ( (sd)->sc.option&OPTION_MADOGEAR )
 /// Rune Knight Dragon
 #define pc_isridingdragon(sd) ( (sd)->sc.option&OPTION_DRAGON )
+
+// Check if character has a pet.
+#define pc_has_pet(sd) ( (sd)->status.pet_id != 0 && (sd)->pd != NULL && (sd)->pd->pet.intimate > PET_INTIMACY_NONE )
 
 #define pc_stop_walking(sd, type) (unit->stop_walking(&(sd)->bl, (type)))
 #define pc_stop_attack(sd)        (unit->stop_attack(&(sd)->bl))
@@ -866,6 +882,12 @@ enum class_exp_type {
 
 struct class_exp_tables {
 	struct class_exp_group *class_exp_table[CLASS_COUNT][2];
+};
+
+enum player_actions_when_dead_flags {
+	PCALLOWACTION_NONE    = 0x0, // Don't allow trading and open chat rooms.
+	PCALLOWACTION_TRADE   = 0x1, // Allow trading when dead.
+	PCALLOWACTION_CHAT    = 0x2, // Allow open chat room when dead.
 };
 
 /*=====================================
@@ -1032,7 +1054,10 @@ END_ZEROED_BLOCK; /* End */
 	void (*unequipitem_pos) (struct map_session_data *sd, int n, int pos);
 	int (*checkitem) (struct map_session_data *sd);
 	int (*useitem) (struct map_session_data *sd,int n);
-	int (*autocast_clear) (struct map_session_data *sd);
+	void (*autocast_clear_current) (struct map_session_data *sd);
+	void (*autocast_clear) (struct map_session_data *sd);
+	void (*autocast_set_current) (struct map_session_data *sd, int skill_id);
+	void (*autocast_remove) (struct map_session_data *sd, enum autocast_type type, int skill_id, int skill_lv);
 
 	int (*skillatk_bonus) (struct map_session_data *sd, uint16 skill_id);
 	int (*skillheal_bonus) (struct map_session_data *sd, uint16 skill_id);
@@ -1073,6 +1098,7 @@ END_ZEROED_BLOCK; /* End */
 	int (*cleareventtimer) (struct map_session_data *sd);
 	int (*addeventtimercount) (struct map_session_data *sd,const char *name,int tick);
 
+	int (*calc_pvprank_sub) (struct block_list *bl, va_list ap);
 	int (*calc_pvprank) (struct map_session_data *sd);
 	int (*calc_pvprank_timer) (int tid, int64 tick, int id, intptr_t data);
 

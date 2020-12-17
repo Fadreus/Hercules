@@ -304,67 +304,6 @@
 - `bc_blue`: 16
 - `bc_woe`: 32
 
-### Mapflags
-
-- `mf_nomemo`: 0
-- `mf_noteleport`: 1
-- `mf_nosave`: 2
-- `mf_nobranch`: 3
-- `mf_nopenalty`: 4
-- `mf_nozenypenalty`: 5
-- `mf_pvp`: 6
-- `mf_pvp_noparty`: 7
-- `mf_pvp_noguild`: 8
-- `mf_gvg`: 9
-- `mf_gvg_noparty`: 10
-- `mf_notrade`: 11
-- `mf_noskill`: 12
-- `mf_nowarp`: 13
-- `mf_partylock`: 14
-- `mf_noicewall`: 15
-- `mf_snow`: 16
-- `mf_fog`: 17
-- `mf_sakura`: 18
-- `mf_leaves`: 19
-- `mf_clouds`: 23
-- `mf_clouds2`: 24
-- `mf_fireworks`: 25
-- `mf_gvg_castle`: 26
-- `mf_gvg_dungeon`: 27
-- `mf_nightenabled`: 28
-- `mf_nobaseexp`: 29
-- `mf_nojobexp`: 30
-- `mf_nomobloot`: 31
-- `mf_nomvploot`: 32
-- `mf_noreturn`: 33
-- `mf_nowarpto`: 34
-- `mf_nightmaredrop`: 35
-- `mf_zone`: 36
-- `mf_nocommand`: 37
-- `mf_nodrop`: 38
-- `mf_jexp`: 39
-- `mf_bexp`: 40
-- `mf_novending`: 41
-- `mf_loadevent`: 42
-- `mf_nochat`: 43
-- `mf_noexppenalty`: 44
-- `mf_guildlock`: 45
-- `mf_town`: 46
-- `mf_autotrade`: 47
-- `mf_allowks`: 48
-- `mf_monster_noteleport`: 49
-- `mf_pvp_nocalcrank`: 50
-- `mf_battleground`: 51
-- `mf_reset`: 52
-- `mf_notomb`: 53
-- `mf_nocashshop`: 54
-- `mf_noautoloot`: 55
-- `mf_noviewid`: 56
-- `mf_pairship_startable`: 57
-- `mf_pairship_endable`: 58
-- `mf_nostorage`: 59
-- `mf_nogstorage`: 60
-
 ### Cell Properties
 
 - `cell_walkable`: 0
@@ -381,6 +320,7 @@
 
 ### Cell checks
 
+- `cell_gettype`: 0
 - `cell_chkwall`: 1
 - `cell_chkwater`: 2
 - `cell_chkcliff`: 3
@@ -388,6 +328,7 @@
 - `cell_chkreach`: 5
 - `cell_chknopass`: 6
 - `cell_chknoreach`: 7
+- `cell_chkstack`: 8
 - `cell_chknpc`: 9
 - `cell_chkbasilica`: 10
 - `cell_chklandprotector`: 11
@@ -575,6 +516,8 @@
 - `bSetMDefRace`: 2060
 - `bAddRaceTolerance`: 2061
 - `bAddMaxWeight`: 2062
+- `bSubDefEle`: 2063
+- `bMagicSubDefEle`: 2064
 
 ### Equip index
 
@@ -3604,7 +3547,39 @@
 - `4_F_EINRESERCHER`: 10339
 - `4_F_REINDEER`: 10340
 - `4_PIGOCTO`: 10341
+- `4_ORK_HERO`: 10342
 - `4_JP_16TH`: 10343
+- `4_EP17_MASTER_A`: 10344
+- `4_EP17_BASIC_B`: 10345
+- `4_EP17_GUARD_B`: 10346
+- `4_EP17_BASIC_B_NG`: 10347
+- `4_EP17_GUARD_B_NG`: 10348
+- `4_EP17_SWEETY`: 10349
+- `4_EP17_BOY_A`: 10350
+- `4_EP17_BOY_B`: 10351
+- `4_EP17_TAMARIN`: 10352
+- `4_EP17_SCISSORE`: 10353
+- `4_EP17_TABLET`: 10354
+- `4_EP17_BUCKETS`: 10355
+- `4_EP17_CLEANER`: 10356
+- `4_EP17_BASKET`: 10357
+- `4_EP17_BROKENBETA`: 10358
+- `4_EP17_CLEANER_W`: 10359
+- `4_EP17_MERMAID`: 10360
+- `4_JP_AB_NPC_009`: 10361
+- `4_JP_AB_NPC_010`: 10362
+- `4_4JOB_SILLA`: 10364
+- `4_4JOB_MAGGI`: 10365
+- `4_4JOB_ROBIN`: 10366
+- `4_4JOB_ROBIN_DRUNK`: 10367
+- `4_4JOB_LETICIA`: 10368
+- `4_4JOB_SERANG`: 10369
+- `4_4JOB_EINHAR`: 10370
+- `4_4JOB_SEALSTONE`: 10371
+- `4_4JOB_PHANTOMBOOK1`: 10372
+- `4_4JOB_PHANTOMBOOK2`: 10373
+- `4_4JOB_PHANTOMBOOK3`: 10374
+- `4_VENDING_MACHINE2`: 10375
 
 ### Mercenary IDs
 
@@ -3655,7 +3630,7 @@
 - `MER_SWORDMAN09`: 6045
 - `MER_SWORDMAN10`: 6046
 
-### checkquest
+### questprogress
 
 - `HAVEQUEST`: 0
 - `PLAYTIME`: 1
@@ -3941,8 +3916,49 @@
 - `HAT_EF_SUBJECT_AURA_RED`: 84
 - `HAT_EF_C_SHINING_ANGEL_WING`: 85
 - `HAT_EF_MAGIC_STAR_TW`: 86
-- `HAT_DIGITAL_SPACE`: 87
+- `HAT_DIGITAL_SPACE`: 87 **(DEPRECATED)**
+- `HAT_EF_DIGITAL_SPACE`: 87
 - `HAT_EF_SLEIPNIR`: 88
+- `HAT_EF_C_MAPLE_WHICH_FALLS_RD`: 89
+- `HAT_EF_MAGICCIRCLERAINBOW`: 90
+- `HAT_EF_SNOWFLAKE_TIARA`: 91
+- `HAT_EF_MIDGARTS_GLORY`: 92
+- `HAT_EF_LEVEL99_TIGER`: 93
+- `HAT_EF_LEVEL160_TIGER`: 94
+- `HAT_EF_FLUFFYWING`: 95
+- `HAT_EF_C_GHOST_EFFECT`: 96
+- `HAT_EF_C_POPPING_PORING_AURA`: 97
+- `HAT_EF_RESONATETAEGO`: 98
+- `HAT_EF_99LV_RUNE_RED`: 99
+- `HAT_EF_99LV_ROYAL_GUARD_BLUE`: 100
+- `HAT_EF_99LV_WARLOCK_VIOLET`: 101
+- `HAT_EF_99LV_SORCERER_LBLUE`: 102
+- `HAT_EF_99LV_RANGER_GREEN`: 103
+- `HAT_EF_99LV_MINSTREL_PINK`: 104
+- `HAT_EF_99LV_ARCHBISHOP_WHITE`: 105
+- `HAT_EF_99LV_GUILL_SILVER`: 106
+- `HAT_EF_99LV_SHADOWC_BLACK`: 107
+- `HAT_EF_99LV_MECHANIC_GOLD`: 108
+- `HAT_EF_99LV_GENETIC_YGREEN`: 109
+- `HAT_EF_160LV_RUNE_RED`: 110
+- `HAT_EF_160LV_ROYAL_G_BLUE`: 111
+- `HAT_EF_160LV_WARLOCK_VIOLET`: 112
+- `HAT_EF_160LV_SORCERER_LBLUE`: 113
+- `HAT_EF_160LV_RANGER_GREEN`: 114
+- `HAT_EF_160LV_MINSTREL_PINK`: 115
+- `HAT_EF_160LV_ARCHB_WHITE`: 116
+- `HAT_EF_160LV_GUILL_SILVER`: 117
+- `HAT_EF_160LV_SHADOWC_BLACK`: 118
+- `HAT_EF_160LV_MECHANIC_GOLD`: 119
+- `HAT_EF_160LV_GENETIC_YGREEN`: 120
+- `HAT_EF_WATER_BELOW3`: 121
+- `HAT_EF_WATER_BELOW4`: 122
+- `HAT_EF_C_VALKYRIE_WING`: 123
+- `HAT_EF_2019RTC_CELEAURA_TW`: 124
+- `HAT_EF_2019RTC1ST_TW`: 125
+- `HAT_EF_2019RTC2ST_TW`: 126
+- `HAT_EF_2019RTC3ST_TW`: 127
+- `HAT_EF_CONS_OF_WIND`: 128
 
 ### Achievement Types
 
@@ -4664,6 +4680,7 @@
 ### Server defines
 
 - `PACKETVER`: 20190530
+- `HERCULES_VERSION`: 202011160
 - `MAX_LEVEL`: 175
 - `MAX_STORAGE`: 600
 - `MAX_GUILD_STORAGE`: 600
@@ -5009,7 +5026,7 @@
 
 ### getmercinfo options
 
-- `MERCINFO_ID,`: 0
+- `MERCINFO_ID`: 0
 - `MERCINFO_CLASS`: 1
 - `MERCINFO_NAME`: 2
 - `MERCINFO_FAITH`: 3
@@ -5093,6 +5110,7 @@
 - `MSC_MASTERATTACKED`: 20
 - `MSC_ALCHEMIST`: 21
 - `MSC_SPAWN`: 22
+- `MSC_MAGICATTACKED`: 23
 
 ### monster skill targets
 
@@ -5130,6 +5148,18 @@
 - `PCBLOCK_COMMANDS`: 128
 - `PCBLOCK_NPC`: 256
 
+### NPC item action constants
+
+- `ITEMENABLEDNPC_NONE`: 0
+- `ITEMENABLEDNPC_EQUIP`: 1
+- `ITEMENABLEDNPC_CONSUME`: 2
+
+### NPC allowed skill use constants
+
+- `SKILLENABLEDNPC_NONE`: 0
+- `SKILLENABLEDNPC_SELF`: 1
+- `SKILLENABLEDNPC_ALL`: 2
+
 ### private airship responds
 
 - `P_AIRSHIP_NONE`: 0
@@ -5138,6 +5168,12 @@
 - `P_AIRSHIP_INVALID_END_MAP`: 3
 - `P_AIRSHIP_ITEM_NOT_ENOUGH`: 2
 - `P_AIRSHIP_ITEM_INVALID`: 5
+
+### player allowed actions when dead
+
+- `PCALLOWACTION_NONE`: 0
+- `PCALLOWACTION_TRADE`: 1
+- `PCALLOWACTION_CHAT`: 2
 
 ### questinfo types
 
@@ -5304,6 +5340,72 @@
 - `IBT_GUILD`: 2
 - `IBT_PARTY`: 3
 - `IBT_CHARACTER`: 4
+
+### Mapflags
+
+- `MF_NOMEMO`: 0
+- `MF_NOTELEPORT`: 1
+- `MF_NOSAVE`: 2
+- `MF_NOBRANCH`: 3
+- `MF_NOPENALTY`: 4
+- `MF_NOZENYPENALTY`: 5
+- `MF_PVP`: 6
+- `MF_PVP_NOPARTY`: 7
+- `MF_PVP_NOGUILD`: 8
+- `MF_GVG`: 9
+- `MF_GVG_NOPARTY`: 10
+- `MF_NOTRADE`: 11
+- `MF_NOSKILL`: 12
+- `MF_NOWARP`: 13
+- `MF_PARTYLOCK`: 14
+- `MF_NOICEWALL`: 15
+- `MF_SNOW`: 16
+- `MF_FOG`: 17
+- `MF_SAKURA`: 18
+- `MF_LEAVES`: 19
+- `MF_CLOUDS`: 23
+- `MF_CLOUDS2`: 24
+- `MF_FIREWORKS`: 25
+- `MF_GVG_CASTLE`: 26
+- `MF_GVG_DUNGEON`: 27
+- `MF_NIGHTENABLED`: 28
+- `MF_NOBASEEXP`: 29
+- `MF_NOJOBEXP`: 30
+- `MF_NOMOBLOOT`: 31
+- `MF_NOMVPLOOT`: 32
+- `MF_NORETURN`: 33
+- `MF_NOWARPTO`: 34
+- `MF_NIGHTMAREDROP`: 35
+- `MF_ZONE`: 36
+- `MF_NOCOMMAND`: 37
+- `MF_NODROP`: 38
+- `MF_JEXP`: 39
+- `MF_BEXP`: 40
+- `MF_NOVENDING`: 41
+- `MF_LOADEVENT`: 42
+- `MF_NOCHAT`: 43
+- `MF_NOEXPPENALTY`: 44
+- `MF_GUILDLOCK`: 45
+- `MF_TOWN`: 46
+- `MF_AUTOTRADE`: 47
+- `MF_ALLOWKS`: 48
+- `MF_MONSTER_NOTELEPORT`: 49
+- `MF_PVP_NOCALCRANK`: 50
+- `MF_BATTLEGROUND`: 51
+- `MF_RESET`: 52
+- `MF_NOTOMB`: 53
+- `MF_NOCASHSHOP`: 54
+- `MF_NOAUTOLOOT`: 55
+- `MF_NOVIEWID`: 56
+- `MF_PAIRSHIP_STARTABLE`: 57
+- `MF_PAIRSHIP_ENDABLE`: 58
+- `MF_NOSTORAGE`: 59
+- `MF_NOGSTORAGE`: 60
+- `MF_NOPET`: 61
+- `MF_NOMAPCHANNELAUTOJOIN`: 62
+- `MF_NOKNOCKBACK`: 63
+- `MF_SRC4INSTANCE`: 64
+- `MF_CVC`: 65
 
 ### Renewal
 
@@ -9547,6 +9649,8 @@
 - `Svalinn_J`: 2188
 - `Mad_Bunny`: 2189
 - `Ancient_Shield_Of_Aeon`: 2190
+- `Rouban_Shield`: 2194
+- `Lian_Shield`: 2195
 - `Lapine_Shield`: 2198
 - `Ahura_Mazda`: 2199
 - `Sunglasses`: 2201
@@ -9939,8 +10043,10 @@
 - `Boss_Brownie_Manteau`: 2592
 - `Flow_Manteau`: 2593
 - `Wrapping_Manteau`: 2594
+- `Sombre_Manteau`: 2595
 - `Sharel_Manteau`: 2596
 - `Scarlet_Poncho`: 2597
+- `Ramor_Manteau`: 2598
 - `Goibnes_Shoulder_Arms_`: 2599
 - `Ring`: 2601
 - `Earring`: 2602
@@ -18076,11 +18182,14 @@
 - `C_Big_Foxtail`: 20584
 - `Fantastic_Aura`: 20600
 - `Egir_Manteau`: 20700
+- `Sol_Manteau`: 20701
 - `TE_Woe_Muffler`: 20702
 - `TE_Woe_Manteau`: 20703
 - `TE_Woe_Magic_Manteau`: 20704
+- `Lumiere_Manteau`: 20705
 - `Amistr_Bag`: 20706
 - `Kirin_Wing`: 20707
+- `Poison_Manteau`: 20708
 - `Mana_Manteau`: 20709
 - `Impr_Angels_Warmth`: 20710
 - `Manteau_Of_Diego`: 20711
@@ -18099,6 +18208,8 @@
 - `C_Rudra_Wing`: 20746
 - `Manteau_Of_Fallen`: 20748
 - `Manteau_Of_Fallen_`: 20749
+- `Rouban_Manteau`: 20750
+- `Lian_Robe`: 20753
 - `Aegir_Cloak`: 20756
 - `Wing_Of_Happiness`: 20757
 - `Wing_Of_Happiness_`: 20758
@@ -18191,8 +18302,16 @@
 - `Beach_Sandals`: 22045
 - `Airship_Boots`: 22046
 - `Felock_Boots`: 22047
+- `Sombre_Shoes`: 22048
+- `Sol_Shoes`: 22049
+- `Sharel_Shoes`: 22055
+- `Flow_Shoes`: 22057
 - `Aegir_Shoes`: 22059
+- `Lumiere_Shoes`: 22061
+- `Rouban_Shoes`: 22063
+- `Poison_Shoes`: 22065
 - `Witch_Shoes`: 22067
+- `Lian_Shoes`: 22069
 - `Wooden_Slipper`: 22076
 - `Red_Eco_Friendly_Shoes`: 22077
 - `Private_Doram_Shoes`: 22083

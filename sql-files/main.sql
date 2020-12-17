@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS `account_data` (
   `base_exp` SMALLINT UNSIGNED NOT NULL DEFAULT '100',
   `base_drop` SMALLINT UNSIGNED NOT NULL DEFAULT '100',
   `base_death` SMALLINT UNSIGNED NOT NULL DEFAULT '100',
+  `attendance_count` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `attendance_timer` BIGINT NULL DEFAULT '0',
   PRIMARY KEY (`account_id`)
 ) ENGINE=MyISAM;
 
@@ -51,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `acc_reg_str_db` (
   `account_id` INT UNSIGNED NOT NULL DEFAULT '0',
   `key` VARCHAR(32) BINARY NOT NULL DEFAULT '',
   `index` INT UNSIGNED NOT NULL DEFAULT '0',
-  `value` VARCHAR(254) NOT NULL DEFAULT '0',
+  `value` VARCHAR(255) NOT NULL DEFAULT '0',
   PRIMARY KEY (`account_id`,`key`,`index`),
   KEY `account_id` (`account_id`)
 ) ENGINE=MyISAM;
@@ -242,8 +244,6 @@ CREATE TABLE IF NOT EXISTS `char` (
   `sex` ENUM('M','F','U') NOT NULL DEFAULT 'U',
   `hotkey_rowshift` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `hotkey_rowshift2` TINYINT UNSIGNED NOT NULL DEFAULT '0',
-  `attendance_count` TINYINT UNSIGNED NOT NULL DEFAULT '0',
-  `attendance_timer` BIGINT NULL DEFAULT '0',
   `title_id` INT UNSIGNED NOT NULL DEFAULT '0',
   `inventory_size` INT UNSIGNED NOT NULL DEFAULT '100',
   PRIMARY KEY (`char_id`),
@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `char_reg_str_db` (
   `char_id` INT UNSIGNED NOT NULL DEFAULT '0',
   `key` VARCHAR(32) BINARY NOT NULL DEFAULT '',
   `index` INT UNSIGNED NOT NULL DEFAULT '0',
-  `value` VARCHAR(254) NOT NULL DEFAULT '0',
+  `value` VARCHAR(255) NOT NULL DEFAULT '0',
   PRIMARY KEY (`char_id`,`key`,`index`),
   KEY `char_id` (`char_id`)
 ) ENGINE=MyISAM;
@@ -372,7 +372,7 @@ CREATE TABLE IF NOT EXISTS `global_acc_reg_str_db` (
   `account_id` INT UNSIGNED NOT NULL DEFAULT '0',
   `key` VARCHAR(32) BINARY NOT NULL DEFAULT '',
   `index` INT UNSIGNED NOT NULL DEFAULT '0',
-  `value` VARCHAR(254) NOT NULL DEFAULT '0',
+  `value` VARCHAR(255) NOT NULL DEFAULT '0',
   PRIMARY KEY (`account_id`,`key`,`index`),
   KEY `account_id` (`account_id`)
 ) ENGINE=MyISAM;
@@ -655,14 +655,25 @@ CREATE TABLE IF NOT EXISTS `login` (
 INSERT IGNORE INTO `login` (`account_id`, `userid`, `user_pass`, `sex`, `email`) VALUES ('1', 's1', 'p1', 'S','athena@athena.com');
 
 --
--- Table structure for table `mapreg`
+-- Table structure for table `map_reg_num_db`
 --
 
-CREATE TABLE IF NOT EXISTS `mapreg` (
-  `varname` VARCHAR(32) BINARY NOT NULL,
+CREATE TABLE IF NOT EXISTS `map_reg_num_db` (
+  `key` VARCHAR(32) BINARY NOT NULL DEFAULT '',
   `index` INT UNSIGNED NOT NULL DEFAULT '0',
-  `value` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`varname`,`index`)
+  `value` INT NOT NULL DEFAULT '0',
+  PRIMARY KEY (`key`, `index`)
+) ENGINE=MyISAM;
+
+--
+-- Table structure for table `map_reg_str_db`
+--
+
+CREATE TABLE IF NOT EXISTS `map_reg_str_db` (
+  `key` VARCHAR(32) BINARY NOT NULL DEFAULT '',
+  `index` INT UNSIGNED NOT NULL DEFAULT '0',
+  `value` VARCHAR(255) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`key`, `index`)
 ) ENGINE=MyISAM;
 
 --
@@ -938,6 +949,9 @@ INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1574463539); -- 2019-11-2
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1579817630); -- 2020-01-24--01-09.sql
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1584838560); -- 2020-03-22--01-56.sql
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1584842940); -- 2020-03-22--03-09.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1588301040); -- 2020-05-01--04-44.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1589145060); -- 2020-05-10--23-11.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1597467600); -- 2020-08-15--13-00.sql
 
 --
 -- Table structure for table `storage`
@@ -1038,39 +1052,39 @@ CREATE TABLE IF NOT EXISTS `npc_barter_data` (
 
 CREATE TABLE IF NOT EXISTS `npc_expanded_barter_data` (
   `name` VARCHAR(24) NOT NULL DEFAULT '',
-  `itemId` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `amount` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `zeny` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyId1` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount1` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine1` INT(11) NOT NULL DEFAULT '0',
-  `currencyId2` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount2` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine2` INT(11) NOT NULL DEFAULT '0',
-  `currencyId3` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount3` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine3` INT(11) NOT NULL DEFAULT '0',
-  `currencyId4` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount4` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine4` INT(11) NOT NULL DEFAULT '0',
-  `currencyId5` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount5` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine5` INT(11) NOT NULL DEFAULT '0',
-  `currencyId6` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount6` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine6` INT(11) NOT NULL DEFAULT '0',
-  `currencyId7` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount7` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine7` INT(11) NOT NULL DEFAULT '0',
-  `currencyId8` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount8` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine8` INT(11) NOT NULL DEFAULT '0',
-  `currencyId9` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount9` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine9` INT(11) NOT NULL DEFAULT '0',
-  `currencyId10` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyAmount10` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-  `currencyRefine10` INT(11) NOT NULL DEFAULT '0',
+  `itemId` INT UNSIGNED NOT NULL DEFAULT '0',
+  `amount` INT UNSIGNED NOT NULL DEFAULT '0',
+  `zeny` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyId1` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount1` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine1` INT NOT NULL DEFAULT '0',
+  `currencyId2` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount2` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine2` INT NOT NULL DEFAULT '0',
+  `currencyId3` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount3` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine3` INT NOT NULL DEFAULT '0',
+  `currencyId4` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount4` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine4` INT NOT NULL DEFAULT '0',
+  `currencyId5` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount5` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine5` INT NOT NULL DEFAULT '0',
+  `currencyId6` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount6` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine6` INT NOT NULL DEFAULT '0',
+  `currencyId7` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount7` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine7` INT NOT NULL DEFAULT '0',
+  `currencyId8` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount8` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine8` INT NOT NULL DEFAULT '0',
+  `currencyId9` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount9` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine9` INT NOT NULL DEFAULT '0',
+  `currencyId10` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyAmount10` INT UNSIGNED NOT NULL DEFAULT '0',
+  `currencyRefine10` INT NOT NULL DEFAULT '0',
   PRIMARY KEY (`name`, `itemid`, `zeny`,
     `currencyId1`, `currencyAmount1`, `currencyRefine1`,
     `currencyId2`, `currencyAmount2`, `currencyRefine2`,
