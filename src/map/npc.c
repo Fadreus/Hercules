@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -1028,6 +1028,9 @@ static int npc_touch_areanpc(struct map_session_data *sd, int16 m, int16 x, int1
 			xs=map->list[m].npc[i]->u.scr.xs;
 			ys=map->list[m].npc[i]->u.scr.ys;
 			break;
+		case CASHSHOP:
+		case SHOP:
+		case TOMB:
 		default:
 			continue;
 		}
@@ -1080,6 +1083,10 @@ static int npc_touch_areanpc(struct map_session_data *sd, int16 m, int16 x, int1
 				sd->areanpc_id = map->list[m].npc[i]->bl.id;
 				npc->click(sd,map->list[m].npc[i]);
 			}
+			break;
+		case CASHSHOP:
+		case SHOP:
+		case TOMB:
 			break;
 	}
 	return 0;
@@ -1137,6 +1144,9 @@ static int npc_touch_areanpc2(struct mob_data *md)
 				xs = map->list[m].npc[i]->u.scr.xs;
 				ys = map->list[m].npc[i]->u.scr.ys;
 				break;
+			case CASHSHOP:
+			case SHOP:
+			case TOMB:
 			default:
 				continue; // Keep Searching
 		}
@@ -1161,6 +1171,10 @@ static int npc_touch_areanpc2(struct mob_data *md)
 					id = md->bl.id; // Stores Unique ID
 					script->run_npc(ev->nd->u.scr.script, ev->pos, md->bl.id, ev->nd->bl.id);
 					if( map->id2md(id) == NULL ) return 1; // Not Warped, but killed
+					break;
+				case CASHSHOP:
+				case SHOP:
+				case TOMB:
 					break;
 			}
 
@@ -1217,6 +1231,9 @@ static int npc_check_areanpc(int flag, int16 m, int16 x, int16 y, int16 range)
 				xs=map->list[m].npc[i]->u.scr.xs;
 				ys=map->list[m].npc[i]->u.scr.ys;
 				break;
+			case CASHSHOP:
+			case SHOP:
+			case TOMB:
 			default:
 				continue;
 		}
@@ -1363,6 +1380,8 @@ static int npc_click(struct map_session_data *sd, struct npc_data *nd)
 			break;
 		case TOMB:
 			npc->run_tomb(sd,nd);
+			break;
+		case WARP:
 			break;
 	}
 
@@ -2899,7 +2918,7 @@ static int npc_selllist(struct map_session_data *sd, struct itemlist *item_list)
 		int idx = entry->id;
 
 		if (sd->inventory_data[idx]->type == IT_PETEGG && sd->status.inventory[idx].card[0] == CARD0_PET) {
-			if (pet->search_petDB_index(sd->status.inventory[idx].nameid, PET_EGG) >= 0)
+			if (pet->search_petDB_index(sd->status.inventory[idx].nameid, PET_EGG) != INDEX_NOT_FOUND)
 				intif->delete_petdata(MakeDWord(sd->status.inventory[idx].card[1], sd->status.inventory[idx].card[2]));
 		}
 
@@ -4246,6 +4265,9 @@ static int npc_duplicate4instance(struct npc_data *snd, int16 m)
 			return 1;
 		}
 		break;
+	case CASHSHOP:
+	case SHOP:
+	case TOMB:
 	default: // Other types have no xs/ys
 		break;
 	}
@@ -4282,6 +4304,9 @@ static void npc_setcells(struct npc_data *nd)
 			xs = nd->u.scr.xs;
 			ys = nd->u.scr.ys;
 			break;
+		case CASHSHOP:
+		case SHOP:
+		case TOMB:
 		default:
 			return; // Other types doesn't have touch area
 	}
@@ -4331,6 +4356,9 @@ static void npc_unsetcells(struct npc_data *nd)
 			xs = nd->u.scr.xs;
 			ys = nd->u.scr.ys;
 			break;
+		case CASHSHOP:
+		case SHOP:
+		case TOMB:
 		default:
 			return; // Other types doesn't have touch area
 	}
@@ -5686,6 +5714,16 @@ static int npc_reload(void)
 		case BL_MOB:
 			unit->free(bl, CLR_OUTSIGHT);
 			break;
+		case BL_NUL:
+		case BL_PC:
+		case BL_PET:
+		case BL_HOM:
+		case BL_MER:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_CHAT:
+		case BL_ELEM:
+		case BL_ALL:
 		default:
 			break;
 		}

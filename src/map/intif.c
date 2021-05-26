@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -1259,7 +1259,7 @@ static void intif_parse_GuildBasicInfoChanged(int fd)
 {
 	//int len = RFIFOW(fd,2) - 10;
 	int guild_id = RFIFOL(fd,4);
-	int type = RFIFOW(fd,8);
+	const enum guild_basic_info type = RFIFOW(fd, 8);
 	//void* data = RFIFOP(fd,10);
 
 	struct guild* g = guild->search(guild_id);
@@ -1298,7 +1298,7 @@ static void intif_parse_GuildMemberInfoChanged(int fd)
 	int guild_id = RFIFOL(fd,4);
 	int account_id = RFIFOL(fd,8);
 	int char_id = RFIFOL(fd,12);
-	int type = RFIFOW(fd,16);
+	enum guild_member_info type = RFIFOW(fd, 16);
 	//void* data = RFIFOP(fd,18);
 
 	struct guild* g;

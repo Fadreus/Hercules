@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -126,6 +126,8 @@ static const char *atcommand_msg(int msg_number)
 	if(atcommand->msg_table[0][msg_number] != NULL && atcommand->msg_table[0][msg_number][0] != '\0')
 		return atcommand->msg_table[0][msg_number];
 
+	ShowWarning("atcommand_msg: Invalid message number was specified: %d", msg_number);
+	Assert_report(0);
 	return "??";
 }
 
@@ -477,7 +479,7 @@ ACMD(mapmove)
 	if ((x || y) && map->getcell(m, &sd->bl, x, y, CELL_CHKNOPASS) && pc_get_group_level(sd) < battle_config.gm_ignore_warpable_area) {
 		//This is to prevent the pc->setpos call from printing an error.
 		clif->message(fd, msg_fd(fd,2));
-		if (!map->search_freecell(NULL, m, &x, &y, 10, 10, 1))
+		if (map->search_free_cell(NULL, m, &x, &y, 10, 10, SFC_XY_CENTER) != 0)
 			x = y = 0; //Invalid cell, use random spot.
 	}
 	if (map->list[m].flag.nowarpto && !pc_has_permission(sd, PC_PERM_WARP_ANYWHERE)) {
@@ -594,7 +596,7 @@ ACMD(jump)
 	if ((x || y) && map->getcell(sd->bl.m, &sd->bl, x, y, CELL_CHKNOPASS)) {
 		//This is to prevent the pc->setpos call from printing an error.
 		clif->message(fd, msg_fd(fd,2));
-		if (!map->search_freecell(NULL, sd->bl.m, &x, &y, 10, 10, 1))
+		if (map->search_free_cell(NULL, sd->bl.m, &x, &y, 10, 10, SFC_XY_CENTER) != 0)
 			x = y = 0; //Invalid cell, use random spot.
 	}
 
@@ -1016,7 +1018,7 @@ ACMD(jobchange)
 	 || job == JOB_WEDDING || job == JOB_XMAS || job == JOB_SUMMER
 	 || job == JOB_LORD_KNIGHT2 || job == JOB_PALADIN2
 	 || job == JOB_BABY_KNIGHT2 || job == JOB_BABY_CRUSADER2
-	 || job == JOB_STAR_GLADIATOR2
+	 || job == JOB_STAR_GLADIATOR2 || job == JOB_BABY_STAR_GLADIATOR2
 	 || (job >= JOB_RUNE_KNIGHT2 && job <= JOB_MECHANIC_T2)
 	 || (job >= JOB_BABY_RUNE2 && job <= JOB_BABY_MECHANIC2)
 	) {
@@ -1212,6 +1214,8 @@ ACMD(item)
 				clif->message(fd, msg_fd(fd, 1499)); //You can't add a guild bound item to a character without guild!
 				return false;
 			}
+			break;
+		case IBT_NONE:
 			break;
 		}
 	}
@@ -2131,7 +2135,7 @@ ACMD(monster)
 	range = (int)sqrt((float)number) +2; // calculation of an odd number (+ 4 area around)
 	for (i = 0; i < number; i++) {
 		int k;
-		map->search_freecell(&sd->bl, 0, &mx,  &my, range, range, 0);
+		map->search_free_cell(&sd->bl, 0, &mx,  &my, range, range, SFC_DEFAULT);
 		k = mob->once_spawn(sd, sd->bl.m, mx, my, name, mob_id, 1, eventname, size, AI_NONE|(mob_id == MOBID_EMPELIUM?0x200:0x0));
 		count += (k != 0) ? 1 : 0;
 	}
@@ -3812,37 +3816,41 @@ ACMD(reloadbattleconf)
 	if (prev_config.feature_roulette == 0 && battle_config.feature_roulette == 1 && !clif->parse_roulette_db())
 		battle_config.feature_roulette = 0;
 
-	if( prev_config.item_rate_mvp          != battle_config.item_rate_mvp
-	   ||  prev_config.item_rate_common       != battle_config.item_rate_common
-	   ||  prev_config.item_rate_common_boss  != battle_config.item_rate_common_boss
-	   ||  prev_config.item_rate_card         != battle_config.item_rate_card
-	   ||  prev_config.item_rate_card_boss    != battle_config.item_rate_card_boss
-	   ||  prev_config.item_rate_equip        != battle_config.item_rate_equip
-	   ||  prev_config.item_rate_equip_boss   != battle_config.item_rate_equip_boss
-	   ||  prev_config.item_rate_heal         != battle_config.item_rate_heal
-	   ||  prev_config.item_rate_heal_boss    != battle_config.item_rate_heal_boss
-	   ||  prev_config.item_rate_use          != battle_config.item_rate_use
-	   ||  prev_config.item_rate_use_boss     != battle_config.item_rate_use_boss
-	   ||  prev_config.item_rate_treasure     != battle_config.item_rate_treasure
-	   ||  prev_config.item_rate_adddrop      != battle_config.item_rate_adddrop
-	   ||  prev_config.logarithmic_drops      != battle_config.logarithmic_drops
-	   ||  prev_config.item_drop_common_min   != battle_config.item_drop_common_min
-	   ||  prev_config.item_drop_common_max   != battle_config.item_drop_common_max
-	   ||  prev_config.item_drop_card_min     != battle_config.item_drop_card_min
-	   ||  prev_config.item_drop_card_max     != battle_config.item_drop_card_max
-	   ||  prev_config.item_drop_equip_min    != battle_config.item_drop_equip_min
-	   ||  prev_config.item_drop_equip_max    != battle_config.item_drop_equip_max
-	   ||  prev_config.item_drop_mvp_min      != battle_config.item_drop_mvp_min
-	   ||  prev_config.item_drop_mvp_max      != battle_config.item_drop_mvp_max
-	   ||  prev_config.item_drop_heal_min     != battle_config.item_drop_heal_min
-	   ||  prev_config.item_drop_heal_max     != battle_config.item_drop_heal_max
-	   ||  prev_config.item_drop_use_min      != battle_config.item_drop_use_min
-	   ||  prev_config.item_drop_use_max      != battle_config.item_drop_use_max
-	   ||  prev_config.item_drop_treasure_min != battle_config.item_drop_treasure_min
-	   ||  prev_config.item_drop_treasure_max != battle_config.item_drop_treasure_max
-	   ||  prev_config.base_exp_rate          != battle_config.base_exp_rate
-	   ||  prev_config.job_exp_rate           != battle_config.job_exp_rate
+	if( prev_config.item_rate_mvp              != battle_config.item_rate_mvp
+	   ||  prev_config.item_rate_common        != battle_config.item_rate_common
+	   ||  prev_config.item_rate_common_boss   != battle_config.item_rate_common_boss
+	   ||  prev_config.item_rate_card          != battle_config.item_rate_card
+	   ||  prev_config.item_rate_card_boss     != battle_config.item_rate_card_boss
+	   ||  prev_config.item_rate_equip         != battle_config.item_rate_equip
+	   ||  prev_config.item_rate_equip_boss    != battle_config.item_rate_equip_boss
+	   ||  prev_config.item_rate_heal          != battle_config.item_rate_heal
+	   ||  prev_config.item_rate_heal_boss     != battle_config.item_rate_heal_boss
+	   ||  prev_config.item_rate_use           != battle_config.item_rate_use
+	   ||  prev_config.item_rate_use_boss      != battle_config.item_rate_use_boss
+	   ||  prev_config.item_rate_treasure      != battle_config.item_rate_treasure
+	   ||  prev_config.item_rate_adddrop       != battle_config.item_rate_adddrop
+	   ||  prev_config.item_rate_add_chain     != battle_config.item_rate_add_chain
+	   ||  prev_config.logarithmic_drops       != battle_config.logarithmic_drops
+	   ||  prev_config.item_drop_common_min    != battle_config.item_drop_common_min
+	   ||  prev_config.item_drop_common_max    != battle_config.item_drop_common_max
+	   ||  prev_config.item_drop_card_min      != battle_config.item_drop_card_min
+	   ||  prev_config.item_drop_card_max      != battle_config.item_drop_card_max
+	   ||  prev_config.item_drop_equip_min     != battle_config.item_drop_equip_min
+	   ||  prev_config.item_drop_equip_max     != battle_config.item_drop_equip_max
+	   ||  prev_config.item_drop_mvp_min       != battle_config.item_drop_mvp_min
+	   ||  prev_config.item_drop_mvp_max       != battle_config.item_drop_mvp_max
+	   ||  prev_config.item_drop_add_chain_min != battle_config.item_drop_add_chain_min
+	   ||  prev_config.item_drop_add_chain_max != battle_config.item_drop_add_chain_max
+	   ||  prev_config.item_drop_heal_min      != battle_config.item_drop_heal_min
+	   ||  prev_config.item_drop_heal_max      != battle_config.item_drop_heal_max
+	   ||  prev_config.item_drop_use_min       != battle_config.item_drop_use_min
+	   ||  prev_config.item_drop_use_max       != battle_config.item_drop_use_max
+	   ||  prev_config.item_drop_treasure_min  != battle_config.item_drop_treasure_min
+	   ||  prev_config.item_drop_treasure_max  != battle_config.item_drop_treasure_max
+	   ||  prev_config.base_exp_rate           != battle_config.base_exp_rate
+	   ||  prev_config.job_exp_rate            != battle_config.job_exp_rate
 	) { // Exp or Drop rates changed.
+		itemdb->read_chains();
 		mob->reload(); //Needed as well so rate changes take effect.
 		chrif->ragsrvinfo(battle_config.base_exp_rate, battle_config.job_exp_rate, battle_config.item_rate_common);
 	}
@@ -4160,9 +4168,11 @@ ACMD(mapinfo)
 			case UNIT_DIR_NORTHEAST:
 				strcpy(direction, msg_fd(fd, 1108)); // North East
 				break;
-			case 9: // is this actually used? [skyleo]
+			case UNIT_DIR_9: // is this actually used? [skyleo]
 				strcpy(direction, msg_fd(fd, 1109)); // North
 				break;
+			case UNIT_DIR_UNDEFINED:
+			case UNIT_DIR_MAX:
 			default:
 				strcpy(direction, msg_fd(fd, 1110)); // Unknown
 				break;
@@ -4541,9 +4551,9 @@ ACMD(unloadnpc)
 		clif->message(fd, msg_fd(fd, 1133)); /// Please enter a NPC name (Usage: @unloadnpc <NPC_name> {<flag>}).
 		return false;
 	}
-	
+
 	struct npc_data *nd = npc->name2id(npc_name);
-	
+
 	if (nd == NULL) {
 		clif->message(fd, msg_fd(fd, 111)); /// This NPC doesn't exist.
 		return false;
@@ -5461,14 +5471,14 @@ ACMD(dropall)
 				ShowWarning("Non-existant item %d on dropall list (account_id: %d, char_id: %d)\n", sd->status.inventory[i].nameid, sd->status.account_id, sd->status.char_id);
 				continue;
 			}
-			
+
 			if (!pc->candrop(sd, &sd->status.inventory[i]))
 				continue;
-			
+
 			if (type == -1 || type == item_data->type) {
 				if (sd->status.inventory[i].equip != 0)
 					pc->unequipitem(sd, i, PCUNEQUIPITEM_RECALC | PCUNEQUIPITEM_FORCE);
-				
+
 				int amount = sd->status.inventory[i].amount;
 				if (pc->dropitem(sd, i, amount) != 0)
 					count += amount;
@@ -7211,25 +7221,11 @@ ACMD(homlevel)
 		return false;
 	}
 
-	switch( htype ) {
-		case HT_REG:
-		case HT_EVO:
-			if( hd->homunculus.level >= battle_config.hom_max_level ) {
-				snprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1478), hd->homunculus.level); // Homun reached its maximum level of '%d'
-				clif->message(fd, atcmd_output);
-				return true;
-			}
-			break;
-		case HT_S:
-			if( hd->homunculus.level >= battle_config.hom_S_max_level ) {
-				snprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1478), hd->homunculus.level); // Homun reached its maximum level of '%d'
-				clif->message(fd, atcmd_output);
-				return true;
-			}
-			break;
-		default:
-			ShowError("atcommand_homlevel: unknown htype '%d'\n",htype);
-			return false;
+
+	if (hd->homunculus.level >= homun->get_max_level(hd)) {
+		snprintf(atcmd_output, sizeof(atcmd_output), msg_fd(fd,1478), hd->homunculus.level); // Homun reached its maximum level of '%d'
+		clif->message(fd, atcmd_output);
+		return true;
 	}
 
 	do {
@@ -9128,7 +9124,9 @@ ACMD(set)
 		}
 	}
 
-	switch( data->type ) {
+	PRAGMA_GCC46(GCC diagnostic push)
+	PRAGMA_GCC46(GCC diagnostic ignored "-Wswitch-enum")
+	switch (data->type) {
 		case C_INT:
 			safesnprintf(atcmd_output, sizeof(atcmd_output),msg_fd(fd,1373),reg,data->u.num); // %s value is now :%d
 			break;
@@ -9142,6 +9140,7 @@ ACMD(set)
 			safesnprintf(atcmd_output, sizeof(atcmd_output),msg_fd(fd,1376),reg,data->type); // %s data type is not supported :%u
 			break;
 	}
+	PRAGMA_GCC46(GCC diagnostic pop)
 	clif->message(fd, atcmd_output);
 
 	aFree(data);

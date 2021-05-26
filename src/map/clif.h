@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -596,10 +596,15 @@ enum zc_ui_types {
 * Client to server open ui request types (packet 0x0a68)
 **/
 enum cz_ui_types {
+#if PACKETVER >= 20150128
 	CZ_STYLIST_UI = 1,
 	CZ_MACRO_REGISTER_UI = 2,
 	CZ_MACRO_DETECTOR_UI = 3,
-	CZ_ATTENDANCE_UI = 5
+#endif
+#if PACKETVER >= 20171122
+	CZ_ATTENDANCE_UI = 5,
+#endif
+	cz_ui_unused  // for avoid compilation errors
 };
 
 /**
@@ -640,6 +645,23 @@ enum siege_teleport_result {
 	SIEGE_TP_SUCCESS = 0x0,
 	SIEGE_TP_NOT_ENOUGH_ZENY = 0x1,
 	SIEGE_TP_INVALID_MODE = 0x2
+};
+
+/** Client action types */
+enum action_type {
+	ACT_ATTACK,
+	ACT_ITEMPICKUP,
+	ACT_SIT,
+	ACT_STAND,
+	ACT_ATTACK_NOMOTION,
+	ACT_SPLASH,
+	ACT_SKILL,
+	ACT_ATTACK_REPEAT,
+	ACT_ATTACK_MULTIPLE,
+	ACT_ATTACK_MULTIPLE_NOMOTION,
+	ACT_ATTACK_CRITICAL,
+	ACT_ATTACK_LUCKY,
+	ACT_TOUCHSKILL
 };
 
 /**
@@ -856,7 +878,7 @@ struct clif_interface {
 	void (*blown) (struct block_list *bl);
 	void (*slide) (struct block_list *bl, int x, int y);
 	void (*fixpos) (struct block_list *bl);
-	void (*changelook) (struct block_list *bl,int type,int val);
+	void (*changelook) (struct block_list *bl, enum look type, int val);
 	void (*changetraplook) (struct block_list *bl,int val);
 	void (*refreshlook) (struct block_list *bl,int id,int type,int val,enum send_target target);
 	void (*sendlook) (struct block_list *bl, int id, int type, int val, int val2, enum send_target target);
@@ -1383,7 +1405,7 @@ struct clif_interface {
 	void (*pEmotion) (int fd, struct map_session_data *sd);
 	void (*pHowManyConnections) (int fd, struct map_session_data *sd);
 	void (*pActionRequest) (int fd, struct map_session_data *sd);
-	void (*pActionRequest_sub) (struct map_session_data *sd, int action_type, int target_id, int64 tick);
+	void (*pActionRequest_sub) (struct map_session_data *sd, enum action_type action_type, int target_id, int64 tick);
 	void (*pRestart) (int fd, struct map_session_data *sd);
 	void (*pWisMessage) (int fd, struct map_session_data* sd);
 	void (*pBroadcast) (int fd, struct map_session_data* sd);

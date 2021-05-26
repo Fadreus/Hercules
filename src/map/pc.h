@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -395,7 +395,7 @@ BEGIN_ZEROED_BLOCK; // this block will be globally zeroed at the beginning of st
 	struct {
 		int value;
 		int rate, tick;
-	} def_set_race[RC_MAX], mdef_set_race[RC_MAX];
+	} def_set_race[RC_MAX], mdef_set_race[RC_MAX], no_recover_state_race[RC_MAX];
 	struct {
 		int rate_mob; //!< Damage reduction rate against monster's defense element.
 		int rate_pc;  //!< Damage reduction rate against player's defense element.

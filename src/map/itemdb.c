@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -373,7 +373,7 @@ static struct itemdb_option *itemdb_option_exists(int idx)
 
 /// Returns human readable name for given item type.
 /// @param type Type id to retrieve name for ( IT_* ).
-static const char *itemdb_typename(int type)
+static const char *itemdb_typename(enum item_types type)
 {
 	switch(type)
 	{
@@ -388,6 +388,9 @@ static const char *itemdb_typename(int type)
 		case IT_AMMO:           return "Arrow/Ammunition";
 		case IT_DELAYCONSUME:   return "Delay-Consume Usable";
 		case IT_CASH:           return "Cash Usable";
+		case IT_UNKNOWN2:
+		case IT_MAX:
+		case IT_UNKNOWN:        return "Unknown Type";
 	}
 	return "Unknown Type";
 }
@@ -683,12 +686,23 @@ static struct item_data *itemdb_search(int nameid)
  *------------------------------------------*/
 static int itemdb_isequip(int nameid)
 {
-	int type=itemdb_type(nameid);
+	enum item_types type = itemdb_type(nameid);
 	switch (type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
 		case IT_AMMO:
 			return 1;
+		case IT_HEALING:
+		case IT_UNKNOWN:
+		case IT_USABLE:
+		case IT_ETC:
+		case IT_CARD:
+		case IT_PETEGG:
+		case IT_PETARMOR:
+		case IT_UNKNOWN2:
+		case IT_DELAYCONSUME:
+		case IT_CASH:
+		case IT_MAX:
 		default:
 			return 0;
 	}
@@ -700,7 +714,7 @@ static int itemdb_isequip(int nameid)
 static int itemdb_isequip2(struct item_data *data)
 {
 	nullpo_ret(data);
-	switch(data->type) {
+	switch (data->type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
 		case IT_AMMO:
@@ -715,13 +729,23 @@ static int itemdb_isequip2(struct item_data *data)
  *------------------------------------------*/
 static int itemdb_isstackable(int nameid)
 {
-	int type=itemdb_type(nameid);
-	switch(type) {
+	enum item_types type = itemdb_type(nameid);
+	switch (type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
 		case IT_PETEGG:
 		case IT_PETARMOR:
 			return 0;
+		case IT_HEALING:
+		case IT_UNKNOWN:
+		case IT_USABLE:
+		case IT_ETC:
+		case IT_CARD:
+		case IT_UNKNOWN2:
+		case IT_AMMO:
+		case IT_DELAYCONSUME:
+		case IT_CASH:
+		case IT_MAX:
 		default:
 			return 1;
 	}
@@ -733,12 +757,22 @@ static int itemdb_isstackable(int nameid)
 static int itemdb_isstackable2(struct item_data *data)
 {
 	nullpo_ret(data);
-	switch(data->type) {
+	switch (data->type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
 		case IT_PETEGG:
 		case IT_PETARMOR:
 			return 0;
+		case IT_HEALING:
+		case IT_UNKNOWN:
+		case IT_USABLE:
+		case IT_ETC:
+		case IT_CARD:
+		case IT_UNKNOWN2:
+		case IT_AMMO:
+		case IT_DELAYCONSUME:
+		case IT_CASH:
+		case IT_MAX:
 		default:
 			return 1;
 	}
@@ -818,12 +852,23 @@ static int itemdb_isrestricted(struct item *item, int gmlv, int gmlv2, int (*fun
  *------------------------------------------*/
 static int itemdb_isidentified(int nameid)
 {
-	int type=itemdb_type(nameid);
+	enum item_types type = itemdb_type(nameid);
 	switch (type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
 		case IT_PETARMOR:
 			return 0;
+		case IT_HEALING:
+		case IT_UNKNOWN:
+		case IT_USABLE:
+		case IT_ETC:
+		case IT_CARD:
+		case IT_PETEGG:
+		case IT_UNKNOWN2:
+		case IT_AMMO:
+		case IT_DELAYCONSUME:
+		case IT_CASH:
+		case IT_MAX:
 		default:
 			return 1;
 	}
@@ -1522,13 +1567,20 @@ static void itemdb_read_chains(void)
 			} else if( !( data = itemdb->name2id(itname) ) )
 				ShowWarning("itemdb_read_chains: unknown item '%s' in chain '%s'!\n",itname,name);
 
+			struct item_chain_entry *item = &itemdb->chains[count].items[c - 1];
+
 			if( prev )
-				prev->next = &itemdb->chains[count].items[c - 1];
+				prev->next = item;
 
-			itemdb->chains[count].items[c - 1].id = data ? data->nameid : 0;
-			itemdb->chains[count].items[c - 1].rate = data ? libconfig->setting_get_int(entry) : 0;
+			item->id = data ? data->nameid : 0;
 
-			prev = &itemdb->chains[count].items[c - 1];
+			int rate = data ? libconfig->setting_get_int(entry) : 0;
+			if (battle_config.item_rate_add_chain != 100)
+				rate = rate * battle_config.item_rate_add_chain / 100;
+
+			item->rate = cap_value(rate, battle_config.item_drop_add_chain_min, battle_config.item_drop_add_chain_max);
+
+			prev = item;
 		}
 
 		if( prev )
@@ -2568,7 +2620,7 @@ static void itemdb_read(bool minimal)
 	itemdb->other->foreach(itemdb->other, itemdb->addname_sub);
 
 	itemdb->read_options();
-	
+
 	if (minimal)
 		return;
 

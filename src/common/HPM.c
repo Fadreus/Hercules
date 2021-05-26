@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2020 Hercules Dev Team
+ * Copyright (C) 2013-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -222,6 +222,19 @@ static bool hplugin_data_store_validate(enum HPluginDataTypes type, struct hplug
 		/* core-handled */
 		case HPDT_SESSION:
 			break;
+		case HPDT_UNKNOWN:
+		case HPDT_MSD:
+		case HPDT_NPCD:
+		case HPDT_MAP:
+		case HPDT_INSTANCE:
+		case HPDT_GUILD:
+		case HPDT_PARTY:
+		case HPDT_MOBDB:
+		case HPDT_MOBDATA:
+		case HPDT_ITEMDATA:
+		case HPDT_BGDATA:
+		case HPDT_AUTOTRADE_VEND:
+		case HPDT_CLAN:
 		default:
 			if (HPM->data_store_validate_sub == NULL) {
 				ShowError("HPM:validateHPData failed, type %u needs sub-handler!\n", type);

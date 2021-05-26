@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include "common/hercules.h"
 #include "common/mmo.h"
 
+struct config_setting_t;
 struct map_session_data;
 
 /// Homunuculus IDs
@@ -89,7 +90,7 @@ struct s_homunculus_db {
 	unsigned char element, race, base_size, evo_size;
 };
 
-enum {
+enum HOMUN_TYPE {
 	HOMUNCULUS_CLASS,
 	HOMUNCULUS_FOOD
 };
@@ -123,7 +124,7 @@ struct homun_data {
 
 	struct map_session_data *master;      //pointer back to its master
 	int hungry_timer;                     //[orn]
-	unsigned int exp_next;
+	uint64 exp_next;
 	char blockskill[MAX_SKILL_DB];        // [orn]
 
 	int64 masterteleport_timer;
@@ -148,7 +149,7 @@ enum homun_type {
 };
 
 struct homun_dbs {
-	unsigned int exptable[MAX_LEVEL];
+	struct class_exp_group *exptable[MAX_HOMUNCULUS_CLASS];
 	struct view_data viewdb[MAX_HOMUNCULUS_CLASS];
 	struct s_homunculus_db db[MAX_HOMUNCULUS_CLASS];
 	struct homun_skill_tree_entry skill_tree[MAX_HOMUNCULUS_CLASS][MAX_SKILL_TREE];
@@ -164,7 +165,7 @@ struct homunculus_interface {
 	void (*reload_skill) (void);
 	/* */
 	struct view_data* (*get_viewdata) (int class_);
-	enum homun_type (*class2type) (int class_);
+	enum homun_type (*class2type) (enum homun_id class_);
 	void (*damaged) (struct homun_data *hd);
 	int (*dead) (struct homun_data *hd);
 	int (*vaporize) (struct map_session_data *sd, enum homun_state state, bool force);
@@ -189,7 +190,7 @@ struct homunculus_interface {
 	void (*hunger_timer_delete) (struct homun_data *hd);
 	int (*change_name) (struct map_session_data *sd, const char *name);
 	bool (*change_name_ack) (struct map_session_data *sd, const char *name, int flag);
-	int (*db_search) (int key,int type);
+	int (*db_search) (int key, enum HOMUN_TYPE type);
 	bool (*create) (struct map_session_data *sd, const struct s_homunculus *hom, bool is_new);
 	void (*init_timers) (struct homun_data * hd);
 	bool (*call) (struct map_session_data *sd);
@@ -199,14 +200,19 @@ struct homunculus_interface {
 	void (*revive) (struct homun_data *hd, unsigned int hp, unsigned int sp);
 	void (*stat_reset) (struct homun_data *hd);
 	bool (*shuffle) (struct homun_data *hd);
-	bool (*read_db_sub) (char* str[], int columns, int current);
 	void (*read_db) (void);
+	bool (*read_db_libconfig) (const char *filename);
+	bool (*read_db_libconfig_sub) (struct config_setting_t *it, int idx, const char *source);
+	bool (*read_db_libconfig_sub_stats) (struct config_setting_t *it, int idx);
+	bool (*read_db_libconfig_sub_stats_group) (struct config_setting_t *it, struct h_stats *smin, struct h_stats *smax);
+	bool (*read_db_libconfig_sub_expgroup) (struct config_setting_t* it, int idx);
 	bool (*read_skill_db_sub) (char* split[], int columns, int current);
 	void (*skill_db_read) (void);
-	void (*exp_db_read) (void);
 	void (*addspiritball) (struct homun_data *hd, int max);
 	void (*delspiritball) (struct homun_data *hd, int count, int type);
 	int8 (*get_intimacy_grade) (struct homun_data *hd);
+	int (*get_max_level) (struct homun_data *hd);
+	uint64 (*get_exp) (struct homun_data *hd, int idx);
 };
 
 #ifdef HERCULES_CORE

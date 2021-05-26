@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -728,6 +728,8 @@ static int auth_db_cleanup_sub(union DBKey key, struct DBData *data, va_list ap)
 				node->node_created = timer->gettick(); //Refresh tick (avoid char-server load if connection is really bad)
 				chrif->save(node->sd, 1);
 				break;
+			case ST_LOGIN:
+			case ST_MAPCHANGE:
 			default:
 				//Clear data. any connected players should have timed out by now.
 				ShowInfo("auth_db: Node (state %s) timed out for %d:%d\n", states[node->state], node->account_id, node->char_id);

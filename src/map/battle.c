@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -147,6 +147,13 @@ static int battle_gettarget(struct block_list *bl)
 		case BL_HOM: return BL_UCCAST(BL_HOM, bl)->ud.target;
 		case BL_MER: return BL_UCCAST(BL_MER, bl)->ud.target;
 		case BL_ELEM: return BL_UCCAST(BL_ELEM, bl)->ud.target;
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_NPC:
+		case BL_SKILL:
+		case BL_CHAT:
+		case BL_ALL:
+			break;
 	}
 
 	return 0;
@@ -251,6 +258,8 @@ static int battle_delay_damage_sub(int tid, int64 tick, int id, intptr_t data)
 {
 	struct delay_damage *dat = (struct delay_damage *)data;
 
+	GUARD_MAP_LOCK
+
 	if ( dat ) {
 		struct block_list *src = map->id2bl(dat->src_id);
 		struct map_session_data *sd = BL_CAST(BL_PC, src);
@@ -291,18 +300,25 @@ static int battle_delay_damage_sub(int tid, int64 tick, int id, intptr_t data)
 
 static int battle_delay_damage(int64 tick, int amotion, struct block_list *src, struct block_list *target, int attack_type, uint16 skill_id, uint16 skill_lv, int64 damage, enum damage_lv dmg_lv, int ddelay, bool additional_effects)
 {
+	GUARD_MAP_LOCK
+
 	struct delay_damage *dat;
 	struct status_change *sc;
 	struct block_list *d_tbl = NULL;
+	struct block_list *e_tbl = NULL;
 	nullpo_ret(src);
 	nullpo_ret(target);
 
 	sc = status->get_sc(target);
 
-	if (sc && sc->data[SC_DEVOTION] && sc->data[SC_DEVOTION]->val1)
-		d_tbl = map->id2bl(sc->data[SC_DEVOTION]->val1);
+	if (sc) {
+		if (sc->data[SC_DEVOTION] && sc->data[SC_DEVOTION]->val1)
+			d_tbl = map->id2bl(sc->data[SC_DEVOTION]->val1);
+		if (sc->data[SC_WATER_SCREEN_OPTION] && sc->data[SC_WATER_SCREEN_OPTION]->val1)
+			e_tbl = map->id2bl(sc->data[SC_WATER_SCREEN_OPTION]->val1);
+	}
 
-	if (d_tbl && sc && check_distance_bl(target, d_tbl, sc->data[SC_DEVOTION]->val3) && damage > 0 && skill_id != PA_PRESSURE && skill_id != CR_REFLECTSHIELD)
+	if (((d_tbl && sc && check_distance_bl(target, d_tbl, sc->data[SC_DEVOTION]->val3)) || e_tbl) && damage > 0 && skill_id != PA_PRESSURE && skill_id != CR_REFLECTSHIELD)
 		damage = 0;
 
 	if ( !battle_config.delay_battle_damage || amotion <= 1 ) {
@@ -1081,6 +1097,16 @@ static int64 battle_calc_cardfix(int attack_type, struct block_list *src, struct
 							case BL_PC:
 								ele_fix += tsd->magic_sub_def_ele[ele].rate_pc;
 								break;
+							case BL_NUL:
+							case BL_ITEM:
+							case BL_NPC:
+							case BL_ELEM:
+							case BL_HOM:
+							case BL_MER:
+							case BL_SKILL:
+							case BL_CHAT:
+							case BL_PET:
+							case BL_ALL:
 							default:
 								break;
 							}
@@ -1266,6 +1292,16 @@ static int64 battle_calc_cardfix(int attack_type, struct block_list *src, struct
 								case BL_PC:
 									ele_fix = tsd->sub_def_ele[ele].rate_pc;
 									break;
+								case BL_NUL:
+								case BL_ITEM:
+								case BL_NPC:
+								case BL_ELEM:
+								case BL_HOM:
+								case BL_MER:
+								case BL_SKILL:
+								case BL_CHAT:
+								case BL_PET:
+								case BL_ALL:
 								default:
 									break;
 								}
@@ -4387,6 +4423,8 @@ static void battle_calc_misc_attack_unknown(struct block_list *src, struct block
 // FIXME: wflag is undocumented
 static struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_list *target, uint16 skill_id, uint16 skill_lv, int wflag)
 {
+	GUARD_MAP_LOCK
+
 	short temp=0;
 	short s_ele, s_ele_;
 	int i, nk;
@@ -5359,9 +5397,11 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 				case RL_B_FLICKER_ATK:
 					rskill = RL_FLICKER;
 					break;
+#ifndef RENEWAL
 				case RL_GLITTERING_GREED_ATK:
 					rskill = RL_GLITTERING_GREED;
 					break;
+#endif
 				default:
 					rskill = skill_id;
 			}
@@ -5758,6 +5798,7 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 				battle->reflect_damage(target, src, &wd, skill_id);
 		}
 	}
+	map->freeblock_lock();
 	//Reject Sword bugreport:4493 by Daegaladh
 	if (wd.damage != 0 && tsc != NULL && tsc->data[SC_SWORDREJECT] != NULL
 	 && (sd == NULL || sd->weapontype1 == W_DAGGER || sd->weapontype1 == W_1HSWORD || sd->weapontype == W_2HSWORD)
@@ -5776,7 +5817,7 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 		wd.damage += md.damage;
 	}
 #endif
-
+	map->freeblock_unlock();
 	return wd;
 }
 
@@ -6147,6 +6188,8 @@ static void battle_drain(struct map_session_data *sd, struct block_list *tbl, in
 // Deals the same damage to targets in area. [pakpil]
 static int battle_damage_area(struct block_list *bl, va_list ap)
 {
+	GUARD_MAP_LOCK
+
 	int64 tick;
 	int amotion, dmotion, damage;
 	struct block_list *src;
@@ -6225,6 +6268,8 @@ static bool battle_check_arrows(struct map_session_data *sd)
 // FIXME: flag is undocumented
 static enum damage_lv battle_weapon_attack(struct block_list *src, struct block_list *target, int64 tick, int flag)
 {
+	GUARD_MAP_LOCK
+
 	struct map_session_data *sd = NULL, *tsd = NULL;
 	struct status_data *sstatus, *tstatus;
 	struct status_change *sc, *tsc;
@@ -6427,15 +6472,11 @@ static enum damage_lv battle_weapon_attack(struct block_list *src, struct block_
 				clif->skill_damage(&ed->bl, target, tick, status_get_amotion(src), 0, -30000, 1, EL_CIRCLE_OF_FIRE, tsc->data[SC_CIRCLE_OF_FIRE_OPTION]->val1, BDT_SKILL);
 				skill->attack(BF_MAGIC,&ed->bl,&ed->bl,src,EL_CIRCLE_OF_FIRE,tsc->data[SC_CIRCLE_OF_FIRE_OPTION]->val1,tick,wd.flag);
 			}
-		} else if( tsc->data[SC_WATER_SCREEN_OPTION] && tsc->data[SC_WATER_SCREEN_OPTION]->val1 ) {
+		} else if (tsc->data[SC_WATER_SCREEN_OPTION]) {
 			struct block_list *e_bl = map->id2bl(tsc->data[SC_WATER_SCREEN_OPTION]->val1);
-			if( e_bl && !status->isdead(e_bl) ) {
-				clif->damage(e_bl,e_bl,wd.amotion,wd.dmotion,damage,wd.div_,wd.type,wd.damage2);
-				status->damage(target,e_bl,damage,0,0,0);
-				// Just show damage in target.
-				clif->damage(src, target, wd.amotion, wd.dmotion, damage, wd.div_, wd.type, wd.damage2 );
-				map->freeblock_unlock();
-				return ATK_NONE;
+			if (e_bl && !status->isdead(e_bl)) {
+				clif->damage(e_bl, e_bl, 0, 0, damage, wd.div_, BDT_NORMAL, 0);
+				status_fix_damage(NULL, e_bl, damage, 0);
 			}
 		}
 	}
@@ -6613,6 +6654,13 @@ static struct block_list *battle_get_master(struct block_list *src)
 					src = map->id2bl(su->group->src_id);
 			}
 				break;
+			case BL_NUL:
+			case BL_ITEM:
+			case BL_NPC:
+			case BL_PC:
+			case BL_CHAT:
+			case BL_ALL:
+				break;
 		}
 	} while (src && src != prev);
 	return prev;
@@ -6664,6 +6712,16 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 				if (pc_has_permission(s_sd, PC_PERM_DISABLE_PVP))
 					return 0;
 				break;
+			case BL_NUL:
+			case BL_ITEM:
+			case BL_NPC:
+			case BL_ELEM:
+			case BL_HOM:
+			case BL_MER:
+			case BL_SKILL:
+			case BL_CHAT:
+			case BL_PET:
+			case BL_ALL:
 			default:/* anything else goes */
 				break;
 		}
@@ -6774,6 +6832,12 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 		case BL_ELEM:
 			break;
 		//All else not specified is an invalid target.
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_CHAT:
+		case BL_NPC:
+		case BL_PET:
+		case BL_ALL:
 		default:
 			return 0;
 	} //end switch actual target
@@ -6804,7 +6868,18 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 				return 0; // Disable guardians/emperiums owned by Guilds on non-woe times.
 			break;
 		}
-		default: break; //other type doesn't have slave yet
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_NPC:
+		case BL_ELEM:
+		case BL_HOM:
+		case BL_MER:
+		case BL_SKILL:
+		case BL_CHAT:
+		case BL_PET:
+		case BL_ALL:
+		default:
+			break; //other type doesn't have slave yet
 	} //end switch master target
 
 	switch( src->type ) { //Checks on actual src type
@@ -6838,6 +6913,16 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 		case BL_MER:
 			if (t_bl->type == BL_MOB && BL_UCCAST(BL_MOB, t_bl)->class_ == MOBID_EMPELIUM && flag&BCT_ENEMY)
 				return 0; //mercenary may not attack Emperium
+			break;
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_NPC:
+		case BL_ELEM:
+		case BL_HOM:
+		case BL_MOB:
+		case BL_CHAT:
+		case BL_PC:
+		case BL_ALL:
 			break;
 	} //end switch actual src
 
@@ -6885,6 +6970,16 @@ static int battle_check_target(struct block_list *src, struct block_list *target
 			}
 			break;
 		}
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_NPC:
+		case BL_ELEM:
+		case BL_HOM:
+		case BL_MER:
+		case BL_SKILL:
+		case BL_CHAT:
+		case BL_PET:
+		case BL_ALL:
 		default:
 		//Need some sort of default behavior for unhandled types.
 			if (t_bl->type != s_bl->type)
@@ -7252,6 +7347,8 @@ static const struct battle_data {
 	{ "item_drop_use_max",                  &battle_config.item_drop_use_max,               10000,  1,      10000,          },
 	{ "item_drop_add_min",                  &battle_config.item_drop_adddrop_min,           1,      1,      10000,          },
 	{ "item_drop_add_max",                  &battle_config.item_drop_adddrop_max,           10000,  1,      10000,          },
+	{ "item_drop_add_chain_min",            &battle_config.item_drop_add_chain_min,         1,      1,      10000,          },
+	{ "item_drop_add_chain_max",            &battle_config.item_drop_add_chain_max,         10000,  1,      10000,          },
 	{ "item_drop_treasure_min",             &battle_config.item_drop_treasure_min,          1,      1,      10000,          },
 	{ "item_drop_treasure_max",             &battle_config.item_drop_treasure_max,          10000,  1,      10000,          },
 	{ "item_rate_mvp",                      &battle_config.item_rate_mvp,                   100,    0,      1000000,        },
@@ -7266,6 +7363,7 @@ static const struct battle_data {
 	{ "item_rate_use",                      &battle_config.item_rate_use,                   100,    0,      1000000,        },
 	{ "item_rate_use_boss",                 &battle_config.item_rate_use_boss,              100,    0,      1000000,        },
 	{ "item_rate_adddrop",                  &battle_config.item_rate_adddrop,               100,    0,      1000000,        },
+	{ "item_rate_add_chain",                &battle_config.item_rate_add_chain,             100,    0,      1000000,        },
 	{ "item_rate_treasure",                 &battle_config.item_rate_treasure,              100,    0,      1000000,        },
 	{ "prevent_logout",                     &battle_config.prevent_logout,                  10000,  0,      60000,          },
 	{ "alchemist_summon_reward",            &battle_config.alchemist_summon_reward,         1,      0,      2,              },
@@ -7409,8 +7507,6 @@ static const struct battle_data {
 	{ "min_npc_vendchat_distance",          &battle_config.min_npc_vendchat_distance,       3,      0,      100             },
 	{ "vendchat_near_hiddennpc",            &battle_config.vendchat_near_hiddennpc,         0,      0,      1               },
 	{ "atcommand_mobinfo_type",             &battle_config.atcommand_mobinfo_type,          0,      0,      1               },
-	{ "homunculus_max_level",               &battle_config.hom_max_level,                   99,     0,      MAX_LEVEL,      },
-	{ "homunculus_S_max_level",             &battle_config.hom_S_max_level,                 150,    0,      MAX_LEVEL,      },
 	{ "mob_size_influence",                 &battle_config.mob_size_influence,              0,      0,      1,              },
 	{ "bowling_bash_area",                  &battle_config.bowling_bash_area,               0,      0,      20,             },
 	/**
@@ -7432,6 +7528,7 @@ static const struct battle_data {
 	{ "idletime_criteria",                  &battle_config.idletime_criteria,            0x25,      1,      INT_MAX,        },
 	{ "mon_trans_disable_in_gvg",           &battle_config.mon_trans_disable_in_gvg,        0,      0,      1,              },
 	{ "case_sensitive_aegisnames",          &battle_config.case_sensitive_aegisnames,       1,      0,      1,              },
+	{ "search_freecell_map_margin",         &battle_config.search_freecell_map_margin,     15,      0,      INT_MAX,        },
 	{ "guild_castle_invite",                &battle_config.guild_castle_invite,             0,      0,      1,              },
 	{ "guild_castle_expulsion",             &battle_config.guild_castle_expulsion,          0,      0,      1,              },
 	{ "song_timer_reset",                   &battle_config.song_timer_reset,                0,      0,      1,              },
@@ -7502,8 +7599,8 @@ static const struct battle_data {
 	{ "elem_natural_heal_hp",               &battle_config.elem_natural_heal_hp,           6000, NATURAL_HEAL_INTERVAL, INT_MAX,},
 	{ "elem_natural_heal_sp",               &battle_config.elem_natural_heal_sp,           8000, NATURAL_HEAL_INTERVAL, INT_MAX,},
 	{ "elem_natural_heal_cap",              &battle_config.elem_natural_heal_cap,          1000,    1,      INT_MAX,        },
-	{ "hom_natural_heal_hp",                &battle_config.elem_natural_heal_hp,           2000, NATURAL_HEAL_INTERVAL, INT_MAX,},
-	{ "hom_natural_heal_sp",                &battle_config.elem_natural_heal_sp,           4000, NATURAL_HEAL_INTERVAL, INT_MAX,},
+	{ "hom_natural_heal_hp",                &battle_config.hom_natural_heal_hp,            2000, NATURAL_HEAL_INTERVAL, INT_MAX,},
+	{ "hom_natural_heal_sp",                &battle_config.hom_natural_heal_sp,            4000, NATURAL_HEAL_INTERVAL, INT_MAX,},
 	{ "hom_natural_heal_cap",               &battle_config.hom_natural_heal_cap,           1000,    1,      INT_MAX,        },
 	{ "merc_natural_heal_hp",               &battle_config.merc_natural_heal_hp,           6000, NATURAL_HEAL_INTERVAL, INT_MAX,},
 	{ "merc_natural_heal_sp",               &battle_config.merc_natural_heal_sp,           8000, NATURAL_HEAL_INTERVAL, INT_MAX,},

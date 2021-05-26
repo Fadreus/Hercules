@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -73,9 +73,9 @@ struct inter_guild_interface {
 	bool (*add_member) (int guild_id, const struct guild_member *member, int map_fd);
 	bool (*leave) (int guild_id, int account_id, int char_id, int flag, const char *mes, int map_fd);
 	bool (*update_member_info_short) (int guild_id, int account_id, int char_id, int online, int lv, int class);
-	bool (*update_member_info) (int guild_id, int account_id, int char_id, int type, const char *data, int len);
+	bool (*update_member_info) (int guild_id, int account_id, int char_id, enum guild_member_info type, const char *data, int len);
 	bool (*disband) (int guild_id);
-	bool (*update_basic_info) (int guild_id, int type, const void *data, int len);
+	bool (*update_basic_info) (int guild_id, enum guild_basic_info type, const void *data, int len);
 	bool (*update_position) (int guild_id, int idx, const struct guild_position *p);
 	bool (*use_skill_point) (int guild_id, uint16 skill_id, int account_id, int max);
 	bool (*remove_alliance) (struct guild *g, int guild_id, int account_id1, int account_id2, int flag);

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2020 Hercules Dev Team
+ * Copyright (C) 2013-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1444,14 +1444,19 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(homun->revive, HP_homun_revive) },
 	{ HP_POP(homun->stat_reset, HP_homun_stat_reset) },
 	{ HP_POP(homun->shuffle, HP_homun_shuffle) },
-	{ HP_POP(homun->read_db_sub, HP_homun_read_db_sub) },
 	{ HP_POP(homun->read_db, HP_homun_read_db) },
+	{ HP_POP(homun->read_db_libconfig, HP_homun_read_db_libconfig) },
+	{ HP_POP(homun->read_db_libconfig_sub, HP_homun_read_db_libconfig_sub) },
+	{ HP_POP(homun->read_db_libconfig_sub_stats, HP_homun_read_db_libconfig_sub_stats) },
+	{ HP_POP(homun->read_db_libconfig_sub_stats_group, HP_homun_read_db_libconfig_sub_stats_group) },
+	{ HP_POP(homun->read_db_libconfig_sub_expgroup, HP_homun_read_db_libconfig_sub_expgroup) },
 	{ HP_POP(homun->read_skill_db_sub, HP_homun_read_skill_db_sub) },
 	{ HP_POP(homun->skill_db_read, HP_homun_skill_db_read) },
-	{ HP_POP(homun->exp_db_read, HP_homun_exp_db_read) },
 	{ HP_POP(homun->addspiritball, HP_homun_addspiritball) },
 	{ HP_POP(homun->delspiritball, HP_homun_delspiritball) },
 	{ HP_POP(homun->get_intimacy_grade, HP_homun_get_intimacy_grade) },
+	{ HP_POP(homun->get_max_level, HP_homun_get_max_level) },
+	{ HP_POP(homun->get_exp, HP_homun_get_exp) },
 /* instance_interface */
 	{ HP_POP(instance->init, HP_instance_init) },
 	{ HP_POP(instance->final, HP_instance_final) },
@@ -1828,7 +1833,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(map->count_oncell, HP_map_count_oncell) },
 	{ HP_POP(map->find_skill_unit_oncell, HP_map_find_skill_unit_oncell) },
 	{ HP_POP(map->get_new_object_id, HP_map_get_new_object_id) },
-	{ HP_POP(map->search_freecell, HP_map_search_freecell) },
+	{ HP_POP(map->search_free_cell, HP_map_search_free_cell) },
 	{ HP_POP(map->closest_freecell, HP_map_closest_freecell) },
 	{ HP_POP(map->quit, HP_map_quit) },
 	{ HP_POP(map->addnpc, HP_map_addnpc) },
@@ -1944,6 +1949,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(map->remove_questinfo, HP_map_remove_questinfo) },
 	{ HP_POP(map->merge_zone, HP_map_merge_zone) },
 	{ HP_POP(map->zone_clear_single, HP_map_zone_clear_single) },
+	{ HP_POP(map->lock_check, HP_map_lock_check) },
 /* mapindex_interface */
 	{ HP_POP(mapindex->config_read_dbpath, HP_mapindex_config_read_dbpath) },
 	{ HP_POP(mapindex->config_read, HP_mapindex_config_read) },
@@ -2683,6 +2689,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(quest->clear, HP_quest_clear) },
 	{ HP_POP(quest->read_db, HP_quest_read_db) },
 	{ HP_POP(quest->read_db_sub, HP_quest_read_db_sub) },
+	{ HP_POP(quest->setting_lookup_const, HP_quest_setting_lookup_const) },
 	{ HP_POP(quest->questinfo_validate_icon, HP_quest_questinfo_validate_icon) },
 	{ HP_POP(quest->questinfo_refresh, HP_quest_questinfo_refresh) },
 	{ HP_POP(quest->questinfo_validate, HP_quest_questinfo_validate) },
@@ -2695,6 +2702,8 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(quest->questinfo_validate_homunculus_type, HP_quest_questinfo_validate_homunculus_type) },
 	{ HP_POP(quest->questinfo_validate_quests, HP_quest_questinfo_validate_quests) },
 	{ HP_POP(quest->questinfo_validate_mercenary_class, HP_quest_questinfo_validate_mercenary_class) },
+	{ HP_POP(quest->mobele2client, HP_quest_mobele2client) },
+	{ HP_POP(quest->mobrace2client, HP_quest_mobrace2client) },
 /* refine_interface */
 	{ HP_POP(refine->init, HP_refine_init) },
 	{ HP_POP(refine->final, HP_refine_final) },
@@ -3009,6 +3018,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(skill->get_desc, HP_skill_get_desc) },
 	{ HP_POP(skill->get_casttype, HP_skill_get_casttype) },
 	{ HP_POP(skill->get_casttype2, HP_skill_get_casttype2) },
+	{ HP_POP(skill->get_sc_type, HP_skill_get_sc_type) },
 	{ HP_POP(skill->is_combo, HP_skill_is_combo) },
 	{ HP_POP(skill->name2id, HP_skill_name2id) },
 	{ HP_POP(skill->isammotype, HP_skill_isammotype) },
@@ -3187,6 +3197,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(skill->validate_unit_target_sub, HP_skill_validate_unit_target_sub) },
 	{ HP_POP(skill->validate_unit_target, HP_skill_validate_unit_target) },
 	{ HP_POP(skill->validate_unit, HP_skill_validate_unit) },
+	{ HP_POP(skill->validate_status_change, HP_skill_validate_status_change) },
 	{ HP_POP(skill->validate_additional_fields, HP_skill_validate_additional_fields) },
 	{ HP_POP(skill->read_skilldb, HP_skill_read_skilldb) },
 	{ HP_POP(skill->config_set_level, HP_skill_config_set_level) },
@@ -3318,7 +3329,6 @@ struct HookingPointData HookingPoints[] = {
 /* status_interface */
 	{ HP_POP(status->init, HP_status_init) },
 	{ HP_POP(status->final, HP_status_final) },
-	{ HP_POP(status->skill2sc, HP_status_skill2sc) },
 	{ HP_POP(status->sc2skill, HP_status_sc2skill) },
 	{ HP_POP(status->sc2scb_flag, HP_status_sc2scb_flag) },
 	{ HP_POP(status->get_sc_relevant_bl_types, HP_status_get_sc_relevant_bl_types) },
@@ -3446,13 +3456,16 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(status->read_scdb_libconfig, HP_status_read_scdb_libconfig) },
 	{ HP_POP(status->read_scdb_libconfig_sub, HP_status_read_scdb_libconfig_sub) },
 	{ HP_POP(status->read_scdb_libconfig_sub_flag, HP_status_read_scdb_libconfig_sub_flag) },
+	{ HP_POP(status->read_scdb_libconfig_sub_calcflag, HP_status_read_scdb_libconfig_sub_calcflag) },
 	{ HP_POP(status->read_scdb_libconfig_sub_flag_additional, HP_status_read_scdb_libconfig_sub_flag_additional) },
+	{ HP_POP(status->read_scdb_libconfig_sub_calcflag_additional, HP_status_read_scdb_libconfig_sub_calcflag_additional) },
+	{ HP_POP(status->read_scdb_libconfig_sub_skill, HP_status_read_scdb_libconfig_sub_skill) },
 	{ HP_POP(status->read_job_db, HP_status_read_job_db) },
 	{ HP_POP(status->read_job_db_sub, HP_status_read_job_db_sub) },
-	{ HP_POP(status->set_sc, HP_status_set_sc) },
 	{ HP_POP(status->copy, HP_status_copy) },
 	{ HP_POP(status->base_matk_min, HP_status_base_matk_min) },
 	{ HP_POP(status->base_matk_max, HP_status_base_matk_max) },
+	{ HP_POP(status->check_job_bonus, HP_status_check_job_bonus) },
 /* storage_interface */
 	{ HP_POP(storage->reconnect, HP_storage_reconnect) },
 	{ HP_POP(storage->delitem, HP_storage_delitem) },
@@ -3631,4 +3644,4 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(vending->searchall, HP_vending_searchall) },
 };
 
-int HookingPointsLenMax = 50;
+int HookingPointsLenMax = 51;

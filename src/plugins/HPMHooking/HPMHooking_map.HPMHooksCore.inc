@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2020 Hercules Dev Team
+ * Copyright (C) 2013-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2818,22 +2818,32 @@ struct {
 	struct HPMHookPoint *HP_homun_stat_reset_post;
 	struct HPMHookPoint *HP_homun_shuffle_pre;
 	struct HPMHookPoint *HP_homun_shuffle_post;
-	struct HPMHookPoint *HP_homun_read_db_sub_pre;
-	struct HPMHookPoint *HP_homun_read_db_sub_post;
 	struct HPMHookPoint *HP_homun_read_db_pre;
 	struct HPMHookPoint *HP_homun_read_db_post;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_pre;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_post;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_pre;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_post;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_stats_pre;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_stats_post;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_stats_group_pre;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_stats_group_post;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_expgroup_pre;
+	struct HPMHookPoint *HP_homun_read_db_libconfig_sub_expgroup_post;
 	struct HPMHookPoint *HP_homun_read_skill_db_sub_pre;
 	struct HPMHookPoint *HP_homun_read_skill_db_sub_post;
 	struct HPMHookPoint *HP_homun_skill_db_read_pre;
 	struct HPMHookPoint *HP_homun_skill_db_read_post;
-	struct HPMHookPoint *HP_homun_exp_db_read_pre;
-	struct HPMHookPoint *HP_homun_exp_db_read_post;
 	struct HPMHookPoint *HP_homun_addspiritball_pre;
 	struct HPMHookPoint *HP_homun_addspiritball_post;
 	struct HPMHookPoint *HP_homun_delspiritball_pre;
 	struct HPMHookPoint *HP_homun_delspiritball_post;
 	struct HPMHookPoint *HP_homun_get_intimacy_grade_pre;
 	struct HPMHookPoint *HP_homun_get_intimacy_grade_post;
+	struct HPMHookPoint *HP_homun_get_max_level_pre;
+	struct HPMHookPoint *HP_homun_get_max_level_post;
+	struct HPMHookPoint *HP_homun_get_exp_pre;
+	struct HPMHookPoint *HP_homun_get_exp_post;
 	struct HPMHookPoint *HP_instance_init_pre;
 	struct HPMHookPoint *HP_instance_init_post;
 	struct HPMHookPoint *HP_instance_final_pre;
@@ -3570,8 +3580,8 @@ struct {
 	struct HPMHookPoint *HP_map_find_skill_unit_oncell_post;
 	struct HPMHookPoint *HP_map_get_new_object_id_pre;
 	struct HPMHookPoint *HP_map_get_new_object_id_post;
-	struct HPMHookPoint *HP_map_search_freecell_pre;
-	struct HPMHookPoint *HP_map_search_freecell_post;
+	struct HPMHookPoint *HP_map_search_free_cell_pre;
+	struct HPMHookPoint *HP_map_search_free_cell_post;
 	struct HPMHookPoint *HP_map_closest_freecell_pre;
 	struct HPMHookPoint *HP_map_closest_freecell_post;
 	struct HPMHookPoint *HP_map_quit_pre;
@@ -3802,6 +3812,8 @@ struct {
 	struct HPMHookPoint *HP_map_merge_zone_post;
 	struct HPMHookPoint *HP_map_zone_clear_single_pre;
 	struct HPMHookPoint *HP_map_zone_clear_single_post;
+	struct HPMHookPoint *HP_map_lock_check_pre;
+	struct HPMHookPoint *HP_map_lock_check_post;
 	struct HPMHookPoint *HP_mapindex_config_read_dbpath_pre;
 	struct HPMHookPoint *HP_mapindex_config_read_dbpath_post;
 	struct HPMHookPoint *HP_mapindex_config_read_pre;
@@ -5244,6 +5256,8 @@ struct {
 	struct HPMHookPoint *HP_quest_read_db_post;
 	struct HPMHookPoint *HP_quest_read_db_sub_pre;
 	struct HPMHookPoint *HP_quest_read_db_sub_post;
+	struct HPMHookPoint *HP_quest_setting_lookup_const_pre;
+	struct HPMHookPoint *HP_quest_setting_lookup_const_post;
 	struct HPMHookPoint *HP_quest_questinfo_validate_icon_pre;
 	struct HPMHookPoint *HP_quest_questinfo_validate_icon_post;
 	struct HPMHookPoint *HP_quest_questinfo_refresh_pre;
@@ -5268,6 +5282,10 @@ struct {
 	struct HPMHookPoint *HP_quest_questinfo_validate_quests_post;
 	struct HPMHookPoint *HP_quest_questinfo_validate_mercenary_class_pre;
 	struct HPMHookPoint *HP_quest_questinfo_validate_mercenary_class_post;
+	struct HPMHookPoint *HP_quest_mobele2client_pre;
+	struct HPMHookPoint *HP_quest_mobele2client_post;
+	struct HPMHookPoint *HP_quest_mobrace2client_pre;
+	struct HPMHookPoint *HP_quest_mobrace2client_post;
 	struct HPMHookPoint *HP_refine_init_pre;
 	struct HPMHookPoint *HP_refine_init_post;
 	struct HPMHookPoint *HP_refine_final_pre;
@@ -5880,6 +5898,8 @@ struct {
 	struct HPMHookPoint *HP_skill_get_casttype_post;
 	struct HPMHookPoint *HP_skill_get_casttype2_pre;
 	struct HPMHookPoint *HP_skill_get_casttype2_post;
+	struct HPMHookPoint *HP_skill_get_sc_type_pre;
+	struct HPMHookPoint *HP_skill_get_sc_type_post;
 	struct HPMHookPoint *HP_skill_is_combo_pre;
 	struct HPMHookPoint *HP_skill_is_combo_post;
 	struct HPMHookPoint *HP_skill_name2id_pre;
@@ -6236,6 +6256,8 @@ struct {
 	struct HPMHookPoint *HP_skill_validate_unit_target_post;
 	struct HPMHookPoint *HP_skill_validate_unit_pre;
 	struct HPMHookPoint *HP_skill_validate_unit_post;
+	struct HPMHookPoint *HP_skill_validate_status_change_pre;
+	struct HPMHookPoint *HP_skill_validate_status_change_post;
 	struct HPMHookPoint *HP_skill_validate_additional_fields_pre;
 	struct HPMHookPoint *HP_skill_validate_additional_fields_post;
 	struct HPMHookPoint *HP_skill_read_skilldb_pre;
@@ -6492,8 +6514,6 @@ struct {
 	struct HPMHookPoint *HP_status_init_post;
 	struct HPMHookPoint *HP_status_final_pre;
 	struct HPMHookPoint *HP_status_final_post;
-	struct HPMHookPoint *HP_status_skill2sc_pre;
-	struct HPMHookPoint *HP_status_skill2sc_post;
 	struct HPMHookPoint *HP_status_sc2skill_pre;
 	struct HPMHookPoint *HP_status_sc2skill_post;
 	struct HPMHookPoint *HP_status_sc2scb_flag_pre;
@@ -6748,20 +6768,26 @@ struct {
 	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_post;
 	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_flag_pre;
 	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_flag_post;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_calcflag_pre;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_calcflag_post;
 	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_flag_additional_pre;
 	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_flag_additional_post;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_calcflag_additional_pre;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_calcflag_additional_post;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_skill_pre;
+	struct HPMHookPoint *HP_status_read_scdb_libconfig_sub_skill_post;
 	struct HPMHookPoint *HP_status_read_job_db_pre;
 	struct HPMHookPoint *HP_status_read_job_db_post;
 	struct HPMHookPoint *HP_status_read_job_db_sub_pre;
 	struct HPMHookPoint *HP_status_read_job_db_sub_post;
-	struct HPMHookPoint *HP_status_set_sc_pre;
-	struct HPMHookPoint *HP_status_set_sc_post;
 	struct HPMHookPoint *HP_status_copy_pre;
 	struct HPMHookPoint *HP_status_copy_post;
 	struct HPMHookPoint *HP_status_base_matk_min_pre;
 	struct HPMHookPoint *HP_status_base_matk_min_post;
 	struct HPMHookPoint *HP_status_base_matk_max_pre;
 	struct HPMHookPoint *HP_status_base_matk_max_post;
+	struct HPMHookPoint *HP_status_check_job_bonus_pre;
+	struct HPMHookPoint *HP_status_check_job_bonus_post;
 	struct HPMHookPoint *HP_storage_reconnect_pre;
 	struct HPMHookPoint *HP_storage_reconnect_post;
 	struct HPMHookPoint *HP_storage_delitem_pre;
@@ -9887,22 +9913,32 @@ struct {
 	int HP_homun_stat_reset_post;
 	int HP_homun_shuffle_pre;
 	int HP_homun_shuffle_post;
-	int HP_homun_read_db_sub_pre;
-	int HP_homun_read_db_sub_post;
 	int HP_homun_read_db_pre;
 	int HP_homun_read_db_post;
+	int HP_homun_read_db_libconfig_pre;
+	int HP_homun_read_db_libconfig_post;
+	int HP_homun_read_db_libconfig_sub_pre;
+	int HP_homun_read_db_libconfig_sub_post;
+	int HP_homun_read_db_libconfig_sub_stats_pre;
+	int HP_homun_read_db_libconfig_sub_stats_post;
+	int HP_homun_read_db_libconfig_sub_stats_group_pre;
+	int HP_homun_read_db_libconfig_sub_stats_group_post;
+	int HP_homun_read_db_libconfig_sub_expgroup_pre;
+	int HP_homun_read_db_libconfig_sub_expgroup_post;
 	int HP_homun_read_skill_db_sub_pre;
 	int HP_homun_read_skill_db_sub_post;
 	int HP_homun_skill_db_read_pre;
 	int HP_homun_skill_db_read_post;
-	int HP_homun_exp_db_read_pre;
-	int HP_homun_exp_db_read_post;
 	int HP_homun_addspiritball_pre;
 	int HP_homun_addspiritball_post;
 	int HP_homun_delspiritball_pre;
 	int HP_homun_delspiritball_post;
 	int HP_homun_get_intimacy_grade_pre;
 	int HP_homun_get_intimacy_grade_post;
+	int HP_homun_get_max_level_pre;
+	int HP_homun_get_max_level_post;
+	int HP_homun_get_exp_pre;
+	int HP_homun_get_exp_post;
 	int HP_instance_init_pre;
 	int HP_instance_init_post;
 	int HP_instance_final_pre;
@@ -10639,8 +10675,8 @@ struct {
 	int HP_map_find_skill_unit_oncell_post;
 	int HP_map_get_new_object_id_pre;
 	int HP_map_get_new_object_id_post;
-	int HP_map_search_freecell_pre;
-	int HP_map_search_freecell_post;
+	int HP_map_search_free_cell_pre;
+	int HP_map_search_free_cell_post;
 	int HP_map_closest_freecell_pre;
 	int HP_map_closest_freecell_post;
 	int HP_map_quit_pre;
@@ -10871,6 +10907,8 @@ struct {
 	int HP_map_merge_zone_post;
 	int HP_map_zone_clear_single_pre;
 	int HP_map_zone_clear_single_post;
+	int HP_map_lock_check_pre;
+	int HP_map_lock_check_post;
 	int HP_mapindex_config_read_dbpath_pre;
 	int HP_mapindex_config_read_dbpath_post;
 	int HP_mapindex_config_read_pre;
@@ -12313,6 +12351,8 @@ struct {
 	int HP_quest_read_db_post;
 	int HP_quest_read_db_sub_pre;
 	int HP_quest_read_db_sub_post;
+	int HP_quest_setting_lookup_const_pre;
+	int HP_quest_setting_lookup_const_post;
 	int HP_quest_questinfo_validate_icon_pre;
 	int HP_quest_questinfo_validate_icon_post;
 	int HP_quest_questinfo_refresh_pre;
@@ -12337,6 +12377,10 @@ struct {
 	int HP_quest_questinfo_validate_quests_post;
 	int HP_quest_questinfo_validate_mercenary_class_pre;
 	int HP_quest_questinfo_validate_mercenary_class_post;
+	int HP_quest_mobele2client_pre;
+	int HP_quest_mobele2client_post;
+	int HP_quest_mobrace2client_pre;
+	int HP_quest_mobrace2client_post;
 	int HP_refine_init_pre;
 	int HP_refine_init_post;
 	int HP_refine_final_pre;
@@ -12949,6 +12993,8 @@ struct {
 	int HP_skill_get_casttype_post;
 	int HP_skill_get_casttype2_pre;
 	int HP_skill_get_casttype2_post;
+	int HP_skill_get_sc_type_pre;
+	int HP_skill_get_sc_type_post;
 	int HP_skill_is_combo_pre;
 	int HP_skill_is_combo_post;
 	int HP_skill_name2id_pre;
@@ -13305,6 +13351,8 @@ struct {
 	int HP_skill_validate_unit_target_post;
 	int HP_skill_validate_unit_pre;
 	int HP_skill_validate_unit_post;
+	int HP_skill_validate_status_change_pre;
+	int HP_skill_validate_status_change_post;
 	int HP_skill_validate_additional_fields_pre;
 	int HP_skill_validate_additional_fields_post;
 	int HP_skill_read_skilldb_pre;
@@ -13561,8 +13609,6 @@ struct {
 	int HP_status_init_post;
 	int HP_status_final_pre;
 	int HP_status_final_post;
-	int HP_status_skill2sc_pre;
-	int HP_status_skill2sc_post;
 	int HP_status_sc2skill_pre;
 	int HP_status_sc2skill_post;
 	int HP_status_sc2scb_flag_pre;
@@ -13817,20 +13863,26 @@ struct {
 	int HP_status_read_scdb_libconfig_sub_post;
 	int HP_status_read_scdb_libconfig_sub_flag_pre;
 	int HP_status_read_scdb_libconfig_sub_flag_post;
+	int HP_status_read_scdb_libconfig_sub_calcflag_pre;
+	int HP_status_read_scdb_libconfig_sub_calcflag_post;
 	int HP_status_read_scdb_libconfig_sub_flag_additional_pre;
 	int HP_status_read_scdb_libconfig_sub_flag_additional_post;
+	int HP_status_read_scdb_libconfig_sub_calcflag_additional_pre;
+	int HP_status_read_scdb_libconfig_sub_calcflag_additional_post;
+	int HP_status_read_scdb_libconfig_sub_skill_pre;
+	int HP_status_read_scdb_libconfig_sub_skill_post;
 	int HP_status_read_job_db_pre;
 	int HP_status_read_job_db_post;
 	int HP_status_read_job_db_sub_pre;
 	int HP_status_read_job_db_sub_post;
-	int HP_status_set_sc_pre;
-	int HP_status_set_sc_post;
 	int HP_status_copy_pre;
 	int HP_status_copy_post;
 	int HP_status_base_matk_min_pre;
 	int HP_status_base_matk_min_post;
 	int HP_status_base_matk_max_pre;
 	int HP_status_base_matk_max_post;
+	int HP_status_check_job_bonus_pre;
+	int HP_status_check_job_bonus_post;
 	int HP_storage_reconnect_pre;
 	int HP_storage_reconnect_post;
 	int HP_storage_delitem_pre;

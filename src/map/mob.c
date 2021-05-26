@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -560,11 +560,11 @@ static struct mob_data *mob_once_spawn_sub(struct block_list *bl, int16 m, int16
 
 	/** Locate spot next to player. **/
 	if (bl != NULL && (x < 0 || y < 0))
-		map->search_freecell(bl, m, &x, &y, 1, 1, 0);
+		map->search_free_cell(bl, m, &x, &y, 1, 1, SFC_DEFAULT);
 
 	/** If none found, pick random position on map. **/
 	if (x <= 0 || x >= map->list[m].xs || y <= 0 || y >= map->list[m].ys)
-		map->search_freecell(NULL, m, &x, &y, -1, -1, 1);
+		map->search_free_cell(NULL, m, &x, &y, -1, -1, SFC_XY_CENTER);
 
 	data.x = x;
 	data.y = y;
@@ -795,7 +795,7 @@ static int mob_spawn_guardian(const char *mapname, short x, short y, const char 
 		return 0;
 	}
 
-	if ((x <= 0 || y <= 0) && map->search_freecell(NULL, map_id, &x, &y, -1, -1, 1) == 0) {
+	if ((x <= 0 || y <= 0) && map->search_free_cell(NULL, map_id, &x, &y, -1, -1, SFC_XY_CENTER) != 0) {
 		ShowWarning("mob_spawn_guardian: Couldn't locate a spawn cell for guardian class %d (index %d) on castle map %s.\n",
 			    class_, guardian, mapname);
 		return 0;
@@ -911,7 +911,7 @@ static int mob_spawn_bg(const char *mapname, short x, short y, const char *mobna
 		return 0;
 	}
 
-	if ((x <= 0 || y <= 0) && map->search_freecell(NULL, map_id, &x, &y, -1, -1, 1) == 0) {
+	if ((x <= 0 || y <= 0) && map->search_free_cell(NULL, map_id, &x, &y, -1, -1, SFC_XY_CENTER) != 0) {
 		ShowWarning("mob_spawn_bg: Couldn't locate a spawn cell for guardian class %d (bg_id %u) on map %s.\n", class_, bg_id, mapname);
 		return 0;
 	}
@@ -1103,7 +1103,8 @@ static int mob_spawn(struct mob_data *md)
 
 		if( (md->bl.x == 0 && md->bl.y == 0) || md->spawn->xs || md->spawn->ys ) {
 			//Monster can be spawned on an area.
-			if( !map->search_freecell(&md->bl, -1, &md->bl.x, &md->bl.y, md->spawn->xs, md->spawn->ys, battle_config.no_spawn_on_player?4:0) ) {
+			int sfc_flag = (battle_config.no_spawn_on_player != 0) ? SFC_AVOIDPLAYER : SFC_DEFAULT;
+			if (map->search_free_cell(&md->bl, -1, &md->bl.x, &md->bl.y, md->spawn->xs, md->spawn->ys, sfc_flag) != 0) {
 				// retry again later
 				if( md->spawn_timer != INVALID_TIMER )
 					timer->delete(md->spawn_timer, mob->delayspawn);
@@ -1199,6 +1200,9 @@ static int mob_can_changetarget(const struct mob_data *md, const struct block_li
 		case MSS_WALK:
 		case MSS_LOOT:
 			return 1;
+		case MSS_ANY:
+		case MSS_ANYTARGET:
+		case MSS_DEAD:
 		default:
 			return 0;
 	}
@@ -1260,6 +1264,17 @@ static int mob_ai_sub_hard_activesearch(struct block_list *bl, va_list ap)
 			if (BL_UCCAST(BL_PC, bl)->state.gangsterparadise && !(status_get_mode(&md->bl)&MD_BOSS))
 				return 0; //Gangster paradise protection.
 			FALLTHROUGH
+		case BL_NUL:
+		case BL_MOB:
+		case BL_PET:
+		case BL_HOM:
+		case BL_MER:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_NPC:
+		case BL_CHAT:
+		case BL_ELEM:
+		case BL_ALL:
 		default:
 			if (battle_config.hom_setting&0x4 &&
 				(*target) && (*target)->type == BL_HOM && bl->type != BL_HOM)
@@ -1413,6 +1428,12 @@ static bool mob_is_in_battle_state(const struct mob_data *md)
 	case MSS_RUSH:
 	case MSS_FOLLOW:
 		return true;
+	case MSS_ANY:
+	case MSS_IDLE:
+	case MSS_WALK:
+	case MSS_LOOT:
+	case MSS_DEAD:
+	case MSS_ANYTARGET:
 	default:
 		return false;
 	}
@@ -1465,7 +1486,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, int64 tick)
 			const struct mob_data *m_md = BL_CCAST(BL_MOB, bl); // Can be NULL due to master being BL_PC
 			// If master is BL_MOB and in battle, lock & chase to master's target instead, unless configured not to.
 			if ((bl->type == BL_PC || battle_config.slave_chase_masters_chasetarget == 0 || (m_md != NULL && !mob->is_in_battle_state(m_md)))
-			    && map->search_freecell(&md->bl, bl->m, &x, &y, MOB_SLAVEDISTANCE, MOB_SLAVEDISTANCE, 1)
+			    && map->search_free_cell(&md->bl, bl->m, &x, &y, MOB_SLAVEDISTANCE, MOB_SLAVEDISTANCE, SFC_XY_CENTER) == 0
 			    && unit->walk_toxy(&md->bl, x, y, 0) == 0)
 				return 1;
 		}
@@ -1532,6 +1553,14 @@ static int mob_unlocktarget(struct mob_data *md, int64 tick)
 			//Delay next random walk when this one failed.
 			md->next_walktime = tick+rnd()%1000;
 		break;
+	case MSS_ANY:
+	case MSS_LOOT:
+	case MSS_DEAD:
+	case MSS_ANYTARGET:
+	case MSS_BERSERK:
+	case MSS_ANGRY:
+	case MSS_RUSH:
+	case MSS_FOLLOW:
 	default:
 		mob_stop_attack(md);
 		mob_stop_walking(md, STOPWALKING_FLAG_FIXPOS); //Stop chasing.
@@ -2302,6 +2331,12 @@ static void mob_log_damage(struct mob_data *md, struct block_list *src, int dama
 				md->attacked_id = src->id;
 			break;
 		}
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_NPC:
+		case BL_CHAT:
+		case BL_ALL:
 		default: //For all unhandled types.
 			md->attacked_id = src->id;
 	}
@@ -2406,6 +2441,8 @@ static void mob_damage(struct mob_data *md, struct block_list *src, int damage)
  *------------------------------------------*/
 static int mob_dead(struct mob_data *md, struct block_list *src, int type)
 {
+	GUARD_MAP_LOCK
+
 	struct status_data *mstatus;
 	struct map_session_data *sd = BL_CAST(BL_PC, src);
 	struct map_session_data *tmpsd[DAMAGELOG_SIZE] = { NULL };
@@ -2875,6 +2912,16 @@ static int mob_dead(struct mob_data *md, struct block_list *src, int type)
 				case BL_HOM: sd = BL_UCAST(BL_HOM, src)->master; break;
 				case BL_MER: sd = BL_UCAST(BL_MER, src)->master; break;
 				case BL_ELEM: sd = BL_UCAST(BL_ELEM, src)->master; break;
+
+				case BL_NUL:
+				case BL_ITEM:
+				case BL_SKILL:
+				case BL_NPC:
+				case BL_CHAT:
+				case BL_PC:
+				case BL_MOB:
+				case BL_ALL:
+					break;
 			}
 		}
 
@@ -2891,9 +2938,9 @@ static int mob_dead(struct mob_data *md, struct block_list *src, int type)
 			}
 
 			if( sd->status.party_id )
-				map->foreachinrange(quest->update_objective_sub,&md->bl,AREA_SIZE,BL_PC,sd->status.party_id,md->class_);
+				map->foreachinrange(quest->update_objective_sub, &md->bl, AREA_SIZE, BL_PC, sd->status.party_id, md);
 			else if( sd->avail_quests )
-				quest->update_objective(sd, md->class_);
+				quest->update_objective(sd, md);
 
 			if( sd->md && src && src->type != BL_HOM && mob->db(md->class_)->lv > sd->status.base_level/2 )
 				mercenary->kills(sd->md);
@@ -3153,7 +3200,7 @@ static int mob_warpslave_sub(struct block_list *bl, va_list ap)
 	if(md->master_id!=master->id)
 		return 0;
 
-	map->search_freecell(master, 0, &x, &y, range, range, 0);
+	map->search_free_cell(master, 0, &x, &y, range, range, SFC_DEFAULT);
 	unit->warp(&md->bl, master->m, x, y,CLR_TELEPORT);
 	return 1;
 }
@@ -3259,14 +3306,9 @@ static int mob_summonslave(struct mob_data *md2, int *value, int amount, uint16 
 
 		short x;
 		short y;
-
-		if (map->search_freecell(&md2->bl, 0, &x, &y, MOB_SLAVEDISTANCE, MOB_SLAVEDISTANCE, 0) != 0) {
-			data.x = x;
-			data.y = y;
-		} else {
-			data.x = md2->bl.x;
-			data.y = md2->bl.y;
-		}
+		map->search_free_cell(&md2->bl, 0, &x, &y, MOB_SLAVEDISTANCE, MOB_SLAVEDISTANCE, SFC_DEFAULT);
+		data.x = x;
+		data.y = y;
 
 		if (battle_config.override_mob_names == 1)
 			strcpy(data.name, DEFAULT_MOB_NAME);
@@ -3473,6 +3515,8 @@ static struct block_list *mob_getfriendstatus(struct mob_data *md, int cond1, in
  **/
 static int mob_use_skill(struct mob_data *md, int64 tick, int event)
 {
+	GUARD_MAP_LOCK
+
 	nullpo_retr(1, md);
 
 	struct mob_skill *ms = md->db->skill;
@@ -3637,7 +3681,7 @@ static int mob_use_skill(struct mob_data *md, int64 tick, int event)
 			// Find a target cell.
 			if (target_type >= MST_AROUND5 && target_type <= MST_AROUND) {
 				int range = target_type - ((target_type >= MST_AROUND1) ? MST_AROUND1 : MST_AROUND5) + 1;
-				map->search_freecell(&md->bl, md->bl.m, &x, &y, range, range, 3);
+				map->search_free_cell(&md->bl, md->bl.m, &x, &y, range, range, (SFC_XY_CENTER | SFC_REACHABLE));
 			}
 
 			md->skill_idx = skill_idx;

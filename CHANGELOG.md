@@ -22,6 +22,181 @@ If you are reading this in a text editor, simply ignore this section
 ### Removed
 -->
 
+## [v2021.05.05] `May 05 2021`
+
+### Added
+
+- Added settings to modify the chain item drop rates. See `item_rate_add_chain`, `item_drop_add_chain_min` and `item_drop_add_chain_max` in drops.conf for details. (#2983, issue #2982)
+- Added a check to ensure that the `map->freeblock_lock()` and `map->freeblock_unlock()` calls are balanced (GCC only). (#2992)
+
+### Changed
+
+- Documented that `struct script_state::rid` can contain the GID of a mob when called through `OnTouchNPC`. (part of #3000)
+- Merged the homunculus exp tables into `exp_group_db` (#2998)
+
+### Fixed
+
+- Fixed a crash in the `WL_WHITEIMPRISON` skill as well as possible crashes in the `ST_SWORDREJECT` and `ASC_BREAKER` skills. (#2991)
+- Fixed the adoption request entry in the character context menu. (#2993)
+- Fixed the Vacuum Extreme status becoming permanent until logout or death. (#2995, issue #2919)
+- Fixed Free Cast ignoring other speed modifiers (bypassing speed debuffs such as Curse). (#2987, issue #2976)
+- Fixed the trade restrictions for the Monster Ticket item, which should disallow dropping, trading, etc. (#2986, issue #2985)
+- Fixed an issue in the custom warper NPC that caused characters to get stuck when selecting the last warp option when it wasn't set yet. (#2984)
+- Fixed an error when `getarraysize()`, `soundeffectall()`, `atcommand()` or `useatcmd()` are called from an `OnTouchNPC` script. (#3000, related to issue #2989)
+- Fixed `montransform()`, `clan_join()`, `clan_leave()` and `clan_master()` not reporting an error when called without RID attached. (part of #3000)
+- Fixed the Water Screen skill, now deflecting the damage to the Aqua elemental spirit and healing the master by 1000 HP every 10 seconds. (#2981)
+- Fixed the Guardians in WoE:SE spawning in random locations instead of their designated ones. (#2999)
+
+### Removed
+
+- Removed the `homunculus_max_level` and `homunculus_S_max_level` battle configuration flags, now replaced by the `exp_group_db` configuration. (part of #2998 and 32fea2586d)
+
+## [v2021.04.05+1] `April 05 2021` `PATCH 1`
+
+### Fixed
+
+- Fixed a regression that caused the buffs from various skills not to get applied. (#2979, issue #2977)
+
+## [v2021.04.05] `April 05 2021`
+
+### Added
+
+- Added new `SP_*` constants in preparation for adding 4th jobs and reformatted the `status_point_types` enum to have one entry per line, with their respective values. (part of #2968)
+- Added support for the Baby Summoner job class. (part of #2968)
+- Added support for the Baby Ninja job class. (part of #2968)
+- Added support for the Baby Kagerou and Baby Oboro job classes. (part of #2968)
+- Added support for the Baby Taekwon job class. (part of #2968)
+- Added support for the Baby Star Gladiator job class. (part of #2968)
+- Added support for the Baby Soul Linker job class. (part of #2968)
+- Added support for the Baby Gunslinger job class. (part of #2968)
+- Added support for the Baby Rebellion job class. (part of #2968)
+- Added support for the Star Emperor job class and related skill ID constants and skill database entries. Skill ID conflicts between Star Emperor and Rebellion were solved in favor of the former for renewal and the latter for pre-renewal for the time being. (part of #2968)
+- Added support for the Baby Star Emperor job class. (part of #2968)
+- Added support for the Soul Reaper job class and related skill ID constants and skill database entries. (part of #2968)
+- Added support for the Baby Soul Reaper job class. (part of #2968)
+
+### Changed
+
+- Moved the mappings between skills and status changes (`Skill2SC` table) into the `StatusChange` field of the skill database. The `Skills` field of the `sc_config` is renamed to `Skill` and limited to one associated skill per SC. (#2971)
+- Added the corresponding numeric value next to each entry in the `e_class` enum, to prevent accidental renumbering and to make lookup easier. (part of #2968)
+- Added some missing constants for job IDs or separators in the `e_class` enum. (part of #2968)
+- Improved validation of the `class_exp_table` of the `job_db` with additional sanity checks. (part of #2968)
+- Moved the `EAJ_*` constants from `constants.conf` to the source and added the ones that were missing (`EAJ_WEDDING`, `EAJ_XMAS`, `EAJ_SUMMER`, `EAJ_BABY_SUMMONER`). (part of #2968)
+- Changed the warning message displayed when a constant is redefined with the same value as previously defined to mention that it has the same value. (part of #2968)
+- Renamed the `job_name()` function to `pc_job_name()`. The public interface name is still `pc->job_name()`. (part of #2968)
+- Moved the job enum values into separate files (`common/class.h`, `common/class_special.h` and `common/class_hidden.h`), to be accessed through the `ENUM_VALUE()` X-macro and reduce repetition. (part of #2968)
+- Added the `-Wswitch-enum` warning to the default compiler settings (with an exception for libbacktrace). (part of #2968)
+- Improved validation of `job_db2`, now detecting missing jobs. (part of #2968)
+- Changed some function parameters from integers to the appropriate enums. (part of #2968)
+- Split the status change config into renewal and pre-renewal. (part of #2963)
+- De-hardcoded the status change calculation flags, moving them from the source to the `CalcFlags` field of the `sc_config`. (#2963)
+
+### Fixed
+
+- Fixed a regression in the association between skills and status changes. (part of #2971, issue #2969)
+- Added support for the Summoner job to the `db2sql` plugin. (part of #2968)
+- Fixed validation of the skills cast through Abracadabra (Hocus Pocus). (#2972, related to #2859, issue #2824)
+- Fixed validation of the skills cast through Improvised Song. (#2972, related to #2859, issue #2823)
+- Worked around a client issue (packet containing garbage) that prevented proper validation of the Warp Portal skill use request when cast through Abracadabra, causing the caster to get stuck and unable to cast any other skills until relogging or teleporting. (#2972)
+
+### Removed
+
+- Removed the unused `FixedCastTime` field from the pre-renewal skill DB. (part of #2968)
+- Removed the `status->set_sc()` function, no longer needed. (part of #2963)
+
+## [v2021.03.08] `March 08 2021`
+
+### Added
+
+- Added support for preview in the cash shop. This is disabled by default and can be enabled by defining `ENABLE_CASHSHOP_PREVIEW_PATCH` or through the configure flag `--enable-cashshop-preview-patch`. A client patch is necessary, available at http://nemo.herc.ws/patches/ExtendCashShopPreview (#2944)
+- Added a console warning if a message that is not present in `messages.conf` is requested. (#2958)
+- Added the missing icons for `SC_DEFSET` and `SC_MDEFSET`. (#2953)
+- Added the `SC_NO_RECOVER_STATE` status preventing HP/SP recovery and the related item bonus `bStateNoRecoverRace`. (#2956)
+
+### Changed
+
+- De-hardcoded the association between status changes and skills from the source code. A new field `Skills` is added to the `sc_config`, allowing to specify a list of skills for each status change entry. The macro `add_sc` has been removed from `status.c`, use `status->set_sc()` instead. (#2954)
+- Converted packets `ZC_NOTIFY_SKILL`, `ZC_USE_SKILL`, `ZC_NOTIFY_GROUNDSKILL`, `ZC_SKILL_POSTDELAY` and `ZC_NOTIFY_SKILL_POSITION` to the structure format. (#2951)
+- Converted the Homunculus database to libconfig. A tool to help converting custom databases has been provided in `tools/homundbconverter.py`. (#2941)
+- De-hardcoded the list of skills that are blocked under `SC_STASIS` and `SC_KG_KAGEHUMI`. A new pair of `SkillInfo` flags `BlockedByStasis` and `BlockedByKagehumi` has been added to the skill database. (#2959)
+- Updated the item script of `Velum_Flail` to its official effects. (part of #2956)
+
+### Fixed
+
+- Fixed compilation with mingw. (#2945)
+- Fixed the CodeQL analysis builds in the CI. (#2946)
+- Fixed a possible use after free in `unit_skilluse_id2()`. (#2947)
+- Fixed the save point message of the Kafra in `alb2trea`. (#2950)
+- Fixed some issues/regressions in the regeneration code: (#2952)
+  - Fixed an issue that caused the SP regeneration rate bonus to be applied to the HP regeneration.
+  - Fixed the HP/SP regeneration always capping to a minimum of 1, causing unintended behavior. (issue #2910)
+  - Fixed a issue that caused the homunculus regeneration configuration to apply to elementals instead.
+  - Fixed the Happy Break bonus not triggering.
+  - Fixed the doridori doubled SP regeneration applying to jobs other than Super Novice.
+- Fixed Emergency Call ignoring `unit_skilluse_id2()` in Renewal. (#2949)
+- Fixed Manhole working on Guardians/Emperium while it shouldn't. (#2942)
+- Fixed `successremovecard()` not running the cards' unequip scripts. (#2933, issue #2922)
+
+## [v2021.02.08] `February 08 2021`
+
+### Added
+
+- Extended the quest database with new options. (#2874)
+  - Mob ID can be set to 0 to allow any monster ID.
+  - A monster level range can now be specified.
+  - A target monster's map can now be specified.
+  - A target monster's type (size, race and/or element) can now be specified.
+- Added new quest database entries using the new options. (part of #2874)
+- Added a failed assertion backtrace report in the removing player error in `unit->remove_map()`. (part of #2938)
+- Added support for constants and improved error messages in the quest DB. This affects the `Mob_ID`, `Drops/ItemId` and `Drops/MobId` fields. (#2886)
+- Added inheritance mechanism for the pet DB. Inheritance works in the same way as the mob and item databases, allowing to specify the `Inherit: true` flag in order to inherit (rather than overriding) an existing entry with the same Id. (#2206, issue #2181)
+- Updated the map database, NPC and Hateffect constants with new data. (#2936)
+
+### Changed
+
+- Changed the free cell search (as used by random mob spawns or teleport) to ignore the map margins, as in official servers. The margin size defaults to the official value of 15 and can be changed by editing the `search_freecell_map_margin` setting in `misc.conf`. (#2911)
+- Refactored and sanitized `map->search_freecell()`. The function has been renamed to `map->search_free_cell()` since the meaning of its return values has changed. (part of #2911)
+- Refactored and documented some pet database functions and added validation of the pet DB entries before they're inserted into the database. The new constant `ITEID_PET_FOOD` has been added. (part of #2206)
+
+### Fixed
+
+- Fixed a signed left shift overflow in socket.c. (part of #2938)
+- Fixed failing github workflows builds, switching from clang-10 to clang-11 since the former is no longer available in the Debian repositories. (part of #2938)
+- Forcefully disabled the compiler flag `-fcf-protection` to avoid issues in the `setjmp()` calls. (#2938)
+- Fixed some missing item IDs referenced by the quest DB in pre-re mode. (part of #2886)
+- Fixed grfio issues with large grf files. (#2937)
+
+## [v2021.01.11] `January 11 2021`
+
+### Added
+
+- Integrated the Renewal mob database with the correct `DamageTakenRate` value for MVPs that require it. Those MVPs have a green aura and only receive 10% of the damage dealt to them. (#2875)
+- Added an enum for client action types. See `enum action_type`. (#2930)
+- Added skill prerequisite checks before leveling up homunculus skills, allowing the definition of prerequisites for non-evolved or non-loyal homunculi, as it was previously limited to those. The check is disabled when the `player_skillfree` setting is enabled in the battle config. (#2807)
+- Added constants for the `mercenary_delete()` script command as well as the `mercenary->delete()` function and documentation for the formerly undocumented values. See `enum merc_delete_type` and the script constants `MERC_DELETE_*`. (part of #2858, issue #2843)
+
+### Changed
+
+- Cleaned up mob database from redundant `MVPExp: 0` fields. (part of #2875)
+- Updated packet `CZ_REQUEST_ACTNPC` to use a struct. (part of #2930)
+- Changed the default mercenary delete type of the `mercenary_delete()` script command to be fired by the user (not updating loyalty). (#2843)
+
+### Fixed
+
+- Fixed an issue that caused the Sign quest to lock up and become unfinishable for everyone when a player times out or logs out under certain conditions. (#2921)
+- Fixed an exploit that allowed multiple people into the solo room of the Sign quest. (part of #2921)
+- Fixed a failed assertion when using the `MH_SUMMON_LEGION` skill. (#2929)
+
+### Removed
+
+- Removed the undocumented and meaningless return value of `mercenary->delete()`, now returning void. It was previously relying on the return value of two other functions, and ultimately always returning zero. (part of #2843)
+
+## [v2020.12.14+1] `December 14 2020` `PATCH 1`
+
+### Fixed
+
+- Fixed a crash in `unit->run_hit()` caused by a regression in the last update. (#2924)
+
 ## [v2020.12.14] `December 14 2020`
 
 ### Added
@@ -1738,6 +1913,13 @@ If you are reading this in a text editor, simply ignore this section
 - New versioning scheme and project changelogs/release notes (#1853)
 
 [Unreleased]: https://github.com/HerculesWS/Hercules/compare/stable...master
+[v2021.05.05]: https://github.com/HerculesWS/Hercules/compare/v2021.04.05+1...v2021.05.05
+[v2021.04.05+1]: https://github.com/HerculesWS/Hercules/compare/v2021.04.05...v2021.04.05+1
+[v2021.04.05]: https://github.com/HerculesWS/Hercules/compare/v2021.03.08...v2021.04.05
+[v2021.03.08]: https://github.com/HerculesWS/Hercules/compare/v2021.02.08...v2021.03.08
+[v2021.02.08]: https://github.com/HerculesWS/Hercules/compare/v2021.01.11...v2021.02.08
+[v2021.01.11]: https://github.com/HerculesWS/Hercules/compare/v2020.12.14+1...v2021.01.11
+[v2020.12.14+1]: https://github.com/HerculesWS/Hercules/compare/v2020.12.14...v2020.12.14+1
 [v2020.12.14]: https://github.com/HerculesWS/Hercules/compare/v2020.11.16...v2020.12.14
 [v2020.11.16]: https://github.com/HerculesWS/Hercules/compare/v2020.10.19...v2020.11.16
 [v2020.10.19]: https://github.com/HerculesWS/Hercules/compare/v2020.09.20...v2020.10.19

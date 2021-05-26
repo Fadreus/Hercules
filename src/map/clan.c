@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2017-2020 Hercules Dev Team
+ * Copyright (C) 2017-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -506,6 +506,12 @@ static int clan_get_id(const struct block_list *bl)
 		if (su->group != NULL)
 			return su->group->clan_id;
 	}
+		break;
+	case BL_NUL:
+	case BL_ITEM:
+	case BL_ELEM:
+	case BL_CHAT:
+	case BL_ALL:
 		break;
 	}
 

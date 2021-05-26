@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -137,6 +137,8 @@ enum e_skill_inf2 {
 	INF2_ALLOW_REPRODUCE   = 0x40000,
 	INF2_HIDDEN_TRAP       = 0x80000, // Traps that are hidden (based on trap_visiblity battle conf)
 	INF2_IS_COMBO_SKILL    = 0x100000, // Sets whether a skill can be used in combos or not
+	INF2_NO_STASIS         = 0x200000,
+	INF2_NO_KAGEHUMI       = 0x400000,
 };
 
 
@@ -166,7 +168,11 @@ enum {
 };
 
 //Returns the cast type of the skill: ground cast, castend damage, castend no damage
-enum { CAST_GROUND, CAST_DAMAGE, CAST_NODAMAGE };
+enum cast_enum {
+	CAST_GROUND,
+	CAST_DAMAGE,
+	CAST_NODAMAGE
+};
 
 enum wl_spheres {
 	WLS_FIRE = 0x44,
@@ -1343,6 +1349,47 @@ enum e_skill {
 	RL_B_FLICKER_ATK,
 	RL_GLITTERING_GREED_ATK,
 
+	SJ_LIGHTOFMOON = 2574,
+	SJ_LUNARSTANCE = 2575,
+	SJ_FULLMOONKICK = 2576,
+	SJ_LIGHTOFSTAR = 2577,
+	SJ_STARSTANCE = 2578,
+	SJ_NEWMOONKICK = 2579,
+	SJ_FLASHKICK = 2580,
+	SJ_STAREMPEROR = 2581,
+	SJ_NOVAEXPLOSING = 2582,
+	SJ_UNIVERSESTANCE = 2583,
+	SJ_FALLINGSTAR = 2584,
+	SJ_GRAVITYCONTROL = 2585,
+	SJ_BOOKOFDIMENSION = 2586,
+	SJ_BOOKOFCREATINGSTAR = 2587,
+	SJ_DOCUMENT = 2588,
+	SJ_PURIFY = 2589,
+	SJ_LIGHTOFSUN = 2590,
+	SJ_SUNSTANCE = 2591,
+	SJ_SOLARBURST = 2592,
+	SJ_PROMINENCEKICK = 2593,
+	SJ_FALLINGSTAR_ATK = 2594,
+	SJ_FALLINGSTAR_ATK2 = 2595,
+
+	SP_SOULGOLEM = 2596,
+	SP_SOULSHADOW = 2597,
+	SP_SOULFALCON = 2598,
+	SP_SOULFAIRY = 2599,
+	SP_CURSEEXPLOSION = 2600,
+	SP_SOULCURSE = 2601,
+	SP_SPA = 2602,
+	SP_SHA = 2603,
+	SP_SWHOO = 2604,
+	SP_SOULUNITY = 2605,
+	SP_SOULDIVISION = 2606,
+	SP_SOULREAPER = 2607,
+	SP_SOULREVOLVE = 2608,
+	SP_SOULCOLLECT = 2609,
+	SP_SOULEXPLOSION = 2610,
+	SP_SOULENERGY = 2611,
+	SP_KAUTE = 2612,
+
 	KO_YAMIKUMO = 3001,
 	KO_RIGHT,
 	KO_LEFT,
@@ -1803,6 +1850,7 @@ struct s_skill_db {
 	int unit_interval[MAX_SKILL_LEVEL];
 	int unit_target[MAX_SKILL_LEVEL];
 	int unit_flag;
+	sc_type status_type;
 	struct skill_required_item_data req_items;
 	struct skill_required_item_data req_equip;
 };
@@ -2045,6 +2093,7 @@ struct skill_interface {
 	/* whether its CAST_GROUND, CAST_DAMAGE or CAST_NODAMAGE */
 	int (*get_casttype) (int skill_id);
 	int (*get_casttype2) (int index);
+	sc_type (*get_sc_type) (int skill_id);
 	bool (*is_combo) (int skill_id);
 	int (*name2id) (const char* name);
 	int (*isammotype) (struct map_session_data *sd, int skill_id, int skill_lv);
@@ -2106,7 +2155,7 @@ struct skill_interface {
 	int (*can_produce_mix) ( struct map_session_data *sd, int nameid, int trigger, int qty);
 	int (*produce_mix) ( struct map_session_data *sd, uint16 skill_id, int nameid, int slot1, int slot2, int slot3, int qty );
 	int (*arrow_create) ( struct map_session_data *sd,int nameid);
-	void (*castend_type) (int type, struct block_list *src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int64 tick, int flag);
+	void (*castend_type) (enum cast_enum type, struct block_list *src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int64 tick, int flag);
 	int (*castend_nodamage_id) (struct block_list *src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int64 tick, int flag);
 	int (*castend_damage_id) (struct block_list* src, struct block_list *bl, uint16 skill_id, uint16 skill_lv, int64 tick,int flag);
 	int (*castend_pos2) (struct block_list *src, int x, int y, uint16 skill_id, uint16 skill_lv, int64 tick, int flag);
@@ -2223,6 +2272,7 @@ struct skill_interface {
 	int (*validate_unit_target_sub) (const char *target);
 	void (*validate_unit_target) (struct config_setting_t *conf, struct s_skill_db *sk);
 	void (*validate_unit) (struct config_setting_t *conf, struct s_skill_db *sk);
+	void (*validate_status_change) (struct config_setting_t *conf, struct s_skill_db *sk);
 	void (*validate_additional_fields) (struct config_setting_t *conf, struct s_skill_db *sk);
 	bool (*read_skilldb) (const char *filename);
 	void (*config_set_level) (struct config_setting_t *conf, int *arr);

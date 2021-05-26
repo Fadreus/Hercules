@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2020 Hercules Dev Team
+ * Copyright (C) 2013-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -210,6 +210,9 @@ uint64 itemdb2sql_readdb_job_sub(struct config_setting_t *t)
 					break;
 				case JOB_REBELLION:
 					newmask = 1ULL << 30;
+					break;
+				case JOB_SUMMONER:
+					newmask = 1ULL << 31;
 					break;
 			}
 

@@ -1,7 +1,7 @@
 -- This file is part of Hercules.
 -- http://herc.ws - http://github.com/HerculesWS/Hercules
 --
--- Copyright (C) 2013-2020 Hercules Dev Team
+-- Copyright (C) 2013-2021 Hercules Dev Team
 --
 -- Hercules is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -209,7 +209,7 @@ REPLACE INTO `item_db` VALUES ('642','Book_Of_Devil','Book of the Devil','2','0'
 REPLACE INTO `item_db` VALUES ('643','Pet_Incubator','Pet Incubator','2','0','3000','1500','30','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','bpet;','','');
 REPLACE INTO `item_db` VALUES ('644','Gift_Box','Gift Box','2','0','1000','500','200','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','getrandgroupitem 644,1;','','');
 REPLACE INTO `item_db` VALUES ('645','Center_Potion','Concentration Potion','2','0','800','400','100','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION1, 1800000, 0;','','');
-REPLACE INTO `item_db` VALUES ('656','Awakening_Potion','Awakening Potion','2','0','1500','750','150','0','0','0','0','0','2145902319','63','2','0','0','40',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION2, 1800000, 0;','','');
+REPLACE INTO `item_db` VALUES ('656','Awakening_Potion','Awakening Potion','2','0','1500','750','150','0','0','0','0','0','4293385967','63','2','0','0','40',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION2, 1800000, 0;','','');
 REPLACE INTO `item_db` VALUES ('657','Berserk_Potion','Berserk Potion','2','0','3000','1500','200','0','0','0','0','0','31868582','63','2','0','0','85',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION3, 1800000, 0;','','');
 REPLACE INTO `item_db` VALUES ('658','Union_Of_Tribe','Union of Tribe','2','0','2','1','500','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','guildgetexp rand(600000,1200000);','','');
 REPLACE INTO `item_db` VALUES ('659','Heart_Of_Her','Her Heart','2','0','500','250','50','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'1',NULL,'0',NULL,'0','pet BON_GUN;','','');
@@ -3237,10 +3237,15 @@ REPLACE INTO `item_db` VALUES ('6396','Auger_Of_Spirit','Auger Of Spirit','3','0
 REPLACE INTO `item_db` VALUES ('6413','New_Insurance','New Insurance','3','0','2','1','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6415','Strange_Embryo','Strange Embryo','3','0','0','0','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','507',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6493','Makibishi','Makibishi','3','0','30','15','1','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('6498','Jejellopy','Jejellopy','3','0','200','100','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('6507','Evil_Bone','Evil Spirit Bone','3','0','0','0','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','499',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('6510','Elegant_Flower','Elegant Flower','3','0','300','150','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6512','Charm_Fire','Charm Fire','3','0','100','50','1','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6513','Charm_Ice','Charm Ice','3','0','100','50','1','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6514','Charm_Wind','Charm Wind','3','0','100','50','1','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6515','Charm_Earth','Charm Earth','3','0','100','50','1','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('6520','Lost_Belongings','Lost Belongings','3','0','0','0','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','467',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('6542','Star_Shape_Mushroom','Star Shape Mushroom','3','0','20','10','100','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','467',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('6707','Cash_Hair_Coupon','Cash Hair Coupon','3','0','0','0','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7001','Mould_Powder','Mould Powder','3','0','466','233','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7002','Ogre_Tooth','Ogre Tooth','3','0','658','329','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
@@ -3754,7 +3759,7 @@ REPLACE INTO `item_db` VALUES ('7510','Valhalla_Flower','Valhalla\'s Flower','3'
 REPLACE INTO `item_db` VALUES ('7511','Rune_Of_Darkness','Rune of Darkness','3','0','2526','1263','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7512','Burnt_Parts','Burnt Part','3','0','1600','800','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7513','Pocket_Watch','Pocket Watch','3','0','3420','1710','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','1','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
-REPLACE INTO `item_db` VALUES ('7514','Monster_Ticket','Monster Ticket','3','0','2','1','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
+REPLACE INTO `item_db` VALUES ('7514','Monster_Ticket','Monster Ticket','3','0','2','1','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','499',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7515','Marvelous_Medal','Prize Medal','3','0','2','1','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','499',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7516','Green_Key_Card','Green Keycard','3','0','0','0','0','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','499',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('7517','Gold_Coin_','Gold Coin','3','0','1000','500','100','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','','','');
@@ -6128,7 +6133,7 @@ REPLACE INTO `item_db` VALUES ('14469','Ox_Tail_Scroll','Ox Tail Egg','2','0','2
 REPLACE INTO `item_db` VALUES ('14500','Insurance60','Life Insurrance Certificate','2','0','2','1','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_CASH_DEATHPENALTY,3600000,0;','','');
 REPLACE INTO `item_db` VALUES ('14508','Zeny_Scroll','Zeny Pet Egg Scroll','2','0','0','0','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','73',NULL,'0',NULL,'0',NULL,'0','','','');
 REPLACE INTO `item_db` VALUES ('14509','Light_Center_Pot','Light Concentration Potion','2','0','800','400','20','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION1, 1800000, 0;','','');
-REPLACE INTO `item_db` VALUES ('14510','Light_Awakening_Pot','Light Awakening Potion','2','0','1500','750','20','0','0','0','0','0','2145902319','63','2','0','0','40',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION2, 1800000, 0;','','');
+REPLACE INTO `item_db` VALUES ('14510','Light_Awakening_Pot','Light Awakening Potion','2','0','1500','750','20','0','0','0','0','0','4293385967','63','2','0','0','40',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION2, 1800000, 0;','','');
 REPLACE INTO `item_db` VALUES ('14511','Light_Berserk_Pot','Light Berserk Potion','2','0','3000','1500','20','0','0','0','0','0','31868582','63','2','0','0','85',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','sc_start SC_ATTHASTE_POTION3, 1800000, 0;','','');
 REPLACE INTO `item_db` VALUES ('14512','Meteor_10_Scroll','Meteor Storm Scroll','2','0','0','0','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','itemskill WZ_METEOR,10;','','');
 REPLACE INTO `item_db` VALUES ('14513','Storm_10_Scroll','Storm Gust Scroll','2','0','0','0','10','0','0','0','0','0','18446744073709551615','63','2','0','0','0',NULL,'0','1','0','0','0','0','0','0',NULL,'0',NULL,'0',NULL,'0','itemskill WZ_STORMGUST,10;','','');

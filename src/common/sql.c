@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -95,7 +95,7 @@ static struct Sql *Sql_Malloc(void)
 	{
 		my_bool reconnect = 1;
 		mysql_options(&self->handle, MYSQL_OPT_RECONNECT, &reconnect);
-#ifdef WIN32
+#if defined(WIN32) && !defined(__MINGW32__) && !defined(MINGW)
 		mysql_optionsv(&self->handle, MYSQL_PLUGIN_DIR, MARIADB_PLUGINDIR);
 #endif
 	}
@@ -522,6 +522,7 @@ static int Sql_P_BindSqlDataType(MYSQL_BIND *bind, enum SqlDataType buffer_type,
 		bind->buffer_type = MYSQL_TYPE_BLOB;
 		break;
 	default:
+	case SQLDT_LASTID:
 		ShowDebug("Sql_P_BindSqlDataType: unsupported buffer type (%u)\n", buffer_type);
 		return SQL_ERROR;
 	}
@@ -539,6 +540,9 @@ static void Sql_P_ShowDebugMysqlFieldInfo(const char *prefix, enum enum_field_ty
 {
 	const char *sign = (is_unsigned ? "UNSIGNED " : "");
 	const char *type_string = NULL;
+	// [4144] probably can be many types and not supported by all mysql versions because this ignore warning about missing type enum values
+	PRAGMA_GCC46(GCC diagnostic push)
+	PRAGMA_GCC46(GCC diagnostic ignored "-Wswitch-enum")
 	switch (type) {
 		default:
 			ShowDebug("%stype=%s%u, length=%lu\n", prefix, sign, type, length);
@@ -565,6 +569,7 @@ static void Sql_P_ShowDebugMysqlFieldInfo(const char *prefix, enum enum_field_ty
 		SHOW_DEBUG_OF(MYSQL_TYPE_NULL);
 #undef SHOW_DEBUG_TYPE_OF
 	}
+	PRAGMA_GCC46(GCC diagnostic pop)
 	ShowDebug("%stype=%s%s, length=%lu%s\n", prefix, sign, type_string, length, length_postfix);
 }
 

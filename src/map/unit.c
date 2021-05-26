@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2020 Hercules Dev Team
+ * Copyright (C) 2012-2021 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -98,6 +98,10 @@ static struct unit_data *unit_bl2ud(struct block_list *bl)
 		return &BL_UCAST(BL_ELEM, bl)->ud;
 	case BL_SKILL: // No assertion to not spam the server console when attacking a skill type unit such as Ice Wall.
 		return NULL;
+	case BL_NUL:
+	case BL_ITEM:
+	case BL_CHAT:
+	case BL_ALL:
 	default:
 		Assert_retr(NULL, false);
 	}
@@ -132,6 +136,10 @@ static const struct unit_data *unit_cbl2ud(const struct block_list *bl)
 		return &BL_UCCAST(BL_ELEM, bl)->ud;
 	case BL_SKILL: // No assertion to not spam the server console when attacking a skill type unit such as Ice Wall.
 		return NULL;
+	case BL_NUL:
+	case BL_ITEM:
+	case BL_CHAT:
+	case BL_ALL:
 	default:
 		Assert_retr(NULL, false);
 	}
@@ -782,9 +790,9 @@ static void unit_run_hit(struct block_list *bl, struct status_change *sc, struct
 	nullpo_retv(ud);
 	//Set running to 0 beforehand so status_change_end knows not to enable spurt [Kevin]
 	ud->state.running = 0;
+	int lv = sc->data[type]->val1;
 	status_change_end(bl, type, INVALID_TIMER);
 
-	int lv = sc->data[type]->val1;
 	if (type == SC_RUN) {
 		if (lv > 0)
 			skill->blown(bl, bl, skill->get_blewcount(TK_RUN, lv), unit->getdir(bl), 0);
@@ -1074,11 +1082,22 @@ static int unit_warp(struct block_list *bl, short m, short x, short y, enum clr_
 			if (map->list[bl->m].flag.noteleport)
 				return 1;
 			break;
+		case BL_NUL:
+		case BL_PET:
+		case BL_HOM:
+		case BL_MER:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_NPC:
+		case BL_CHAT:
+		case BL_ELEM:
+		case BL_ALL:
+			break;
 	}
 
 	if (x<0 || y<0) {
 		//Random map position.
-		if (!map->search_freecell(NULL, m, &x, &y, -1, -1, 1)) {
+		if (map->search_free_cell(NULL, m, &x, &y, -1, -1, SFC_XY_CENTER) != 0) {
 			ShowWarning("unit_warp failed. Unit Id:%d/Type:%u, target position map %d (%s) at [%d,%d]\n", bl->id, bl->type, m, map->list[m].name, x, y);
 			return 2;
 
@@ -1087,7 +1106,7 @@ static int unit_warp(struct block_list *bl, short m, short x, short y, enum clr_
 		//Invalid target cell
 		ShowWarning("unit_warp: Specified non-walkable target cell: %d (%s) at [%d,%d]\n", m, map->list[m].name, x,y);
 
-		if (!map->search_freecell(NULL, m, &x, &y, 4, 4, 1)) {
+		if (map->search_free_cell(NULL, m, &x, &y, 4, 4, SFC_XY_CENTER) != 0) {
 			//Can't find a nearby cell
 			ShowWarning("unit_warp failed. Unit Id:%d/Type:%u, target position map %d (%s) at [%d,%d]\n", bl->id, bl->type, m, map->list[m].name, x, y);
 			return 2;
@@ -1309,10 +1328,10 @@ static int unit_resume_running(int tid, int64 tick, int id, intptr_t data)
 	nullpo_ret(ud);
 	if(sd && pc_isridingwug(sd))
 		clif->skill_nodamage(ud->bl,ud->bl,RA_WUGDASH,ud->skill_lv,
-		                     sc_start4(ud->bl,ud->bl,status->skill2sc(RA_WUGDASH),100,ud->skill_lv,unit->getdir(ud->bl),0,0,1));
+		                     sc_start4(ud->bl,ud->bl,skill->get_sc_type(RA_WUGDASH),100,ud->skill_lv,unit->getdir(ud->bl),0,0,1));
 	else
 		clif->skill_nodamage(ud->bl,ud->bl,TK_RUN,ud->skill_lv,
-		                     sc_start4(ud->bl,ud->bl,status->skill2sc(TK_RUN),100,ud->skill_lv,unit->getdir(ud->bl),0,0,0));
+		                     sc_start4(ud->bl,ud->bl,skill->get_sc_type(TK_RUN),100,ud->skill_lv,unit->getdir(ud->bl),0,0,0));
 
 	if (sd) clif->walkok(sd);
 
@@ -1370,6 +1389,8 @@ static int unit_set_walkdelay(struct block_list *bl, int64 tick, int delay, int 
 //-------------- stop here
 static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill_id, uint16 skill_lv, int casttime, int castcancel)
 {
+	GUARD_MAP_LOCK
+
 	struct unit_data *ud;
 	struct status_data *tstatus;
 	struct status_change *sc;
@@ -1734,6 +1755,8 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 	if (sd != NULL && sd->auto_cast_current.itemskill_instant_cast && sd->auto_cast_current.type == AUTOCAST_ITEM)
 		casttime = 0;
 
+	map->freeblock_lock();
+
 	// in official this is triggered even if no cast time.
 	clif->useskill(src, src->id, target_id, 0,0, skill_id, skill_lv, casttime);
 	if( casttime > 0 || temp )
@@ -1760,6 +1783,13 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 					md->target_id = src->id;
 					md->state.aggressive = (tstatus->mode&MD_ANGRY)?1:0;
 					md->min_chase = md->db->range3;
+					break;
+				case MSS_ANY:
+				case MSS_DEAD:
+				case MSS_BERSERK:
+				case MSS_ANGRY:
+				case MSS_ANYTARGET:
+				case MSS_LOOT:
 					break;
 				}
 			}
@@ -1798,6 +1828,8 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 	if (sd != NULL && battle_config.prevent_logout_trigger & PLT_SKILL)
 		sd->canlog_tick = timer->gettick();
 
+	map->freeblock_unlock();
+
 	return 1;
 }
 
@@ -1808,7 +1840,7 @@ static int unit_skilluse_pos(struct block_list *src, short skill_x, short skill_
 	int ret = unit->skilluse_pos2(src, skill_x, skill_y, skill_id, skill_lv, casttime, castcancel);
 	struct map_session_data *sd = BL_CAST(BL_PC, src);
 
-	if (sd != NULL)
+	if (sd != NULL && sd->auto_cast_current.skill_id != AL_WARP)
 		pc->autocast_remove(sd, sd->auto_cast_current.type, sd->auto_cast_current.skill_id,
 				    sd->auto_cast_current.skill_lv);
 
@@ -2263,6 +2295,8 @@ static int unit_calc_pos(struct block_list *bl, int tx, int ty, enum unit_dir di
  *------------------------------------------*/
 static int unit_attack_timer_sub(struct block_list *src, int tid, int64 tick)
 {
+	GUARD_MAP_LOCK
+
 	struct block_list *target;
 	struct unit_data *ud;
 	struct status_data *sstatus;
@@ -2560,6 +2594,8 @@ static int unit_changeviewsize(struct block_list *bl, short size)
  *------------------------------------------*/
 static int unit_remove_map(struct block_list *bl, enum clr_type clrtype, const char *file, int line, const char *func)
 {
+	GUARD_MAP_LOCK
+
 	struct unit_data *ud = unit->bl2ud(bl);
 	struct status_change *sc = status->get_sc(bl);
 	nullpo_ret(bl);
@@ -2708,6 +2744,7 @@ static int unit_remove_map(struct block_list *bl, enum clr_type clrtype, const c
 					sd->state.active, sd->state.connect_new, sd->state.rewarp, sd->state.changemap, sd->state.debug_remove_map,
 					map->list[bl->m].name, map->list[bl->m].users,
 					sd->debug_file, sd->debug_line, sd->debug_func, file, line, func);
+					Assert_report(0);
 			} else if (--map->list[bl->m].users == 0 && battle_config.dynamic_mobs) //[Skotlex]
 				map->removemobs(bl->m);
 			if (!(pc_isinvisible(sd))) {
@@ -2792,6 +2829,12 @@ static int unit_remove_map(struct block_list *bl, enum clr_type clrtype, const c
 			}
 			break;
 		}
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_NPC:
+		case BL_CHAT:
+		case BL_ALL:
 		default: break;// do nothing
 	}
 	/**
@@ -2838,6 +2881,8 @@ static void unit_free_pc(struct map_session_data *sd)
  *------------------------------------------*/
 static int unit_free(struct block_list *bl, enum clr_type clrtype)
 {
+	GUARD_MAP_LOCK
+
 	struct unit_data *ud = unit->bl2ud( bl );
 	nullpo_ret(bl);
 	nullpo_ret(ud);
@@ -3081,6 +3126,13 @@ static int unit_free(struct block_list *bl, enum clr_type clrtype)
 			elemental->summon_stop(ed);
 			break;
 		}
+		case BL_NUL:
+		case BL_ITEM:
+		case BL_SKILL:
+		case BL_NPC:
+		case BL_CHAT:
+		case BL_ALL:
+			break;
 	}
 
 	skill->clear_unitgroup(bl);

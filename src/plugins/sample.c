@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2020 Hercules Dev Team
+ * Copyright (C) 2013-2021 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -184,6 +184,7 @@ HPExport void plugin_init (void) {
 		case SERVER_TYPE_LOGIN: printf("Login Server\n"); break;
 		case SERVER_TYPE_CHAR: printf("Char Server\n"); break;
 		case SERVER_TYPE_MAP: printf ("Map Server\n"); break;
+		case SERVER_TYPE_UNKNOWN: printf ("Unknown Server\n"); break;
 	}
 
 	ShowInfo("I'm being run from the '%s' filename\n", SERVER_NAME);
