@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -36,8 +36,6 @@ struct status_change_entry;
 #define CHECK_INTERVAL 3600000
 //Interval at which map server sends number of connected users. [Skotlex]
 #define UPDATE_INTERVAL 10000
-
-#define CHRIF_PACKET_LEN_TABLE_SIZE 0x3d
 
 /**
  * Enumerations
@@ -74,7 +72,6 @@ struct chrif_interface {
 	struct eri *auth_db_ers; //For re-utilizing player login structures.
 	struct DBMap *auth_db; // int id -> struct auth_node*
 	/* */
-	int packet_len_table[CHRIF_PACKET_LEN_TABLE_SIZE];
 	int fd;
 	int srvinfo;
 	char ip_str[128];

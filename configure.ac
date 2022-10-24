@@ -4,7 +4,7 @@
 # This file is part of Hercules.
 # http://herc.ws - http://github.com/HerculesWS/Hercules
 #
-# Copyright (C) 2012-2021 Hercules Dev Team
+# Copyright (C) 2012-2022 Hercules Dev Team
 # Copyright (C) Athena Dev Teams
 #
 # Hercules is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 AC_INIT(Hercules)
 AC_REVISION([m4_esyscmd_s([type git >/dev/null 2>&1 && git describe --always 2>/dev/null || echo '(unknown version)'])])
-AC_PREREQ([2.59])
+AC_PREREQ([2.69])
 AC_CONFIG_SRCDIR([src/common/cbasetypes.h])
 AC_CONFIG_FILES([Makefile src/common/Makefile])
 AC_CONFIG_FILES([3rdparty/mt19937ar/Makefile 3rdparty/libconfig/Makefile 3rdparty/libbacktrace/Makefile 3rdparty/libbacktrace/backtrace-supported.h])
@@ -91,7 +91,7 @@ esac
 #
 AC_ARG_ENABLE(
 	[manager],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-manager=ARG],
 		[memory managers: no, builtin, memwatch, dmalloc, gcollect, bcheck (defaults to builtin)]
 	),
@@ -116,7 +116,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[packetver],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-packetver=ARG],
 		[Sets the PACKETVER define. (see src/common/mmo.h)]
 	),
@@ -129,12 +129,25 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[cashshop-preview-patch],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-cashshop-preview-patch],
 		[Enable Nemo patch ExtendCashShopPreview.]
 	),
 	[enable_cashshop_preview_patch=1],
 	[enable_cashshop_preview_patch=0]
+)
+
+#
+# old cash shop preview patch
+#
+AC_ARG_ENABLE(
+	[old-cashshop-preview-patch],
+	AC_HELP_STRING(
+		[--enable-old-cashshop-preview-patch],
+		[Enable Nemo patch ExtendOldCashShopPreview.]
+	),
+	[enable_old_cashshop_preview_patch=1],
+	[enable_old_cashshop_preview_patch=0]
 )
 
 
@@ -143,7 +156,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[packetver-re],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-packetver-re],
 		[Sets or unsets the PACKETVER_RE define - see src/common/mmo.h (currently disabled by default)]
 	),
@@ -164,7 +177,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[packetver-zero],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-packetver-zero],
 		[Sets or unsets the PACKETVER_ZERO define - see src/common/mmo.h (currently disabled by default)]
 	),
@@ -184,7 +197,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[packetver-sak],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-packetver-sak],
 		[Sets or unsets the PACKETVER_SAK define - see src/common/mmo.h (currently disabled by default)]
 	),
@@ -204,7 +217,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[packetver-ad],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-packetver-ad],
 		[Sets or unsets the PACKETVER_AD define - see src/common/mmo.h (currently disabled by default)]
 	),
@@ -255,7 +268,7 @@ fi
 #
 AC_ARG_WITH(
 	[key1],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-key1@<:@=ARG@:>@],
 		[Set the first obfuscation key (ignored unless the other two are also specified)]
 	),
@@ -271,7 +284,7 @@ AC_ARG_WITH(
 )
 AC_ARG_WITH(
 	[key2],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-key2@<:@=ARG@:>@],
 		[Set the second obfuscation key (ignored unless the other two are also specified)]
 	),
@@ -287,7 +300,7 @@ AC_ARG_WITH(
 )
 AC_ARG_WITH(
 	[key3],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-key3@<:@=ARG@:>@],
 		[Set the third obfuscation key (ignored unless the other two are also specified)]
 	),
@@ -308,7 +321,7 @@ AC_ARG_WITH(
 #
 AC_ARG_ENABLE(
 	[debug],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-debug@<:@=ARG@:>@],
 		[
 			Compiles extra debug code. (yes by default)
@@ -332,7 +345,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[libbacktrace],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-libbacktrace@<:@=ARG@:>@],
 		[
 			Compiles with libbacktrace. (no by default - experimental)
@@ -363,7 +376,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[buildbot],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-buildbot@<:@=ARG@:>@],
 		[(available options: yes, no)]
 	),
@@ -383,7 +396,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[rdtsc],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-rdtsc],
 		[
 			Uses rdtsc as timing source (disabled by default)
@@ -412,7 +425,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[profiler],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-profiler=ARG],
 		[Profilers: no, gprof (disabled by default)]
 	),
@@ -433,7 +446,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[64bit],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--disable-64bit],
 		[
 			Enforce 32bit output on x86_64 systems.
@@ -456,7 +469,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[lto],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-lto],
 		[
 			Enables or Disables Linktime Code Optimization (LTO is disabled by default)
@@ -479,7 +492,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[static],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-static],
 		[
 			Enables or Disables Statick Linking (STATIC is disabled by default)
@@ -502,7 +515,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[sanitize],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-sanitize@<:@=ARG@:>@],
 		[
 			Enables sanitizer. (disabled by default)
@@ -513,8 +526,12 @@ AC_ARG_ENABLE(
 		enable_sanitize="$enableval"
 		case $enableval in
 			"no");;
-			"yes");;
-			"full");;
+			"yes")
+				CPPFLAGS="$CPPFLAGS -DSANITIZE"
+				;;
+			"full")
+				CPPFLAGS="$CPPFLAGS -DSANITIZE"
+				;;
 			*) AC_MSG_ERROR([[invalid argument --enable-sanitize=$enableval... stopping]]);;
 		esac
 	],
@@ -530,7 +547,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[Werror],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--enable-Werror],
 		[
 			Enables -Werror in the compiler flags. (disabled by default)
@@ -553,7 +570,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
 	[renewal],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--disable-renewal],
 		[
 			Disable Ragnarok Renewal support (override settings in src/config/renewal.h)
@@ -577,7 +594,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_WITH(
 	[maxconn],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-maxconn@<:@=ARG@:>@],
 		[optionally set the maximum connections the core can handle (Without epoll enabled, default: 1024. With epol enabled: 3072)]
 	),
@@ -601,7 +618,7 @@ AC_ARG_WITH(
 #
 AC_ARG_WITH(
 	[mysql],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-mysql@<:@=ARG@:>@],
 		[optionally specify the path to the mysql_config executable]
 	),
@@ -621,7 +638,7 @@ AC_ARG_WITH(
 #
 AC_ARG_WITH(
 	[MYSQL_CFLAGS],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-MYSQL_CFLAGS=ARG],
 		[specify MYSQL_CFLAGS manually (instead of using "mysql_config --include")]
 	),
@@ -638,7 +655,7 @@ AC_ARG_WITH(
 #
 AC_ARG_WITH(
 	[MYSQL_LIBS],
-	AC_HELP_STRING(
+	AS_HELP_STRING(
 		[--with-MYSQL_LIBS=ARG],
 		[specify MYSQL_LIBS manually (instead of using "mysql_config --libs")]
 	),
@@ -1134,8 +1151,13 @@ AC_CHECK_COMPILER_WFLAG(format-security)
 AC_CHECK_COMPILER_WFLAG(format)
 AC_CHECK_COMPILER_WFLAG(format-signedness)
 AC_CHECK_COMPILER_WFLAG(format-y2k)
+AC_CHECK_COMPILER_WFLAG(format-overflow=2)
+AC_CHECK_COMPILER_WFLAG(format-diag)
+#AC_CHECK_COMPILER_WFLAG(format-truncation=2)
 AC_CHECK_COMPILER_WFLAG(missing-include-dirs)
 AC_CHECK_COMPILER_WFLAG(suggest-attribute=noreturn)
+AC_CHECK_COMPILER_WFLAG(suggest-attribute=format)
+#AC_CHECK_COMPILER_WFLAG(suggest-attribute=malloc)
 AC_CHECK_COMPILER_WFLAG(undef)
 #AC_CHECK_COMPILER_WFLAG(cast-align)
 #AC_CHECK_COMPILER_WFLAG(logical-op) # some useless warnings
@@ -1143,15 +1165,34 @@ AC_CHECK_COMPILER_WFLAG(nested-externs)
 AC_CHECK_COMPILER_WFLAG(old-style-definition)
 AC_CHECK_COMPILER_WFLAG(overlength-strings)
 AC_CHECK_COMPILER_WFLAG(redundant-decls)
-AC_CHECK_COMPILER_WFLAG(cast-qual)
+#AC_CHECK_COMPILER_WFLAG(cast-qual)
 AC_CHECK_COMPILER_WFLAG(misleading-indentation)
 AC_CHECK_COMPILER_WFLAG(null-dereference)
 AC_CHECK_COMPILER_WFLAG(vla)
+AC_CHECK_COMPILER_WFLAG(vla-parameter)
 AC_CHECK_COMPILER_WFLAG(switch-enum)
-AC_CHECK_COMPILER_WNOFLAG(format-nonliteral)
+AC_CHECK_COMPILER_WFLAG(mismatched-dealloc)
+AC_CHECK_COMPILER_WFLAG(sizeof-array-div)
+AC_CHECK_COMPILER_WFLAG(stringop-overflow=4)
+AC_CHECK_COMPILER_WFLAG(stringop-overread)
+AC_CHECK_COMPILER_WFLAG(string-compare)
+AC_CHECK_COMPILER_WFLAG(zero-length-bounds)
+AC_CHECK_COMPILER_WFLAG(absolute-value)
+AC_CHECK_COMPILER_WFLAG(shift-overflow=2)
+#AC_CHECK_COMPILER_WFLAG(unreachable-code)
+#AC_CHECK_COMPILER_WFLAG(unused-const-variable=2)
+#AC_CHECK_COMPILER_WFLAG(write-strings)
+
+#AC_CHECK_COMPILER_WNOFLAG(format-nonliteral)
 AC_CHECK_COMPILER_WNOFLAG(switch)
 AC_CHECK_COMPILER_WNOFLAG(missing-field-initializers)
-AC_CHECK_COMPILER_WNOFLAG(suggest-attribute=format)
+#AC_CHECK_COMPILER_WNOFLAG(suggest-attribute=format)
+AC_CHECK_COMPILER_WNOFLAG(incompatible-pointer-types-discards-qualifiers)
+AC_CHECK_COMPILER_WNOFLAG(discarded-qualifiers)
+# issue in clang-15 in libconfig
+AC_CHECK_COMPILER_WNOFLAG(deprecated-non-prototype)
+# issue in clang-15 in libconfig
+AC_CHECK_COMPILER_WNOFLAG(unused-but-set-variable)
 
 # Certain versions of gcc make -Wshadow completely useless by making it flood
 # you with unnecessary warnings <https://lkml.org/lkml/2006/11/28/239>
@@ -1179,6 +1220,39 @@ if test "x$CFLAGS" != "x$SAVED_OLD_CFLAGS"; then
 		[
 			AC_MSG_RESULT([no])
 			CFLAGS="$SAVED_OLD_CFLAGS"
+		]
+	)
+fi
+
+# Certain versions of gcc implement -Wformat-truncation in a naive way,
+# disregarding the actual values that an integer can take in every code path
+# and assuming a worst case of INT_MAX. That makes it not very useful as it
+# produces meaningless warnings.
+SAVED_OLD_CFLAGS="$CFLAGS"
+AC_CHECK_COMPILER_WNOFLAG(format-truncation)
+if test "x$CFLAGS" != "x$SAVED_OLD_CFLAGS"; then
+	AC_MSG_CHECKING([whether $CC has a too naive -Wformat-truncation implementation])
+	NEW_CFLAGS="$CFLAGS"
+	CFLAGS="$SAVED_OLD_CFLAGS"
+	CFLAGS="$CFLAGS -Werror"
+	AC_COMPILE_IFELSE(
+		[AC_LANG_SOURCE([
+			#include <stdio.h>
+			char foo(void) {
+				[char buf[3];]
+				for (int i = 0; i < 4; i++) {
+					snprintf(buf, sizeof(buf), "a%d", i);
+				}
+				[return buf[1];]
+			}
+		])],
+		[
+			AC_MSG_RESULT([no])
+			CFLAGS="$SAVED_OLD_CFLAGS"
+		],
+		[
+			AC_MSG_RESULT([yes])
+			CFLAGS="$NEW_CFLAGS"
 		]
 	)
 fi
@@ -1427,6 +1501,18 @@ case $enable_cashshop_preview_patch in
 esac
 
 #
+# old cash shop preview patch
+#
+case $enable_old_cashshop_preview_patch in
+	0)
+		#default value
+		;;
+	1)
+		CPPFLAGS="$CPPFLAGS -DENABLE_OLD_CASHSHOP_PREVIEW_PATCH"
+		;;
+esac
+
+#
 # Epoll
 #
 case $have_linux_epoll in
@@ -1495,7 +1581,7 @@ else
 		)],
 		[
 			BACKTRACE_FILE="nounwind.lo"
-		 	backtrace_supported=no
+			backtrace_supported=no
 		]
 	)
 	AC_SUBST(BACKTRACE_FILE)

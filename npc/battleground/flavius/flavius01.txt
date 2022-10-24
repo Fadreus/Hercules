@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) Kisuka
 //= Copyright (C) L0ne_W0lf
@@ -340,6 +340,8 @@ OnInit:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	percentheal 100,100;
 	warp "bat_b01",87,73;
 	end;
@@ -385,6 +387,8 @@ OnInit:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	percentheal 100,100;
 	warp "bat_b01",312,225;
 	end;
@@ -744,6 +748,7 @@ OnInit:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 bat_b01,1,10,3	script	Release all#b01	4_DOG01,{
 	.@i = callfunc("F_GM_NPC",1854,0);
 	if (.@i == -1) {
@@ -765,4 +770,8 @@ bat_b01,1,10,3	script	Release all#b01	4_DOG01,{
 			close;
 		}
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/

@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Athena Dev Teams
 //=
 //= Hercules is free software: you can redistribute it and/or modify
@@ -48,6 +48,8 @@ OnUnhide:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	switch ($@airplanelocation) {
 	case 0: warp "yuno",92,260; end;
 	case 1: warp "einbroch",92,278; end;
@@ -665,6 +667,8 @@ airplane_01,243,73,0	script	#AirshipWarp-3	WARPNPC,1,1,{
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	switch ($@airplanelocation2) {
 	case 0: warp "ra_fild12",292,204; end;
 	case 1:

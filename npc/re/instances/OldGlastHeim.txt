@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2013-2021 Hercules Dev Team
+//= Copyright (C) 2013-2022 Hercules Dev Team
 //= Copyright (C) Ridley
 //= Copyright (C) Exneval
 //= Copyright (C) Euphy
@@ -748,6 +748,8 @@ OnEnable:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	.@map1$ = instance_mapname("1@gl_k");
 	.@map2$ = instance_mapname("2@gl_k");
 	switch (atoi(replacestr(strnpcinfo(NPC_NAME_HIDDEN), "ghinstancewarp", ""))) {
@@ -2027,7 +2029,7 @@ OnTimer80000:
 		mes("[Hugin]");
 		mes("Varmundt's time is stopped by me. And your time will be distorted soon.");
 		specialeffect(EF_BLIND, AREA, AREA, playerattached());
-		soundeffect("_blind.wav", 0);
+		soundeffect("_blind.wav", PLAY_SOUND_ONCE);
 		next();
 		mes("[Hugin]");
 		mes("Maybe this poor time traveler will try to stop Glast Heim's tragedy from happening.");

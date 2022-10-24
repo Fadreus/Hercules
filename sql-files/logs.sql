@@ -1,7 +1,7 @@
 -- This file is part of Hercules.
 -- http://herc.ws - http://github.com/HerculesWS/Hercules
 --
--- Copyright (C) 2012-2021 Hercules Dev Team
+-- Copyright (C) 2012-2022 Hercules Dev Team
 -- Copyright (C) Athena Dev Teams
 --
 -- Hercules is free software: you can redistribute it and/or modify
@@ -144,10 +144,11 @@ CREATE TABLE IF NOT EXISTS `picklog` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `time` DATETIME NULL,
   `char_id` INT NOT NULL DEFAULT '0',
-  `type` ENUM('M','P','L','T','V','S','N','C','A','R','G','E','B','O','I','X','D','U','K','Y','Z','W','Q','J','H','@','0','1','2','3') NOT NULL DEFAULT 'P',
+  `type` ENUM('M','P','L','T','V','S','N','C','A','R','G','E','B','O','I','X','D','U','K','Y','Z','W','Q','J','H','@','0','1','2','3','4') NOT NULL DEFAULT 'P',
   `nameid` INT NOT NULL DEFAULT '0',
   `amount` INT NOT NULL DEFAULT '1',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
   `card2` INT NOT NULL DEFAULT '0',
@@ -177,7 +178,7 @@ CREATE TABLE IF NOT EXISTS `zenylog` (
   `time` DATETIME NULL,
   `char_id` INT NOT NULL DEFAULT '0',
   `src_id` INT NOT NULL DEFAULT '0',
-  `type` ENUM('T','V','P','M','S','N','D','C','A','E','I','B','K') NOT NULL DEFAULT 'S',
+  `type` ENUM('T','V','P','M','S','N','D','C','A','E','I','B','K','4') NOT NULL DEFAULT 'S',
   `amount` INT NOT NULL DEFAULT '0',
   `map` VARCHAR(11) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),

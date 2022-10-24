@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Masao
 //= Copyright (C) Gepard
 //= Copyright (C) L0ne_W0lf
@@ -383,6 +383,8 @@ aldeg_cas04,108,210,0	warp	aldeg-4-14_aldeg-4-4	1,1,aldeg_cas04,186,92
 aldeg_cas04,132,231,0	script	aldeg-4-15_aldeg-4-	WARPNPC,1,1,{
 
 OnTouch:
+	if (checkhiding())
+		return;
 	switch (rand(1,5)) {
 		case 1:	warp "aldeg_cas04",152,210; end;
 		case 2:	warp "aldeg_cas04",111,210; end;

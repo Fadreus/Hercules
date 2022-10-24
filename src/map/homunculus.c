@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -123,7 +123,7 @@ static void homunculus_addspiritball(struct homun_data *hd, int max)
 	else
 		hd->homunculus.spiritball++;
 
-	clif->spiritball(&hd->bl);
+	clif->spiritball(&hd->bl, BALL_TYPE_NONE, AREA);
 }
 
 static void homunculus_delspiritball(struct homun_data *hd, int count, int type)
@@ -143,7 +143,7 @@ static void homunculus_delspiritball(struct homun_data *hd, int count, int type)
 
 	hd->homunculus.spiritball -= count;
 	if (!type)
-		clif->spiritball(&hd->bl);
+		clif->spiritball(&hd->bl, BALL_TYPE_NONE, AREA);
 }
 
 static void homunculus_damaged(struct homun_data *hd)
@@ -377,7 +377,7 @@ static bool homunculus_levelup(struct homun_data *hd)
 		hom->skillpts++; //1 skillpoint each 3 base level
 
 	hom->exp -= hd->exp_next;
-	hd->exp_next = homun->get_exp(hd, hom->level - 1);
+	hd->exp_next = homun->get_exp_next(hd);
 
 	max  = &hd->homunculusDB->gmax;
 	min  = &hd->homunculusDB->gmin;
@@ -864,7 +864,7 @@ static bool homunculus_create(struct map_session_data *sd, const struct s_homunc
 	hd->homunculusDB = &homun->dbs->db[i];
 	memcpy(&hd->homunculus, hom, sizeof(struct s_homunculus));
 	hd->homunculus.char_id = sd->status.char_id; // Fix character ID if necessary.
-	hd->exp_next = homun->get_exp(hd, hd->homunculus.level - 1);
+	hd->exp_next = homun->get_exp_next(hd);
 
 	status->set_viewdata(&hd->bl, hd->homunculus.class_);
 	status->change_init(&hd->bl);
@@ -1095,7 +1095,7 @@ static void homunculus_stat_reset(struct homun_data *hd)
 	hom->dex = base->dex *10;
 	hom->luk = base->luk *10;
 	hom->exp = 0;
-	hd->exp_next = homun->get_exp(hd, 0);
+	hd->exp_next = homun->get_exp_next(hd);
 	memset(&hd->homunculus.hskill, 0, sizeof hd->homunculus.hskill);
 	hd->homunculus.skillpts = 0;
 }
@@ -1165,8 +1165,8 @@ static void homunculus_read_db(void)
 static bool homunculus_read_db_libconfig(const char *filename)
 {
 	struct config_t homun_conf;
-	char filepath[256];
-	safesnprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
+	char filepath[260];
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
 
 	if (libconfig->load_file(&homun_conf, filepath) == CONFIG_FALSE) {
 		ShowError("homunculus_read_db_libconfig: can't read %s\n", filepath);
@@ -1184,7 +1184,7 @@ static bool homunculus_read_db_libconfig(const char *filename)
 	struct config_setting_t *it = NULL;
 
 	while ((it = libconfig->setting_get_elem(homun_db, i++)) != NULL) {
-		if (homun->read_db_libconfig_sub(it, i - 1, filepath))
+		if (homun->read_db_libconfig_sub(it, filepath))
 			++count;
 	}
 
@@ -1193,20 +1193,23 @@ static bool homunculus_read_db_libconfig(const char *filename)
 	return true;
 }
 
-static bool homunculus_read_db_libconfig_sub(struct config_setting_t *it, int idx, const char *source)
+static bool homunculus_read_db_libconfig_sub(struct config_setting_t *it, const char *source)
 {
 	nullpo_retr(false, it);
 	nullpo_retr(false, source);
-	Assert_retr(false, idx >= 0 && idx < MAX_HOMUNCULUS_CLASS);
 
-	struct s_homunculus_db *db = &homun->dbs->db[idx];
 	const char *str = NULL;
 	int i32 = 0;
 
 	if (libconfig->setting_lookup_int(it, "Id", &i32) != CONFIG_TRUE || !homdb_checkid(i32)) {
-		ShowError("homunculus_read_db_libconfig_sub: Invalid homunculus Id (%d) provided for entry %d in '%s', skipping...\n", i32, idx, source);
+		ShowError("homunculus_read_db_libconfig_sub: Invalid homunculus Id (%d) provided '%s', skipping...\n", i32, source);
 		return false;
 	}
+
+	const int idx = i32 - HM_CLASS_BASE;
+	Assert_retr(false, idx >= 0 && idx < MAX_HOMUNCULUS_CLASS);
+
+	struct s_homunculus_db *db = &homun->dbs->db[idx];
 	db->base_class = i32;
 
 	if (libconfig->setting_lookup_int(it, "EvoId", &i32) != CONFIG_TRUE || !homdb_checkid(i32)) {
@@ -1410,20 +1413,24 @@ static int homunculus_get_max_level(struct homun_data *hd)
 	nullpo_ret(hd);
 	Assert_ret(homdb_checkid(hd->homunculus.class_));
 
-	return homun->dbs->exptable[hd->homunculus.class_ - HM_CLASS_BASE]->max_level;
+	const struct class_exp_group *gp = homun->dbs->exptable[hd->homunculus.class_ - HM_CLASS_BASE];
+	nullpo_ret(gp);
+
+	return gp->max_level;
 }
 
-static uint64 homunculus_get_exp(struct homun_data *hd, int idx)
+static uint64 homunculus_get_exp_next(struct homun_data *hd)
 {
 	nullpo_ret(hd);
 	Assert_ret(homdb_checkid(hd->homunculus.class_));
 
+	if (hd->homunculus.level >= homun->get_max_level(hd) || hd->homunculus.level <= 0)
+		return 0;
+
 	const struct class_exp_group *gp = homun->dbs->exptable[hd->homunculus.class_ - HM_CLASS_BASE];
-	const int exp_len = VECTOR_LENGTH(gp->exp);
+	nullpo_ret(gp);
 
-	Assert_ret(idx >= 0 && idx <= exp_len);
-
-	return VECTOR_INDEX(gp->exp, idx);
+	return VECTOR_INDEX(gp->exp, hd->homunculus.level >= gp->max_level ? 0 : hd->homunculus.level - 1);
 }
 
 static void homunculus_skill_db_read(void)
@@ -1523,5 +1530,5 @@ void homunculus_defaults(void)
 	homun->delspiritball = homunculus_delspiritball;
 	homun->get_intimacy_grade = homunculus_get_intimacy_grade;
 	homun->get_max_level = homunculus_get_max_level;
-	homun->get_exp = homunculus_get_exp;
+	homun->get_exp_next = homunculus_get_exp_next;
 }

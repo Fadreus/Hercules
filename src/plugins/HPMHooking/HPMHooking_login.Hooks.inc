@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -6105,6 +6105,33 @@ uint16 HP_login_convert_users_to_colors(uint16 users) {
 	}
 	return retVal___;
 }
+int HP_login_check_client_version(struct login_session_data *sd) {
+	int hIndex = 0;
+	int retVal___ = 0;
+	if (HPMHooks.count.HP_login_check_client_version_pre > 0) {
+		int (*preHookFunc) (struct login_session_data **sd);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_login_check_client_version_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_login_check_client_version_pre[hIndex].func;
+			retVal___ = preHookFunc(&sd);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return retVal___;
+		}
+	}
+	{
+		retVal___ = HPMHooks.source.login.check_client_version(sd);
+	}
+	if (HPMHooks.count.HP_login_check_client_version_post > 0) {
+		int (*postHookFunc) (int retVal___, struct login_session_data *sd);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_login_check_client_version_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_login_check_client_version_post[hIndex].func;
+			retVal___ = postHookFunc(retVal___, sd);
+		}
+	}
+	return retVal___;
+}
 /* loginlog_interface */
 unsigned long HP_loginlog_failedattempts(uint32 ip, unsigned int minutes) {
 	int hIndex = 0;
@@ -6816,6 +6843,84 @@ void HP_packets_addLen(int id, int len) {
 		void (*postHookFunc) (int id, int len);
 		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLen_post; hIndex++) {
 			postHookFunc = HPMHooks.list.HP_packets_addLen_post[hIndex].func;
+			postHookFunc(id, len);
+		}
+	}
+	return;
+}
+void HP_packets_addLenIntif(int id, int len) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_packets_addLenIntif_pre > 0) {
+		void (*preHookFunc) (int *id, int *len);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenIntif_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_packets_addLenIntif_pre[hIndex].func;
+			preHookFunc(&id, &len);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.packets.addLenIntif(id, len);
+	}
+	if (HPMHooks.count.HP_packets_addLenIntif_post > 0) {
+		void (*postHookFunc) (int id, int len);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenIntif_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_packets_addLenIntif_post[hIndex].func;
+			postHookFunc(id, len);
+		}
+	}
+	return;
+}
+void HP_packets_addLenInter(int id, int len) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_packets_addLenInter_pre > 0) {
+		void (*preHookFunc) (int *id, int *len);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenInter_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_packets_addLenInter_pre[hIndex].func;
+			preHookFunc(&id, &len);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.packets.addLenInter(id, len);
+	}
+	if (HPMHooks.count.HP_packets_addLenInter_post > 0) {
+		void (*postHookFunc) (int id, int len);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenInter_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_packets_addLenInter_post[hIndex].func;
+			postHookFunc(id, len);
+		}
+	}
+	return;
+}
+void HP_packets_addLenChrif(int id, int len) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_packets_addLenChrif_pre > 0) {
+		void (*preHookFunc) (int *id, int *len);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenChrif_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_packets_addLenChrif_pre[hIndex].func;
+			preHookFunc(&id, &len);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.packets.addLenChrif(id, len);
+	}
+	if (HPMHooks.count.HP_packets_addLenChrif_post > 0) {
+		void (*postHookFunc) (int id, int len);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_packets_addLenChrif_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_packets_addLenChrif_post[hIndex].func;
 			postHookFunc(id, len);
 		}
 	}
@@ -10119,6 +10224,33 @@ int HP_sysinfo_build_revision(void) {
 	}
 	return retVal___;
 }
+uint32 HP_sysinfo_fflags(void) {
+	int hIndex = 0;
+	uint32 retVal___ = 0;
+	if (HPMHooks.count.HP_sysinfo_fflags_pre > 0) {
+		uint32 (*preHookFunc) (void);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_sysinfo_fflags_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_sysinfo_fflags_pre[hIndex].func;
+			retVal___ = preHookFunc();
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return retVal___;
+		}
+	}
+	{
+		retVal___ = HPMHooks.source.sysinfo.fflags();
+	}
+	if (HPMHooks.count.HP_sysinfo_fflags_post > 0) {
+		uint32 (*postHookFunc) (uint32 retVal___);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_sysinfo_fflags_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_sysinfo_fflags_post[hIndex].func;
+			retVal___ = postHookFunc(retVal___);
+		}
+	}
+	return retVal___;
+}
 void HP_sysinfo_vcsrevision_reload(void) {
 	int hIndex = 0;
 	if (HPMHooks.count.HP_sysinfo_vcsrevision_reload_pre > 0) {
@@ -10167,6 +10299,33 @@ bool HP_sysinfo_is_superuser(void) {
 		bool (*postHookFunc) (bool retVal___);
 		for (hIndex = 0; hIndex < HPMHooks.count.HP_sysinfo_is_superuser_post; hIndex++) {
 			postHookFunc = HPMHooks.list.HP_sysinfo_is_superuser_post[hIndex].func;
+			retVal___ = postHookFunc(retVal___);
+		}
+	}
+	return retVal___;
+}
+const char* HP_sysinfo_zlib(void) {
+	int hIndex = 0;
+	const char* retVal___ = NULL;
+	if (HPMHooks.count.HP_sysinfo_zlib_pre > 0) {
+		const char* (*preHookFunc) (void);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_sysinfo_zlib_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_sysinfo_zlib_pre[hIndex].func;
+			retVal___ = preHookFunc();
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return retVal___;
+		}
+	}
+	{
+		retVal___ = HPMHooks.source.sysinfo.zlib();
+	}
+	if (HPMHooks.count.HP_sysinfo_zlib_post > 0) {
+		const char* (*postHookFunc) (const char* retVal___);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_sysinfo_zlib_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_sysinfo_zlib_post[hIndex].func;
 			retVal___ = postHookFunc(retVal___);
 		}
 	}
@@ -10866,4 +11025,84 @@ void HP_timer_final(void) {
 		}
 	}
 	return;
+}
+void HP_timer_check_timers(void) {
+	int hIndex = 0;
+	if (HPMHooks.count.HP_timer_check_timers_pre > 0) {
+		void (*preHookFunc) (void);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_check_timers_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_timer_check_timers_pre[hIndex].func;
+			preHookFunc();
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return;
+		}
+	}
+	{
+		HPMHooks.source.timer.check_timers();
+	}
+	if (HPMHooks.count.HP_timer_check_timers_post > 0) {
+		void (*postHookFunc) (void);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_check_timers_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_timer_check_timers_post[hIndex].func;
+			postHookFunc();
+		}
+	}
+	return;
+}
+bool HP_timer_get_current_clocksource(char *buf, int buf_size) {
+	int hIndex = 0;
+	bool retVal___ = false;
+	if (HPMHooks.count.HP_timer_get_current_clocksource_pre > 0) {
+		bool (*preHookFunc) (char **buf, int *buf_size);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_get_current_clocksource_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_timer_get_current_clocksource_pre[hIndex].func;
+			retVal___ = preHookFunc(&buf, &buf_size);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return retVal___;
+		}
+	}
+	{
+		retVal___ = HPMHooks.source.timer.get_current_clocksource(buf, buf_size);
+	}
+	if (HPMHooks.count.HP_timer_get_current_clocksource_post > 0) {
+		bool (*postHookFunc) (bool retVal___, char *buf, int buf_size);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_get_current_clocksource_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_timer_get_current_clocksource_post[hIndex].func;
+			retVal___ = postHookFunc(retVal___, buf, buf_size);
+		}
+	}
+	return retVal___;
+}
+bool HP_timer_get_available_clocksource(char *buf, int buf_size) {
+	int hIndex = 0;
+	bool retVal___ = false;
+	if (HPMHooks.count.HP_timer_get_available_clocksource_pre > 0) {
+		bool (*preHookFunc) (char **buf, int *buf_size);
+		*HPMforce_return = false;
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_get_available_clocksource_pre; hIndex++) {
+			preHookFunc = HPMHooks.list.HP_timer_get_available_clocksource_pre[hIndex].func;
+			retVal___ = preHookFunc(&buf, &buf_size);
+		}
+		if (*HPMforce_return) {
+			*HPMforce_return = false;
+			return retVal___;
+		}
+	}
+	{
+		retVal___ = HPMHooks.source.timer.get_available_clocksource(buf, buf_size);
+	}
+	if (HPMHooks.count.HP_timer_get_available_clocksource_post > 0) {
+		bool (*postHookFunc) (bool retVal___, char *buf, int buf_size);
+		for (hIndex = 0; hIndex < HPMHooks.count.HP_timer_get_available_clocksource_post; hIndex++) {
+			postHookFunc = HPMHooks.list.HP_timer_get_available_clocksource_post[hIndex].func;
+			retVal___ = postHookFunc(retVal___, buf, buf_size);
+		}
+	}
+	return retVal___;
 }

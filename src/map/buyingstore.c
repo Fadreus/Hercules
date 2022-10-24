@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -197,7 +197,7 @@ static void buyingstore_create(struct map_session_data *sd, int zenylimit, unsig
 	sd->buyingstore.slots = i;  // store actual amount of items
 	safestrncpy(sd->message, storename, sizeof(sd->message));
 	clif->buyingstore_myitemlist(sd);
-	clif->buyingstore_entry(sd);
+	clif->buyingstore_entry(&sd->bl, sd->message);
 }
 
 static void buyingstore_close(struct map_session_data *sd)
@@ -210,7 +210,7 @@ static void buyingstore_close(struct map_session_data *sd)
 		memset(&sd->buyingstore, 0, sizeof(sd->buyingstore));
 
 		// notify other players
-		clif->buyingstore_disappear_entry(sd);
+		clif->buyingstore_disappear_entry(&sd->bl);
 	}
 }
 
@@ -478,8 +478,8 @@ static bool buyingstore_searchall(struct map_session_data *sd, const struct s_se
 			;
 		}
 
-		// TODO: add support for cards and options
-		if (!searchstore->result(s->search_sd, sd->buyer_id, sd->status.account_id, sd->message, it->nameid, it->amount, it->price, buyingstore->blankslots, 0, buyingstore->blankoptions))
+		// TODO: add support for cards, options, grade
+		if (!searchstore->result(s->search_sd, sd->buyer_id, sd->status.account_id, sd->message, it->nameid, it->amount, it->price, buyingstore->blankslots, 0, 0, buyingstore->blankoptions))
 		{// result set full
 			return false;
 		}

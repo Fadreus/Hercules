@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Joseph
 //= Copyright (C) Euphy
 //= Copyright (C) Masao
@@ -1655,6 +1655,7 @@ OnTouch:
 }
 */
 
+/*@LOADGMSCRIPTS
 job3_arch01,1,1,1	script	control#arch	CLEAR_NPC,{
 	callfunc "F_GM_NPC";
 	mes "[Troll]";
@@ -1681,7 +1682,11 @@ job3_arch01,1,1,1	script	control#arch	CLEAR_NPC,{
 		mes "Enter the correct password!";
 		close;
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 odin_tem02,30,181,0	script	#wherearch01	HIDDEN_WARP_NPC,10,10,{
 OnTouch:

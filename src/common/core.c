@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -499,8 +499,10 @@ int main(int argc, char **argv)
 
 	sysinfo->init();
 
-	if (!(showmsg->silent&0x1))
+	if (!(showmsg->silent&0x1)) {
 		console->display_title();
+		timer->check_timers();
+	}
 
 	if (!usercheck())
 		return EXIT_FAILURE;

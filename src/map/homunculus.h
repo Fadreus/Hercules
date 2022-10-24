@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -202,7 +202,7 @@ struct homunculus_interface {
 	bool (*shuffle) (struct homun_data *hd);
 	void (*read_db) (void);
 	bool (*read_db_libconfig) (const char *filename);
-	bool (*read_db_libconfig_sub) (struct config_setting_t *it, int idx, const char *source);
+	bool (*read_db_libconfig_sub) (struct config_setting_t *it, const char *source);
 	bool (*read_db_libconfig_sub_stats) (struct config_setting_t *it, int idx);
 	bool (*read_db_libconfig_sub_stats_group) (struct config_setting_t *it, struct h_stats *smin, struct h_stats *smax);
 	bool (*read_db_libconfig_sub_expgroup) (struct config_setting_t* it, int idx);
@@ -212,7 +212,7 @@ struct homunculus_interface {
 	void (*delspiritball) (struct homun_data *hd, int count, int type);
 	int8 (*get_intimacy_grade) (struct homun_data *hd);
 	int (*get_max_level) (struct homun_data *hd);
-	uint64 (*get_exp) (struct homun_data *hd, int idx);
+	uint64 (*get_exp_next) (struct homun_data *hd);
 };
 
 #ifdef HERCULES_CORE

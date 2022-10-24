@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -77,6 +77,7 @@ struct s_search_store_info_item {
 	unsigned int price;
 	int card[MAX_SLOTS];
 	unsigned char refine;
+	unsigned char grade;
 	struct item_option option[MAX_ITEM_OPTIONS];
 };
 
@@ -109,7 +110,7 @@ struct searchstore_interface {
 	void (*click) (struct map_session_data* sd, int account_id, int store_id, int nameid);
 	bool (*queryremote) (struct map_session_data* sd, int account_id);
 	void (*clearremote) (struct map_session_data* sd);
-	bool (*result) (struct map_session_data* sd, unsigned int store_id, int account_id, const char* store_name, int nameid, unsigned short amount, unsigned int price, const int* card, unsigned char refine_level, const struct item_option *option);
+	bool (*result) (struct map_session_data* sd, unsigned int store_id, int account_id, const char* store_name, int nameid, unsigned short amount, unsigned int price, const int* card, unsigned char refine_level, unsigned char grade_level, const struct item_option *option);
 };
 
 #ifdef HERCULES_CORE

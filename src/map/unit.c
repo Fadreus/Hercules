@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -1473,6 +1473,13 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 					return 0;
 				}
 				break;
+			case RL_QD_SHOT:
+				if (sc != NULL && sc->data[SC_QD_SHOT_READY]) {
+					if ((target = map->id2bl(sc->data[SC_QD_SHOT_READY]->val1)) == NULL)
+						return 0;
+					temp = 1;
+				}
+				break;
 		}
 		if (target)
 			target_id = target->id;
@@ -1722,6 +1729,20 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 				casttime <<= 1;
 		}
 		break;
+	case RL_C_MARKER:
+		{
+			uint8 i = 0;
+
+			ARR_FIND(0, MAX_SKILL_CRIMSON_MARKER, i, sd->c_marker[i] == target_id);
+			if (i == MAX_SKILL_CRIMSON_MARKER) {
+				ARR_FIND(0, MAX_SKILL_CRIMSON_MARKER, i, sd->c_marker[i] == 0);
+				if (i == MAX_SKILL_CRIMSON_MARKER) { // No free slots, skill Fail
+					clif->skill_fail(sd, skill_id, USESKILL_FAIL_LEVEL, 0, 0);
+					return 0;
+				}
+			}
+		}
+		break;
 	}
 
 	// moved here to prevent Suffragium from ending if skill fails
@@ -1745,6 +1766,9 @@ static int unit_skilluse_id2(struct block_list *src, int target_id, uint16 skill
 			if (!src->prev) return 0; //Warped away!
 		} else if( sc->data[SC_CLOAKINGEXCEED] && !(sc->data[SC_CLOAKINGEXCEED]->val4&4) && skill_id != GC_CLOAKINGEXCEED ) {
 			status_change_end(src,SC_CLOAKINGEXCEED, INVALID_TIMER);
+			if (!src->prev) return 0;
+		} else if (sc->data[SC_NEWMOON] != NULL && skill_id != SJ_NEWMOONKICK) {
+			status_change_end(src, SC_NEWMOON, INVALID_TIMER);
 			if (!src->prev) return 0;
 		}
 	}
@@ -1964,6 +1988,9 @@ static int unit_skilluse_pos2(struct block_list *src, short skill_x, short skill
 			if (!src->prev) return 0; //Warped away!
 		} else if (sc->data[SC_CLOAKINGEXCEED] && !(sc->data[SC_CLOAKINGEXCEED]->val4&4)) {
 			status_change_end(src, SC_CLOAKINGEXCEED, INVALID_TIMER);
+			if (!src->prev) return 0;
+		} else if (sc->data[SC_NEWMOON] != NULL && skill_id != SJ_NEWMOONKICK) {
+			status_change_end(src, SC_NEWMOON, INVALID_TIMER);
 			if (!src->prev) return 0;
 		}
 	}
@@ -2636,6 +2663,7 @@ static int unit_remove_map(struct block_list *bl, enum clr_type clrtype, const c
 		status_change_end(bl, SC_RG_CCONFINE_M, INVALID_TIMER);
 		status_change_end(bl, SC_RG_CCONFINE_S, INVALID_TIMER);
 		status_change_end(bl, SC_HIDING, INVALID_TIMER);
+		status_change_end(bl, SC_FLASHKICK, INVALID_TIMER);
 		// Ensure the bl is a PC; if so, we'll handle the removal of cloaking and cloaking exceed later
 		if ( bl->type != BL_PC ) {
 			status_change_end(bl, SC_CLOAKING, INVALID_TIMER);
@@ -2660,6 +2688,7 @@ static int unit_remove_map(struct block_list *bl, enum clr_type clrtype, const c
 		status_change_end(bl, SC_NETHERWORLD, INVALID_TIMER);
 		status_change_end(bl, SC_SUHIDE, INVALID_TIMER);
 		status_change_end(bl, SC_SV_ROOTTWIST, INVALID_TIMER);
+		status_change_end(bl, SC_NEWMOON, INVALID_TIMER);
 	}
 
 	if (bl->type&(BL_CHAR|BL_PET)) {
@@ -3019,6 +3048,9 @@ static int unit_free(struct block_list *bl, enum clr_type clrtype)
 		case BL_MOB:
 		{
 			struct mob_data *md = BL_UCAST(BL_MOB, bl);
+
+			mob->free_dynamic_viewdata(md);
+
 			if( md->spawn_timer != INVALID_TIMER )
 			{
 				timer->delete(md->spawn_timer,mob->delayspawn);

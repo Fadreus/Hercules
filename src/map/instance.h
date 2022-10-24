@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -31,10 +31,19 @@ struct map_session_data;
 
 #define INSTANCE_NAME_LENGTH (60+1)
 
+/**
+ * true if instance is in an active/playable state.
+ * In other words, if a player can interact with it.
+ * 
+ * @param inst instance_data to be checked
+ */
+#define instance_is_active(inst) ((inst).state == INSTANCE_IDLE || (inst).state == INSTANCE_BUSY)
+
 typedef enum instance_state {
 	INSTANCE_FREE,
 	INSTANCE_IDLE,
-	INSTANCE_BUSY
+	INSTANCE_BUSY,
+	INSTANCE_DESTROYING,
 } instance_state;
 
 enum instance_owner_type {
@@ -44,6 +53,25 @@ enum instance_owner_type {
 	IOT_GUILD,
 	/* ... */
 	IOT_MAX,
+};
+
+/**
+ * Reason for instance being destroyed.
+ * Note: These numbers are client-dependent.
+ */
+enum instance_destroy_reason {
+	/**
+	 * Time to progress in the instance has expired.
+	 */
+	INSTANCE_DESTROY_PROG_TIMEOUT = 1,
+	/**
+	 * The instance has been empty for too long.
+	 */
+	INSTANCE_DESTROY_IDLE_TIMEOUT = 2,
+	/**
+	 * Other reason
+	 */
+	INSTANCE_DESTROY_OTHER = 3,
 };
 
 struct instance_data {
@@ -97,6 +125,7 @@ struct instance_interface {
 	bool (*valid) (int instance_id);
 	int (*destroy_timer) (int tid, int64 tick, int id, intptr_t data);
 	void (*force_destroy) (struct map_session_data *sd);
+	void (*reload_map_flags) (int instance_id);
 };
 
 #ifdef HERCULES_CORE

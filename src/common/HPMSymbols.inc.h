@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,6 +89,9 @@ struct elemental_interface *elemental;
 #ifdef CHAR_GEOIP_H /* geoip */
 struct geoip_interface *geoip;
 #endif // CHAR_GEOIP_H
+#ifdef MAP_GRADER_H /* grader */
+struct grader_interface *grader;
+#endif // MAP_GRADER_H
 #ifdef COMMON_GRFIO_H /* grfio */
 struct grfio_interface *grfio;
 #endif // COMMON_GRFIO_H
@@ -153,7 +156,7 @@ struct intif_interface *intif;
 struct ipban_interface *ipban;
 #endif // LOGIN_IPBAN_H
 #ifdef MAP_IRC_BOT_H /* ircbot */
-struct irc_bot_interface *ircbot;
+struct ircbot_interface *ircbot;
 #endif // MAP_IRC_BOT_H
 #ifdef MAP_ITEMDB_H /* itemdb */
 struct itemdb_interface *itemdb;
@@ -179,6 +182,9 @@ struct loginif_interface *loginif;
 #ifdef LOGIN_LOGINLOG_H /* loginlog */
 struct loginlog_interface *loginlog;
 #endif // LOGIN_LOGINLOG_H
+#ifdef MAP_MACRO_H /* macro */
+struct macro_interface *macro;
+#endif // MAP_MACRO_H
 #ifdef MAP_MAIL_H /* mail */
 struct mail_interface *mail;
 #endif // MAP_MAIL_H
@@ -396,6 +402,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_CHAR)) != 0 && !HPM_SYMBOL("geoip", geoip))
 		return "geoip";
 #endif // CHAR_GEOIP_H
+#ifdef MAP_GRADER_H /* grader */
+	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("grader", grader))
+		return "grader";
+#endif // MAP_GRADER_H
 #ifdef COMMON_GRFIO_H /* grfio */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("grfio", grfio))
 		return "grfio";
@@ -516,6 +526,10 @@ HPExport const char *HPM_shared_symbols(int server_type)
 	if ((server_type&(SERVER_TYPE_LOGIN)) != 0 && !HPM_SYMBOL("loginlog", loginlog))
 		return "loginlog";
 #endif // LOGIN_LOGINLOG_H
+#ifdef MAP_MACRO_H /* macro */
+	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("macro", macro))
+		return "macro";
+#endif // MAP_MACRO_H
 #ifdef MAP_MAIL_H /* mail */
 	if ((server_type&(SERVER_TYPE_MAP)) != 0 && !HPM_SYMBOL("mail", mail))
 		return "mail";

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -129,7 +129,7 @@ struct guild_interface {
 	int (*recv_memberinfoshort) (int guild_id, int account_id, int char_id, int online, int lv, int class, uint32 last_login);
 	int (*change_memberposition) (int guild_id,int account_id,int char_id,short idx);
 	int (*memberposition_changed) (struct guild *g,int idx,int pos);
-	int (*change_position) (int guild_id,int idx,int mode,int exp_mode,const char *name);
+	bool (*change_position) (int guild_id, int idx, int mode, int exp_mode, const char *name);
 	int (*position_changed) (int guild_id, int idx, const struct guild_position *p);
 	int (*change_notice) (struct map_session_data *sd,int guild_id,const char *mes1,const char *mes2);
 	int (*notice_changed) (int guild_id,const char *mes1,const char *mes2);

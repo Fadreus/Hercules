@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Capuche
 //= Copyright (C) Joseph
 //= Copyright (C) Euphy
@@ -1796,7 +1796,7 @@ OnInit:
 
 	function	MN	{
 		setarray .@n$[1], "poring","lunatic","savagebebe","desertwolf","deviruchi","baphomet";
-		for (.@i = 1; .@i <= getarraysize(.@n$); ++.@i) {
+		for (.@i = 1; .@i < getarraysize(.@n$); ++.@i) {
 			if (compare(strnpcinfo(NPC_NAME),.@n$[.@i]))
 				break;
 		}
@@ -1804,12 +1804,12 @@ OnInit:
 	}
 
 }
-p_track02,30,38,0	duplicate(mob1#main)	#poring1	HIDDEN_WARP_NPC,0,0
-p_track02,30,36,0	duplicate(mob1#main)	#lunatic1	HIDDEN_WARP_NPC,0,0
-p_track02,30,34,0	duplicate(mob1#main)	#savagebebe1	HIDDEN_WARP_NPC,0,0
-p_track02,30,32,0	duplicate(mob1#main)	#desertwolf1	HIDDEN_WARP_NPC,0,0
-p_track02,30,30,0	duplicate(mob1#main)	#deviruchi1	HIDDEN_WARP_NPC,0,0
-p_track02,30,28,0	duplicate(mob1#main)	#baphomet1	HIDDEN_WARP_NPC,0,0
+p_track02,30,38,0	duplicate(mob1#main)	#poring1	HIDDEN_WARP_NPC,1,0
+p_track02,30,36,0	duplicate(mob1#main)	#lunatic1	HIDDEN_WARP_NPC,1,0
+p_track02,30,34,0	duplicate(mob1#main)	#savagebebe1	HIDDEN_WARP_NPC,1,0
+p_track02,30,32,0	duplicate(mob1#main)	#desertwolf1	HIDDEN_WARP_NPC,1,0
+p_track02,30,30,0	duplicate(mob1#main)	#deviruchi1	HIDDEN_WARP_NPC,1,0
+p_track02,30,28,0	duplicate(mob1#main)	#baphomet1	HIDDEN_WARP_NPC,1,0
 
 p_track02,19,48,0	script	TrapGlobal#race02	FAKE_NPC,{
 OnEnable:
@@ -3008,6 +3008,7 @@ p_track01,45,42,3	script	Absent Minded Man#single	4_M_SITDOWN,{
 	close;
 }
 
+/*@LOADGMSCRIPTS
 hugel,5,5,3	script	Monster Race Manager	4_M_LGTGUARD,{
 	callfunc "F_GM_NPC";
 	mes "[Monster Race Manager]";
@@ -3059,4 +3060,7 @@ hugel,5,5,3	script	Monster Race Manager	4_M_LGTGUARD,{
 		close;
 	}
 	close;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/

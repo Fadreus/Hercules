@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/*
+// add custom compile flags. Can be any compiler flags.
+-DTESTVAR -DTESTVAR2=2 #PLUGINFLAGS
+*/
+
+#ifndef WIN32
+
+// check is TESTVAR defined from custom compile flags
+#ifndef TESTVAR
+#error TESTVAR not defined
+#endif
+
+// check is TESTVAR2 defined to value 2 from custom compile flags
+#if !(TESTVAR2 == 2)
+#error TESTVAR2 not defined
+#endif
+
+#endif  // WIN32
 
 /// Sample Hercules Plugin
 
@@ -133,7 +152,7 @@ int my_pc_dropitem_post(int retVal, struct map_session_data *sd, int n, int amou
 		return retVal;/* we don't do anything if pc_dropitem didn't return 1 (success) */
 	if (my_pc_dropitem_storage) {/* signs whether pre-hook did this */
 		char output[99];
-		safesnprintf(output, 99, "[ Warning ] you can only drop 1 item at a time, capped from %d to 1", my_pc_dropitem_storage);
+		snprintf(output, 99, "[ Warning ] you can only drop 1 item at a time, capped from %d to 1", my_pc_dropitem_storage);
 		clif->messagecolor_self(sd->fd, COLOR_RED, output);
 	}
 	return 1;

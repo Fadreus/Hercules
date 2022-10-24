@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -157,6 +157,9 @@ static int npc_isnear_sub(struct block_list *bl, va_list args)
 	if( battle_config.vendchat_near_hiddennpc && ( nd->class_ == FAKE_NPC || nd->class_ == HIDDEN_WARP_CLASS ) )
 		return 0;
 
+	if (nd->dyn.isdynamic)
+		return 0;
+
 	return 1;
 }
 
@@ -224,6 +227,9 @@ static int npc_enable_sub(struct block_list *bl, va_list ap)
 		struct map_session_data *sd = BL_UCAST(BL_PC, bl);
 
 		if (nd->option&OPTION_INVISIBLE)
+			return 1;
+
+		if (nd->dyn.isdynamic && nd->dyn.owner_id != sd->status.char_id)
 			return 1;
 
 		if( npc->ontouch_event(sd,nd) > 0 && npc->ontouch2_event(sd,nd) > 0 )
@@ -1018,6 +1024,10 @@ static int npc_touch_areanpc(struct map_session_data *sd, int16 m, int16 x, int1
 			f=0; // a npc was found, but it is disabled; don't print warning
 			continue;
 		}
+		if (map->list[m].npc[i]->dyn.isdynamic && map->list[m].npc[i]->dyn.owner_id != sd->status.char_id) {
+			f = 0;
+			continue;
+		}
 
 		switch(map->list[m].npc[i]->subtype) {
 		case WARP:
@@ -1132,6 +1142,8 @@ static int npc_touch_areanpc2(struct mob_data *md)
 	for( i = 0; i < map->list[m].npc_num; i++ ) {
 		if( map->list[m].npc[i]->option&OPTION_INVISIBLE )
 			continue;
+		if (map->list[m].npc[i]->dyn.isdynamic)
+			continue;
 
 		switch( map->list[m].npc[i]->subtype ) {
 			case WARP:
@@ -1216,6 +1228,8 @@ static int npc_check_areanpc(int flag, int16 m, int16 x, int16 y, int16 range)
 	//Now check for the actual NPC on said range.
 	for(i=0;i<map->list[m].npc_num;i++) {
 		if (map->list[m].npc[i]->option&OPTION_INVISIBLE)
+			continue;
+		if (map->list[m].npc[i]->dyn.isdynamic)
 			continue;
 
 		switch(map->list[m].npc[i]->subtype) {
@@ -1364,6 +1378,13 @@ static int npc_click(struct map_session_data *sd, struct npc_data *nd)
 	if (nd->class_ < 0 || nd->option&(OPTION_INVISIBLE|OPTION_HIDE))
 		return 1;
 
+	// Dynamic npcs only triggerable by the owner
+	if (nd->dyn.isdynamic && nd->dyn.owner_id != sd->status.char_id)
+		return 1;
+
+	// Update the interaction tick
+	npc->update_interaction_tick(nd);
+
 	switch(nd->subtype) {
 		case SHOP:
 			clif->npcbuysell(sd,nd->bl.id);
@@ -1439,6 +1460,8 @@ static int npc_scriptcont(struct map_session_data *sd, int id, bool closing)
 #ifdef SECURE_NPCTIMEOUT
 	sd->npc_idle_tick = timer->gettick(); /// Update the last NPC iteration.
 #endif
+	// Update the interaction tick
+	npc->update_interaction_tick(BL_CAST(BL_NPC, target));
 
 	/// WPE can get to this point with a progressbar; we deny it.
 	if (sd->progressbar.npc_id != 0 && DIFF_TICK(sd->progressbar.timeout, timer->gettick()) > 0)
@@ -1481,6 +1504,9 @@ static int npc_buysellsel(struct map_session_data *sd, int id, int type)
 	}
 
 	if (nd->option & OPTION_INVISIBLE) // can't buy if npc is not visible (hack?)
+		return 1;
+
+	if (nd->dyn.isdynamic && nd->dyn.owner_id != sd->status.char_id)
 		return 1;
 
 	if( nd->class_ < 0 && !sd->state.callshop ) {// not called through a script and is not a visible NPC so an invalid call
@@ -1661,7 +1687,6 @@ static void npc_market_fromsql(void)
 
 	while ( SQL_SUCCESS == SQL->StmtNextRow(stmt) ) {
 		struct npc_data *nd = NULL;
-		unsigned short i;
 
 		if( !(nd = npc->name2id(name)) ) {
 			ShowError("npc_market_fromsql: NPC '%s' not found! skipping...\n",name);
@@ -1673,7 +1698,8 @@ static void npc_market_fromsql(void)
 			continue;
 		}
 
-		for(i = 0; i < nd->u.scr.shop->items; i++) {
+		int i;
+		for (i = 0; i < nd->u.scr.shop->items; i++) {
 			if( nd->u.scr.shop->item[i].nameid == itemid ) {
 				nd->u.scr.shop->item[i].qty = amount;
 				break;
@@ -1751,7 +1777,6 @@ static void npc_barter_fromsql(void)
 
 	while (SQL_SUCCESS == SQL->StmtNextRow(stmt)) {
 		struct npc_data *nd = NULL;
-		unsigned short i;
 
 		if (!(nd = npc->name2id(name))) {
 			ShowError("npc_barter_fromsql: NPC '%s' not found! skipping...\n",name);
@@ -1763,6 +1788,7 @@ static void npc_barter_fromsql(void)
 			continue;
 		}
 
+		int i;
 		for (i = 0; i < nd->u.scr.shop->items; i++) {
 			struct npc_item_list *const item = &nd->u.scr.shop->item[i];
 			if (item->nameid == itemid && item->value == removeId && item->value2 == removeAmount) {
@@ -1869,7 +1895,6 @@ static void npc_expanded_barter_fromsql(void)
 
 	while (SQL_SUCCESS == SQL->StmtNextRow(stmt)) {
 		struct npc_data *nd = NULL;
-		unsigned short i;
 
 		if ((nd = npc->name2id(name)) == NULL) {
 			ShowError("npc_expanded_barter_fromsql: NPC '%s' not found! skipping...\n",name);
@@ -1881,6 +1906,7 @@ static void npc_expanded_barter_fromsql(void)
 			continue;
 		}
 
+		int i;
 		for (i = 0; i < nd->u.scr.shop->items; i++) {
 			struct npc_item_list *const item = &nd->u.scr.shop->item[i];
 			if (item->nameid == itemid && item->value == zeny) {
@@ -2016,7 +2042,7 @@ static bool npc_trader_open(struct map_session_data *sd, struct npc_data *nd)
 			clif->npcbuysell(sd,nd->bl.id);
 			return true;/* we skip sd->npc_shopid, npc->buysell will set it then when the player selects */
 		case NST_MARKET: {
-				unsigned short i;
+				int i;
 
 				for(i = 0; i < nd->u.scr.shop->items; i++) {
 					if( nd->u.scr.shop->item[i].qty )
@@ -2251,21 +2277,22 @@ static int npc_cashshop_buy(struct map_session_data *sd, int nameid, int amount,
  */
 static int npc_buylist(struct map_session_data *sd, struct itemlist *item_list)
 {
-	struct npc_data* nd;
+	struct npc_data *nd;
 	struct npc_item_list *shop = NULL;
 	int64 z;
-	int i,j,w,skill_t,new_, idx = skill->get_index(MC_DISCOUNT);
+	int i, j, w, skill_t, new_, idx = skill->get_index(MC_DISCOUNT);
 	unsigned short shop_size = 0;
 
 	nullpo_retr(3, sd);
 	nullpo_retr(3, item_list);
 
-	nd = npc->checknear(sd,map->id2bl(sd->npc_shopid));
-	if( nd == NULL )
+	nd = npc->checknear(sd, map->id2bl(sd->npc_shopid));
+
+	if (nd == NULL)
 		return 3;
 
-	if( nd->subtype != SHOP ) {
-		if( nd->subtype == SCRIPT && nd->u.scr.shop && nd->u.scr.shop->type == NST_ZENY ) {
+	if (nd->subtype != SHOP) {
+		if (nd->subtype == SCRIPT && nd->u.scr.shop && nd->u.scr.shop->type == NST_ZENY) {
 			shop = nd->u.scr.shop->item;
 			shop_size = nd->u.scr.shop->items;
 		} else
@@ -2278,67 +2305,70 @@ static int npc_buylist(struct map_session_data *sd, struct itemlist *item_list)
 	z = 0;
 	w = 0;
 	new_ = 0;
-	// process entries in buy list, one by one
+
+	// Process entries in buy list, one by one
 	for (i = 0; i < VECTOR_LENGTH(*item_list); ++i) {
 		int value;
 		struct itemlist_entry *entry = &VECTOR_INDEX(*item_list, i);
 
-		// find this entry in the shop's sell list
-		ARR_FIND( 0, shop_size, j,
-				 entry->id == shop[j].nameid || //Normal items
-				 entry->id == itemdb_viewid(shop[j].nameid) //item_avail replacement
+		// Find this entry in the shop's sell list
+		ARR_FIND(0, shop_size, j,
+				 entry->id == shop[j].nameid || // Normal items
+				 entry->id == itemdb_viewid(shop[j].nameid) // item_avail replacement
 				 );
-		if (j == shop_size)
-			return 3; // no such item in shop
 
-		entry->id = shop[j].nameid; //item_avail replacement
+		if (j == shop_size)
+			return 3; // No such item in shop
+
+		entry->id = shop[j].nameid; // item_avail replacement
 		value = shop[j].value;
 
-		if (!itemdb->exists(entry->id))
-			return 3; // item no longer in itemdb
+		struct item_data *id = itemdb->exists(entry->id);
+
+		if (id == NULL)
+			return 3; // Item no longer in itemdb
 
 		if (!itemdb->isstackable(entry->id) && entry->amount > 1) {
-			//Exploit? You can't buy more than 1 of equipment types o.O
+			// Exploit? You can't buy more than 1 of equipment types o.O
 			ShowWarning("Player %s (%d:%d) sent a hexed packet trying to buy %d of non-stackable item %d!\n",
 						sd->status.name, sd->status.account_id, sd->status.char_id, entry->amount, entry->id);
 			entry->amount = 1;
 		}
 
-		if( nd->master_nd ) {
+		if (nd->master_nd) {
 			// Script-controlled shops decide by themselves, what can be bought and for what price.
 			continue;
 		}
 
 		switch (pc->checkadditem(sd, entry->id, entry->amount)) {
-			case ADDITEM_EXIST:
-				break;
+		case ADDITEM_EXIST:
+			break;
 
-			case ADDITEM_NEW:
-				new_++;
-				break;
+		case ADDITEM_NEW:
+			new_++;
+			break;
 
-			case ADDITEM_OVERAMOUNT:
+		case ADDITEM_OVERAMOUNT:
 #if PACKETVER >= 20110705
-				return 9;
+			return 9;
 #else
-				return 2;
+			return 2;
 #endif
 		}
 
-		value = pc->modifybuyvalue(sd,value);
+		value = pc->modifybuyvalue(sd, value, id->flag.ignore_discount);
 
 		z += (int64)value * entry->amount;
 		w += itemdb_weight(entry->id) * entry->amount;
 	}
 
-	if (nd->master_nd != NULL) //Script-based shops.
+	if (nd->master_nd != NULL) // Script-based shops.
 		return npc->buylist_sub(sd, item_list, nd->master_nd);
-
 	if (z > sd->status.zeny)
 		return 1; // Not enough Zeny
-	if( w + sd->weight > sd->max_weight )
+	if (w + sd->weight > sd->max_weight)
 		return 2; // Too heavy
-	if( pc->inventoryblank(sd) < new_ )
+	if (pc->inventoryblank(sd) < new_)
 		return 3; // Not enough space to store items
 
 	pc->payzeny(sd, (int)z, LOG_TYPE_NPC, NULL);
@@ -2349,7 +2379,7 @@ static int npc_buylist(struct map_session_data *sd, struct itemlist *item_list)
 			pet->create_egg(sd, entry->id);
 		} else {
 			struct item item_tmp;
-			memset(&item_tmp,0,sizeof(item_tmp));
+			memset(&item_tmp, 0, sizeof(item_tmp));
 			item_tmp.nameid = entry->id;
 			item_tmp.identify = 1;
 
@@ -2357,15 +2387,17 @@ static int npc_buylist(struct map_session_data *sd, struct itemlist *item_list)
 		}
 	}
 
-	// custom merchant shop exp bonus
-	if( battle_config.shop_exp > 0 && z > 0 && (skill_t = pc->checkskill2(sd,idx)) > 0 ) {
-		if( sd->status.skill[idx].flag >= SKILL_FLAG_REPLACED_LV_0 )
+	// Custom merchant shop exp bonus
+	if (battle_config.shop_exp > 0 && z > 0 && (skill_t = pc->checkskill2(sd, idx)) > 0) {
+		if (sd->status.skill[idx].flag >= SKILL_FLAG_REPLACED_LV_0)
 			skill_t = sd->status.skill[idx].flag - SKILL_FLAG_REPLACED_LV_0;
 
-		if( skill_t > 0 ) {
+		if (skill_t > 0) {
 			z = apply_percentrate64(z, skill_t * battle_config.shop_exp, 10000);
+
 			if (z < 1)
 				z = 1;
+
 			pc->gainexp(sd, NULL, 0, (int)z, false);
 		}
 	}
@@ -2901,7 +2933,7 @@ static int npc_selllist(struct map_session_data *sd, struct itemlist *item_list)
 		if (nd->master_nd != NULL) // Script-controlled shops decide by themselves, what can be sold and at what price.
 			continue;
 
-		int value = pc->modifysellvalue(sd, sd->inventory_data[idx]->value_sell);
+		int value = pc->modifysellvalue(sd, sd->inventory_data[idx]->value_sell, sd->inventory_data[idx]->flag.ignore_overcharge);
 
 		z += (int64)value * entry->amount;
 	}
@@ -2958,16 +2990,16 @@ static int npc_selllist(struct map_session_data *sd, struct itemlist *item_list)
 //This doesn't remove it from map_db
 static int npc_remove_map(struct npc_data *nd)
 {
-	int16 m,i;
 	nullpo_retr(1, nd);
 
 	if(nd->bl.prev == NULL || nd->bl.m < 0)
 		return 1; //Not assigned to a map.
-	m = nd->bl.m;
+	int16 m = nd->bl.m;
 	clif->clearunit_area(&nd->bl,CLR_RESPAWN);
 	npc->unsetcells(nd);
 	map->delblock(&nd->bl);
 	//Remove npc from map->list[].npc list. [Skotlex]
+	int i = 0;
 	ARR_FIND( 0, map->list[m].npc_num, i, map->list[m].npc[i] == nd );
 	if( i == map->list[m].npc_num ) return 2; //failed to find it?
 
@@ -3372,8 +3404,12 @@ static void npc_parsename(struct npc_data *nd, const char *name, const char *sta
 
 		do {
 			++i;
-			safesnprintf(newname, ARRAYLENGTH(newname), "%d_%d_%d_%d", i, nd->bl.m, nd->bl.x, nd->bl.y);
-		} while( npc->name2id(newname) != NULL );
+			PRAGMA_GCC7(GCC diagnostic push)
+			PRAGMA_GCC7(GCC diagnostic ignored "-Wformat-truncation")
+			// Name is being checked for duplicates, so it's safe to ignore the unlikely but possible string truncation
+			snprintf(newname, ARRAYLENGTH(newname), "%d_%d_%d_%d", i, nd->bl.m, nd->bl.x, nd->bl.y);
+			PRAGMA_GCC7(GCC diagnostic pop)
+		} while(npc->name2id(newname) != NULL);
 
 		strcpy(this_mapname, (nd->bl.m == -1 ? "(not on a map)" : mapindex_id2name(map_id2index(nd->bl.m))));
 		strcpy(other_mapname, (dnd->bl.m == -1 ? "(not on a map)" : mapindex_id2name(map_id2index(dnd->bl.m))));
@@ -3465,13 +3501,17 @@ static struct npc_data *npc_create_npc(enum npc_subtype subtype, int m, int x, i
 	nd->vd = npc_viewdb[0]; // Copy INVISIBLE_CLASS view data. Actual view data is set by npc->add_to_location() later.
 	VECTOR_INIT(nd->qi_data);
 
+	nd->dyn.isdynamic = false;
+	nd->dyn.owner_id = 0;
+	nd->dyn.despawn_timer = INVALID_TIMER;
+	nd->dyn.last_interaction_tick = timer->gettick();
+
 	return nd;
 }
 
 //Add then display an npc warp on map
 static struct npc_data *npc_add_warp(char *name, short from_mapid, short from_x, short from_y, short xs, short ys, unsigned short to_mapindex, short to_x, short to_y)
 {
-	int i, flag = 0;
 	struct npc_data *nd;
 
 	nullpo_retr(NULL, name);
@@ -3479,14 +3519,21 @@ static struct npc_data *npc_add_warp(char *name, short from_mapid, short from_x,
 	nd = npc->create_npc(WARP, from_mapid, from_x, from_y, 0, battle_config.warp_point_debug ? WARP_DEBUG_CLASS : WARP_CLASS);
 
 	safestrncpy(nd->exname, name, ARRAYLENGTH(nd->exname));
-	if (npc->name2id(nd->exname) != NULL)
-		flag = 1;
+	if (npc->name2id(nd->exname) != NULL) {
+		PRAGMA_GCC7(GCC diagnostic push)
+		PRAGMA_GCC7(GCC diagnostic ignored "-Wformat-truncation")
+		// Name is being checked for duplicates afterwards, so it's safe to ignore the unlikely but possible string truncation
+		snprintf(nd->exname, ARRAYLENGTH(nd->exname), "warp_%d_%d_%d", from_mapid, from_x, from_y);
+		PRAGMA_GCC7(GCC diagnostic pop)
+	}
 
-	if (flag == 1)
-		safesnprintf(nd->exname, ARRAYLENGTH(nd->exname), "warp_%d_%d_%d", from_mapid, from_x, from_y);
-
-	for( i = 0; npc->name2id(nd->exname) != NULL; ++i )
-		safesnprintf(nd->exname, ARRAYLENGTH(nd->exname), "warp%d_%d_%d_%d", i, from_mapid, from_x, from_y);
+	for (int i = 0; npc->name2id(nd->exname) != NULL; ++i) {
+		PRAGMA_GCC7(GCC diagnostic push)
+		PRAGMA_GCC7(GCC diagnostic ignored "-Wformat-truncation")
+		// Name is being checked for duplicates, so it's safe to ignore the unlikely but possible string truncation
+		snprintf(nd->exname, ARRAYLENGTH(nd->exname), "warp%d_%d_%d_%d", i, from_mapid, from_x, from_y);
+		PRAGMA_GCC7(GCC diagnostic pop)
+	}
 	safestrncpy(nd->name, nd->exname, ARRAYLENGTH(nd->name));
 
 	nd->u.warp.mapindex = to_mapindex;
@@ -4456,7 +4503,6 @@ static int npc_do_atcmd_event(struct map_session_data *sd, const char *command, 
 	struct npc_data *nd;
 	struct script_state *st;
 	int i = 0, nargs = 0;
-	size_t len;
 
 	nullpo_ret(sd);
 	nullpo_ret(message);
@@ -4477,7 +4523,7 @@ static int npc_do_atcmd_event(struct map_session_data *sd, const char *command, 
 		return 1;
 	}
 
-	if( ev->nd->option&OPTION_INVISIBLE ) { // Disabled npc, shouldn't trigger event.
+	if ((ev->nd->option & OPTION_INVISIBLE) != 0 || ev->nd->dyn.isdynamic) { // Disabled npc, shouldn't trigger event.
 		npc->event_dequeue(sd);
 		return 2;
 	}
@@ -4485,8 +4531,8 @@ static int npc_do_atcmd_event(struct map_session_data *sd, const char *command, 
 	st = script->alloc_state(ev->nd->u.scr.script, ev->pos, sd->bl.id, ev->nd->bl.id);
 	script->setd_sub(st, NULL, ".@atcmd_command$", 0, command, NULL);
 
-	len = strlen(message);
-	if (len) {
+	int len = (int)strlen(message);
+	if (len > 0) {
 		char *temp, *p;
 		p = temp = aStrdup(message);
 		// Sanity check - Skip leading spaces (shouldn't happen)
@@ -5762,7 +5808,7 @@ static int npc_reload(void)
 	map->flags_init();
 	itemdb->name_constants();
 	clan->set_constants();
-	npc_process_files(npc_new_min);
+	npc->process_files(npc_new_min);
 	instance->reload();
 	map->zone_init();
 	npc->motd = npc->name2id("HerculesMOTD"); /// [Ind/Hercules]
@@ -5887,10 +5933,10 @@ static void npc_debug_warps_sub(struct npc_data *nd)
 
 static void npc_debug_warps(void)
 {
-	int16 m, i;
-	for (m = 0; m < map->count; m++)
-		for (i = 0; i < map->list[m].npc_num; i++)
+	for (int m = 0; m < map->count; m++) {
+		for (int i = 0; i < map->list[m].npc_num; i++)
 			npc->debug_warps_sub(map->list[m].npc[i]);
+	}
 }
 
 static void npc_questinfo_clear(struct npc_data *nd)
@@ -5903,6 +5949,31 @@ static void npc_questinfo_clear(struct npc_data *nd)
 		VECTOR_CLEAR(qi->quest_requirement);
 	}
 	VECTOR_CLEAR(nd->qi_data);
+}
+
+static int npc_dynamic_npc_despawn(int tid, int64 tick, int id, intptr_t data)
+{
+	struct npc_data *nd = map->id2nd(id);
+
+	if (nd == NULL || nd->dyn.despawn_timer != tid)
+		return 0;
+
+	if (DIFF_TICK(tick, nd->dyn.last_interaction_tick) >= data) {
+		nd->dyn.despawn_timer = INVALID_TIMER;
+		npc->unload(nd, true, false);
+		return 0;
+	}
+
+	int64 next_tick = battle->bc->dynamic_npc_timeout - DIFF_TICK(tick, nd->dyn.last_interaction_tick);
+	nd->dyn.despawn_timer = timer->add(tick + next_tick, npc->dynamic_npc_despawn, nd->bl.id, (intptr_t)next_tick);
+	return 0;
+}
+
+static void npc_update_interaction_tick(struct npc_data *nd)
+{
+	nullpo_retv(nd);
+
+	nd->dyn.last_interaction_tick = timer->gettick();
 }
 
 /*==========================================
@@ -5940,7 +6011,7 @@ static int do_init_npc(bool minimal)
 	if (!minimal) {
 		npc->timer_event_ers = ers_new(sizeof(struct timer_event_data),"clif.c::timer_event_ers",ERS_OPT_NONE);
 
-		npc_process_files(START_NPC_NUM);
+		npc->process_files(START_NPC_NUM);
 	}
 
 	if (!minimal) {
@@ -6133,4 +6204,7 @@ void npc_defaults(void)
 	npc->db_checkid = npc_db_checkid;
 	npc->refresh = npc_refresh;
 	npc->questinfo_clear = npc_questinfo_clear;
+	npc->process_files = npc_process_files;
+	npc->dynamic_npc_despawn = npc_dynamic_npc_despawn;
+	npc->update_interaction_tick = npc_update_interaction_tick;
 }

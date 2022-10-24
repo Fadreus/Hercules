@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) rAthena Dev Team
 //= Copyright (C) eAthena Dev Team
 //=
@@ -34,6 +34,8 @@
 ra_fild12,295,208,0	script	toairplane#rachel	WARPNPC,1,1,{
 	end;
 OnTouch:
+	if (checkhiding())
+		end;
 	mes("To use the airship, you are required to pay 1,200 zeny or a Free Airship Ticket.");
 	mes("Would you like to use the service?");
 	next;

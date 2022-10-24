@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -76,6 +76,7 @@ static char log_picktype2char(e_log_pick_type type)
 		case LOG_TYPE_REFINE:           return '2';  // Refine
 		case LOG_TYPE_OTHER:            return 'X';  // Other
 		case LOG_TYPE_ACHIEVEMENT:      return '3';  // Achievement
+		case LOG_TYPE_GRADE:            return '4';  // Grade Enchant
 		case LOG_TYPE_NONE:             break;
 		case LOG_TYPE_ALL:              break;
 	}
@@ -180,10 +181,10 @@ static void log_pick_sub_sql(int id, int16 m, e_log_pick_type type, int amount, 
 {
 	nullpo_retv(itm);
 	if (SQL_ERROR == SQL->Query(logs->mysql_handle,
-	    LOG_QUERY " INTO `%s` (`time`, `char_id`, `type`, `nameid`, `amount`, `refine`, `card0`, `card1`, `card2`, `card3`, "
+	    LOG_QUERY " INTO `%s` (`time`, `char_id`, `type`, `nameid`, `amount`, `refine`, `grade`, `card0`, `card1`, `card2`, `card3`, "
 		"`opt_idx0`, `opt_val0`, `opt_idx1`, `opt_val1`, `opt_idx2`, `opt_val2`, `opt_idx3`, `opt_val3`, `opt_idx4`, `opt_val4`, `map`, `unique_id`) "
-	    "VALUES (NOW(), '%d', '%c', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%"PRIu64"')",
-	    logs->config.log_pick, id, logs->picktype2char(type), itm->nameid, amount, itm->refine, itm->card[0], itm->card[1], itm->card[2], itm->card[3],
+	    "VALUES (NOW(), '%d', '%c', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%"PRIu64"')",
+	    logs->config.log_pick, id, logs->picktype2char(type), itm->nameid, amount, itm->refine, itm->grade, itm->card[0], itm->card[1], itm->card[2], itm->card[3],
 		itm->option[0].index, itm->option[0].value, itm->option[1].index, itm->option[1].value, itm->option[2].index, itm->option[2].value,
 		itm->option[3].index, itm->option[3].value, itm->option[4].index, itm->option[4].value,
 	    map->list[m].name, itm->unique_id))

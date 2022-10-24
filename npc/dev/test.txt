@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2013-2021 Hercules Dev Team
+//= Copyright (C) 2013-2022 Hercules Dev Team
 //= Copyright (C) 2013-2021 Haru
 //=
 //= Hercules is free software: you can redistribute it and/or modify
@@ -148,6 +148,24 @@ function	script	F_TestVarOfAnotherNPC	{
 
 		return set(getarg(0), 1337);
 	}
+}
+
+function	script	F_TestCalendarNextTime	{
+	.@hour = gettime(GETTIME_HOUR);
+	.@min = gettime(GETTIME_MINUTE);
+	
+	.@result = getcalendartime(.@hour, .@min);
+	.@expected = gettimetick(2) + 24 * 60 * 60;
+	
+	// We give it a range of 70 seconds more or less in the result because:
+	// 1. getcalendartime doesn't take seconds into account, so we may have differing seconds;
+	// 2. We can't mock time, the second may change during the commands execution,
+	//    so we give it a few seconds to spare.
+	// This still gives a good test, because we are looking for 24 hours into the future,
+	// ~3 minutes aren't really an issue for correcteness here.
+	.@check = (.@result >= .@expected - 70 && .@result <= .@expected + 70);
+	
+	return .@check;
 }
 
 function	script	HerculesSelfTestHelper	{
@@ -503,6 +521,12 @@ function	script	HerculesSelfTestHelper	{
 	callsub(OnCheck, "Ternary conditional operator", .@x, 2);
 	callsub(OnCheck, "Ternary conditional operator", .@y, 3);
 
+	// Ternary conditional operator ?: (with strings)
+	.@x = ("0" ? 4 : 5); // 4
+	.@y = ("" ? 4 : 5); // 5
+	callsub(OnCheck, "Ternary conditional operator (strings)", .@x, 4);
+	callsub(OnCheck, "Ternary conditional operator (strings)", .@y, 5);
+
 	// Associativity of ?:
 	.@x = (1 ? 2 : 0 ? 3 : 4);
 	.@y = (1 ? 1 ? 2 : 3 : 5);
@@ -559,7 +583,7 @@ function	script	HerculesSelfTestHelper	{
 	.@x = 1; .@y = 3;
 	.@x = .@y != 3 ? .@y = 2 : 4;
 	callsub(OnCheck, "Order of = and ?:", .@x, 4);
-	// FIXME callsub(OnCheck, "Short-circuit of ?:", .@y, 3);
+	callsub(OnCheck, "Short-circuit/lazy evaluation of ?:", .@y, 3);
 
 	.@x = 0;
 	if (0)
@@ -804,6 +828,26 @@ function	script	HerculesSelfTestHelper	{
 	callsub(OnCheckStr, "sprintf (Two args)",   sprintf("'%+05d' '%x'", 5, 0x7f), "'+0005' '7f'");
 	callsub(OnCheckStr, "sprintf (positional)", sprintf("'%2$+05d'", 5, 6), "'+0006'");
 	callsub(OnCheckStr, "sprintf (positional)", sprintf("'%2$s' '%1$c'", "First", "Second"), "'Second' 'F'");
+	.@x = 0;
+	/*@TRUE
+	.@x = 1;
+	//@*/
+	callsub(OnCheck, "Conditional comment (TRUE)", .@x, 1);
+	.@x = 0;
+	/*@!TRUE
+	.@x = 1;
+	//@*/
+	callsub(OnCheck, "Conditional comment (!TRUE)", .@x, 0);
+	.@x = 0;
+	/*@TRUE*/
+	.@x = 1;
+	//@*/
+	callsub(OnCheck, "Conditional comment with fallback (TRUE)", .@x, 1);
+	.@x = 0;
+	/*@!TRUE*/
+	.@x = 1;
+	//@*/
+	callsub(OnCheck, "Conditional comment with fallback (!TRUE)", .@x, 0);
 
 	callsub(OnCheck, "Getdatatype (integer)",              getdatatype(5), DATATYPE_INT);
 	callsub(OnCheck, "Getdatatype (constant string)",      getdatatype("foo"), DATATYPE_STR | DATATYPE_CONST);
@@ -833,6 +877,8 @@ function	script	HerculesSelfTestHelper	{
 	callsub(OnCheck, "public local function ownership",          "export test"::Public(), getnpcid());
 	callsub(OnCheck, "public local function var reference test", .@refTest, 1337);
 	callsub(OnCheck, "programatic public local call",            callfunctionofnpc("export test", "RefTest", .@refTest = 1), 1337);
+
+	callsub(OnCheck, "getcalendartime: next occurence of current Hour/Minute", F_TestCalendarNextTime(), true);
 
 	if (.errors) {
 		consolemes(CONSOLEMES_DEBUG, "Script engine self-test   [ \033[0;31mFAILED\033[0m ]");

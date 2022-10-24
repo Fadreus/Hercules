@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -84,7 +84,7 @@ struct config_setting_t;
 #define CL_MAGENTA CL_BT_MAGENTA
 #define CL_CYAN    CL_BT_CYAN
 
-#define CL_SPACE   "           "   // space aquivalent of the print messages
+#define CL_SPACE   "           "   // space equivalent of the print messages
 
 enum msg_type {
 	MSG_NONE,
@@ -108,7 +108,7 @@ struct showmsg_interface {
 	void (*final) (void);
 
 	void (*clearScreen) (void);
-	int (*showMessageV) (const char *string, va_list ap);
+	int (*showMessageV) (const char *string, va_list ap) __attribute__((format(printf, 1, 0)));
 
 	void (*showMessage) (const char *, ...) __attribute__((format(printf, 1, 2)));
 	void (*showStatus) (const char *, ...) __attribute__((format(printf, 1, 2)));

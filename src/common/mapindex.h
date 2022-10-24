@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -89,7 +89,7 @@ struct mapindex_interface {
 	/* number of entries in the index table */
 	int num;
 	/* default map name */
-	char *default_map;
+	const char *default_map;
 	/* default x on map */
 	int default_x;
 	/* default y on map */

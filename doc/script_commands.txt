@@ -366,6 +366,67 @@ parameter.
 Once an object is defined which has a 'code' field to it's definition, it
 contains script commands which can actually be triggered and executed.
 
+Conditional comments
+--------------------
+
+An extension of the block comment syntax can be used for conditional comments.
+A conditional comment is treated as a block comment when the specified flag is
+not defined and as a normal block of code if it is, in a similar way to #ifdef
+blocks in the C preprocessor. This can be useful to make
+parts of scripts (including top-level commands) optional depending on a server
+feature, a setting or a plugin.
+
+A conditional comment begins with /*@CONDITION followed by whitespace or */ and
+ends with the first */ sequence encountered on a separate line, but the sequence
+//@*/ at the beginning of a line (optionally with indentation) is recommended as
+a terminator, since it provides compatibility with older versions of the script
+engine that don't support conditional comments. The condition flag can be
+negated by prefixing it with an exclamation mark (!). Condition flags consist of
+an uppercase letter followed by a sequence of uppercase letters, digits and
+underscores and are at least three characters long.
+
+The following block is only parsed if FLAG is defined. If not defined, or when
+loaded by an older engine, the block is treated as a block comment:
+
+/*@FLAG
+.@x = 1;
+//@*/
+
+The following block is only parsed if FLAG is not defined. If defined, or when
+loaded by an older engine, the block is treated as a block comment:
+
+/*@!FLAG
+.@x = 1;
+//@*/
+
+The following block is only parsed if FLAG is defined. If not defined, the block
+is treated as a block comment. When loaded by an older engine, the block is also
+parsed:
+
+/*@FLAG*/
+.@x = 1;
+//@*/
+
+The following block is only parsed if FLAG is not defined. If defined, the block
+is treated as a block comment. When loaded by an older engine, the block is also
+parsed.
+
+/*@!FLAG*/
+.@x = 1;
+//@*/
+
+The Hercules core provides the following conditional comment flags (plugins may
+provide more):
+
+- TRUE          - always defined
+- HERCULES      - always defined
+- FALSE         - never defined
+- RENEWAL       - only defined when compiled in renewal mode
+- PRERENEWAL    - only defined when compiled in pre-renewal mode
+- LOADGMSCRIPTS - only defined when script_configuration.load_gm_scripts is true
+
+Note: conditional comments cannot be nested.
+
 ~ RID? GID? ~
 
 What a RID is and why do you need to know
@@ -742,6 +803,7 @@ MAX_BANK_ZENY		- Maximum Zeny in the bank
 MAX_BG_MEMBERS		- Maximum BattleGround members
 MAX_CHAT_USERS		- Maximum Chat users
 MAX_REFINE			- Maximum Refine level
+MAX_ITEM_GRADE		- Maximum Grade level
 MAX_ITEM_ID			- Maximum Item ID
 MAX_MENU_OPTIONS    - Maximum NPC menu options
 MAX_MENU_LENGTH     - Maximum NPC menu string length
@@ -1313,6 +1375,60 @@ for more details.
 
 ---------------------------------------
 
+*zmes1f("<format>"{, <param>{, <param>{, ...}}})
+
+This command will displays a box on the screen for the invoking character, with zero ui at bottom.
+Works same as *mesf* except zero ui.
+
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
+*zmes2f("<format>"{, <param>{, <param>{, ...}}})
+
+This command will displays a box on the screen for the invoking character, with zero ui at center.
+Works same as *mesf* except zero ui.
+
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
+*zmes1("<string>")
+
+This command will displays a box on the screen for the invoking character, with zero ui at bottom.
+Works same as *mes* except zero ui.
+
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
+*zmes2("<string>")
+
+This command will displays a box on the screen for the invoking character, with zero ui at center.
+Works same as *mes* except zero ui.
+
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
+*mes2("<string>"{, type})
+
+This command will displays a box on the screen for the invoking character.
+Work same as *mes* except positionting window with text at bottom.
+
+Works only on main client starting from 20220504.
+
+---------------------------------------
+
+*mes2f("<format>"{, <param>{, <param>{, ...{, type}}}})
+
+This command will displays a box on the screen for the invoking character.
+Works same as *mesf* except positionting window with text at bottom.
+
+Works only on main client starting from 20220504.
+
+---------------------------------------
+
 *next()
 
 This command will display a 'next' button in the message window for the
@@ -1329,6 +1445,17 @@ and the script will terminate.
     next();
     mes("[Woman]"); // This is needed since it is a new page and the top will now be blank
     mes("This would appear on the 2nd page");
+
+---------------------------------------
+
+*next2()
+*next2(type)
+
+This command will display a 'next' button in the message window for the
+invoking character.
+Work same as *next* but should be used with *mes2*.
+
+Works only on main client starting from 20220504.
 
 ---------------------------------------
 
@@ -1660,6 +1787,13 @@ perfectly equivalent.
 
 ---------------------------------------
 
+*zmenu("<option_text>", <target_label>{, "<option_text>", <target_label>, ...})
+
+Same as *menu* but for zero npc dialogs.
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
 *select("<option>"{, "<option>", ...})
 
 This function is a handy replacement for 'menu' that doesn't use a complex
@@ -1674,11 +1808,25 @@ and empty options.
 
 ---------------------------------------
 
+*zselect("<option>"{, "<option>", ...})
+
+Same as *select* but for zero npc dialogs.
+Works only in zero clients starting from 20210721.
+
+---------------------------------------
+
 *prompt("<option>"{, "<option>", ...})
 
 This function behaves exactly like select(), but when a player presses cancel
 it returns MAX_MENU_OPTIONS and the script is not terminated. You almost always
 want to use select() rather than prompt().
+
+---------------------------------------
+
+*zprompt("<option>"{, "<option>", ...})
+
+Same as *prompt* but for zero npc dialogs.
+Works only in zero clients starting from 20210721.
 
 ---------------------------------------
 
@@ -3184,7 +3332,7 @@ count items number 512 (Apple).
 
 *getequipcardcnt(<equipment slot>)
 
-This function will return the number of cards that have been compounded
+This function will return the number of items/cards that have been compounded
 onto a specific equipped item for the invoking character. See 'getequipid'
 for a list of possible equipment slots.
 
@@ -3201,6 +3349,7 @@ recreate these items perfectly if they are destroyed. Here's what you get:
 @inventorylist_amount[]        - their corresponding item amounts.
 @inventorylist_equip[]         - will return the slot the item is equipped on, if at all.
 @inventorylist_refine[]        - for how much it is refined.
+@inventorylist_grade[]         - for grade levels.
 @inventorylist_identify[]      - whether it is identified.
 @inventorylist_attribute[]     - whether it is broken.
 @inventorylist_card1[]         - These four arrays contain card data for the items.
@@ -3239,6 +3388,7 @@ recreate these items perfectly if they are destroyed. Here's what you get:
 @cartinventorylist_id[]            - array of item ids.
 @cartinventorylist_amount[]        - their corresponding item amounts.
 @cartinventorylist_refine[]        - for how much it is refined.
+@cartinventorylist_grade[]         - for grade levels.
 @cartinventorylist_identify[]      - whether it is identified.
 @cartinventorylist_attribute[]     - whether it is broken.
 @cartinventorylist_card1[]         - These four arrays contain card data for the items.
@@ -3368,6 +3518,7 @@ Valid types are:
 	ITEMINFO_CLASS_BASE_3            - Class base 3
 	ITEMINFO_CLASS_UPPER             - Class Upper
 	ITEMINFO_FLAG_NO_REFINE          - No refine flag
+	ITEMINFO_FLAG_NO_GRADE           - No grade flag
 	ITEMINFO_FLAG_DELAY_CONSUME      - Delay consume flag
 	ITEMINFO_FLAG_AUTOEQUIP          - Auto equip flag
 	ITEMINFO_FLAG_AUTO_FAVORITE      - Auto favorite flag
@@ -3665,7 +3816,9 @@ Example :
 
 *getcalendartime(<hour>, <minute>{, <day of month>{, <day of week>}})
 
-This function returns the timestamp of the next ocurrence of given time.
+This function returns the timestamp of the next ocurrence of a given time.
+If this time is later today, it will stay in the same day, otherwise, it will adjust to a future
+day as needed.
 
 Day of Month specifies a day between 1 and 31 in the future, by default its value is -1 (don't use).
 Day of Week specifies a day in the week and its valid values are:
@@ -3684,6 +3837,12 @@ Examples :
 	getcalendartime(19, 00); // Next 7 pm
 	getcalendartime(19, 00, 6); // Next day 6 of the month, at 7pm
 	getcalendartime(19, 10, -1, 1); // Next Monday, at 7:10pm
+
+Note: If supplied with the current hour and minute, you will get the timestamp for the same
+hour and minute in the next day. For example, if is now August 1st 7:00pm and you use:
+	getcalendartime(gettime(GETTIME_HOUR), gettime(GETTIME_MINUTE));
+
+You will get August 2nd 7pm
 
 ---------------------------------------
 
@@ -3789,82 +3948,6 @@ Valid <info type> are:
 
 Example:
 	getguildinfo(GUILDINFO_MASTER_NAME, getcharid(CHAR_ID_GUILD, "Haru"))
-
----------------------------------------
-
-*getguildname(<guild id>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This function returns a guild's name given an ID number. If there is no
-such guild, "null" will be returned;
-
-	// Would print whatever guild 10007 name is.
-	mes("The guild "+getguildname(10007)+" are all nice people.");
-
-	// This will do the same as above:
-	.@var = 10007;
-	mes("We have some friends in "+getguildname(.@var)+", you know.");
-
-This is used all over the WoE controlling scripts. You could also use it
-for a guild-based event.
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use getguildinfo instead:
-	getguildinfo(GUILDINFO_NAME, <guild id>)
-
----------------------------------------
-
-*getguildmaster(<guild id>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This function return the name of the master of the guild which has the
-specified ID number. If there is no such guild, "null" will be returned.
-
-// Would return the guild master of guild 10007, whatever that might be.
-	mes(getguildmaster(10007)+" runs "+getguildname(10007));
-
-Can be used to check if the character is the guild master of the specified
-guild.
-
-Maybe you want to make a room only guild masters can enter:
-
-	.@GID = getcharid(CHAR_ID_GUILD);
-	if (.@GID == 0) {
-		mes("Sorry you are not in a guild");
-		close();
-	}
-	if (strcharinfo(PC_NAME) == getguildmaster(.@GID)) {
-		mes("Welcome guild master of "+getguildname(.@GID));
-		close();
-	}
-	mes("Sorry you don't own the guild you are in");
-	close();
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use getguildinfo instead:
-	getguildinfo(GUILDINFO_MASTER_NAME, <guild id>)
-
----------------------------------------
-
-*getguildmasterid(<guild id>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This function will return the character ID number of the guild master of
-the guild specified by the ID. 0 if the character is not a guild master of
-any guild.
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use getguildinfo instead:
-	getguildinfo(GUILDINFO_MASTER_CID, <guild id>)
 
 ---------------------------------------
 
@@ -4057,7 +4140,7 @@ These fields are associate in 'db/(pre-)re/pet_db.conf'. Valid types are:
 
 	PETINFO_ID            - Pet Database ID, stored in `pet` table to distinguish from other pets.
 	PETINFO_CLASS         - Pet class ID. (Id field)
-	PETINFO_NAME          - Pet Name, return "null" if there's no active pet.
+	PETINFO_NAME          - Pet Name, return "" if there's no active pet.
 	PETINFO_INTIMACY      - Pet Intimacy level. 1000 is full loyalty.
 	PETINFO_HUNGRY        - Pet hungry level. 100 is completely full.
 	PETINFO_RENAME        - Pet rename flag. 0 means this pet has not been named yet.
@@ -4070,31 +4153,7 @@ These fields are associate in 'db/(pre-)re/pet_db.conf'. Valid types are:
 	PETINFO_AUTOFEED      - Pet AutoFeed flag.
 
 If the invoking player doesn't own a pet, this command will
-return "null" for type PETINFO_NAME, and return 0 for other types.
-
----------------------------------------
-
-*petstat(<flag>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-Returns current pet status, all are integers except name.
-Returns 0 or "" if the player doesn't have pets.
-
-Flags usable:
-PET_CLASS
-PET_NAME
-PET_LEVEL
-PET_HUNGRY
-PET_INTIMATE
-
-Example:
-	.@i = petstat(PET_CLASS);
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use 'getpetinfo' instead.
+return "" for type PETINFO_NAME, and return 0 for other types.
 
 ---------------------------------------
 
@@ -4517,6 +4576,17 @@ they don't.
 
 ---------------------------------------
 
+*checkhiding({<account id>};
+
+This function returns true if the invoking character is hidden (including
+Hiding, Cloaking and Chase Walk, but excluding GM Perfect Hide) and false
+otherwise.
+
+If <account id> is given, this character will be checked instead of the invoking
+character.
+
+---------------------------------------
+
 *checkvending({"<Player Name>"})
 *checkchatting({"<Player Name>"})
 
@@ -4575,7 +4645,7 @@ night mode or day mode:
 *isequipped(<item id>{, <item id>{, <item id>{, <item id>}}})
 
 This function will return true if the invoking character has all of the item
-IDs given equipped (if card IDs are passed, then it checks if the cards
+IDs given equipped (if item/card IDs are passed, then it checks if the item/card
 are inserted into slots in the equipment they are currently wearing).
 Theoretically there is no limit to the number of items that may be tested
 for at the same time.
@@ -4609,9 +4679,9 @@ invoking character.
 
 ---------------------------------------
 
-*checkequipedcard(<card id>)
+*checkequipedcard(<item id>)
 
-This function will return true if the card specified by it's item ID number
+This function will return true if the item/card specified by it's item ID number
 is inserted into any equipment they have in their inventory, currently
 equipped or not.
 
@@ -5166,10 +5236,17 @@ due to a wall), the character is pushed only up to the obstacle.
 
 *montransform(<monster id>, <duration>{, <sc_type>{, <val1>{, <val2>{, <val3>{, <val4>}}}}})
 *montransform("<monster name>", <duration>{, <sc_type>{, <val1>{, <val2>{, <val3>{, <val4>}}}}})
+*active_transform(<monster id>, <duration>{, <sc_type>{, <val1>{, <val2>{, <val3>{, <val4>}}}}})
+*active_transform("<monster name>", <duration>{, <sc_type>{, <val1>{, <val2>{, <val3>{, <val4>}}}}})
 
 This command can transform your character into monster and you can still
 use all your skills like a normal character.
-Can only be removed when your killed or if you die or if duration is over.
+Can only be removed when you die or if duration is over.
+
+active_transform works in the same way but it stacks with montransform, and is displayed first.
+This means that you may have a montransform, that effect and an active_transform effect at
+the same time, and the monster from active_transform will show first, once it ends, your appearance
+changes back to the montransform one, if it is still active.
 
 for sc_type, val1, val2, val3, val4, see sc_start(), sc_start2(), sc_start4() commands.
 
@@ -5470,17 +5547,18 @@ Note: delitem() in an NPC script can still remove rental items.
 
 ---------------------------------------
 
-*makeitem(<item id>, <amount>, "<map name>", <X>, <Y>)
-*makeitem("<item name>", <amount>, "<map name>", <X>, <Y>)
+*makeitem(<item id>, <amount>, "<map name>", <x>, <y> {,<showdropeffect>})
+*makeitem("<item name>", <amount>, "<map name>", <x>, <y>)
 
 This command will create an item lying around on a specified map in the
 specified location.
 
-	itemid   - Found in 'db/(pre-)re/item_db.txt'
-	amount   - Amount you want produced
-	map name - The map name
-	X        - The X coordinate
-	Y        - The Y coordinate.
+	item id/name    - Found in 'db/(pre-)re/item_db.conf'
+	amount          - Amount you want produced
+	map name        - The map name
+	y               - The x coordinate
+	y               - The y coordinate.
+	showdropeffect  - enable pillar effect on the dropped item (default: 0)
 
 This item will still disappear just like any other dropped item. Like
 getitem(), it also accepts an 'english name' field from the database and
@@ -6083,15 +6161,14 @@ Example:
 
 This function works the same as openstorage() but will open a guild
 storage window instead for the guild storage of the guild the invoking
-character belongs to. This is a function because it returns a value - 0 if
-the guild storage was opened successfully and 1 if it wasn't. (Notice,
-it's a ZERO upon success.)
-Since guild storage is only accessible to one character at one time, it
-may fail if another character is accessing the guild storage at the same
-time.
+character belongs to.
+Expected return values:
 
-This will also fail and return 2 if the attached character does not belong
-to any guild.
+ 0 Success (Opens storage)
+ 1 Storage is already open
+ 2 Player has no guild / guild information hasn't arrived yet
+ 3 Player's guild doesn't have GD_GUILD_STORAGE (only if OFFICIAL_GUILD_STORAGE is enabled - automatically enabled on PACKETVER >= 20131223)
+ 4 Player doesn't have permission to use storage (only on PACKETVER >= 20140205)
 
 The mapflag 'nogstorage' when set to type '2' (or 3), will not open the
 guild storage. Unless the character group has the permission 'bypass_nostorage'.
@@ -6368,21 +6445,6 @@ Examples and detailed explanation about parameters see in specialeffect.
 
 ---------------------------------------
 
-*specialeffect2(<effect number>{, <send_target>{, "<Player Name>"}})
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This command behaves identically to the specialeffect(), but the effect
-will be centered on the invoking character's sprite.
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use specialeffect instead,
-ie: specialeffect(<effect number>, <send_target>, playerattached())
-
----------------------------------------
-
 *statusup(<stat>)
 
 This command will bump a specified stat of the invoking character up by
@@ -6614,26 +6676,6 @@ Examples:
 
 // Makes Aaron stop following whoever he is following.
 	pcstopfollow(getcharid(CHAR_ID_ACCOUNT, "Aaron"));
-
----------------------------------------
-
-*pcblockmove(<account id>, <option>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-Prevents the player from moving when the option != 0, and 0 enables the
-player to move again. The player has to be the account ID of a character,
-and will run for the attached player if zero is supplied.
-
-Examples:
-
-// Prevents the current char from moving away.
-	pcblockmove(getcharid(CHAR_ID_ACCOUNT), true);
-
-// Enables the current char to move again.
-	pcblockmove(getcharid(CHAR_ID_ACCOUNT), false);
 
 ---------------------------------------
 
@@ -6968,16 +7010,16 @@ above 91000 intimacy with its owner.
 *gethominfo(<type>)
 
 This function works as a direct counterpart of 'getpetinfo':
- 0 - Homunculus unique ID
- 1 - Homunculus Class
- 2 - Name
- 3 - Friendly level (intimacy score). 100000 is full loyalty.
- 4 - Hungry level. 100 is completely full.
- 5 - Rename flag. 0 means this homunculus has not been named yet.
- 6 - Homunculus level
+	HOMINFO_ID       - Homunculus unique ID
+	HOMINFO_CLASS    - Homunculus Class
+	HOMINFO_NAME     - Name
+	HOMINFO_INTIMACY - Friendly level (intimacy score). 100000 is full loyalty.
+	HOMINFO_HUNGRY   - Hungry level. 100 is completely full.
+	HOMINFO_RENAME   - Rename flag. 0 means this homunculus has not been named yet.
+	HOMINFO_LEVEL    - Homunculus level
 
 If the attached player doesn't own a homunculus, this command will return
-"null" for type 2, and return 0 for other types.
+"null" for type HOMINFO_NAME, and return 0 for other types.
 
 ---------------------------------------
 
@@ -7855,16 +7897,6 @@ one-on-one duel, for example.
 
 ---------------------------------------
 
-*kickwaitingroomall({"<NPC object name>"})
-
-	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	@ /!\ This command is deprecated @
-	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This command kicks everybody out of a specified waiting room chat.
-
----------------------------------------
-
 *waitingroomkick({"<NPC object name>"{,"<player name>"|<account_id>}})
 
 This command kicks target player(s) out of a waiting room chat of specific NPC if any.
@@ -8169,25 +8201,6 @@ solution rather than sending the map and the monster_id.
 //=====================================
 ---------------------------------------
 
-*debugmes("<format string>"{, <param>{, ...}})
-
-	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	@ /!\ This command is deprecated @
-	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This command will print a message in the server console (map-server window),
-after applying the same format-string replacements as sprintf(). It will not be
-displayed anywhere else. Returns true on success.
-
-Example:
-
-	// Displays "NAME has clicked me!" in the map-server window.
-	debugmes("%s has clicked me!", strcharinfo(PC_NAME));
-
-	debugmes("\033[0;32mHello World"); // supports ANSI escape sequences
-
----------------------------------------
-
 *consolemes("<type>", "<format string>"{,<param>{, ...}})
 
 This command will print a message in the server console (map-server window),
@@ -8390,28 +8403,9 @@ without event labels. If specified name is not found, command does nothing.
 
 ---------------------------------------
 
-*misceffect(<effect number>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-This command, if run from an NPC object that has a sprite, will call up a
-specified effect number, centered on the NPC sprite. If the running code
-does not have an object ID (a 'floating' NPC) or is not running from an
-NPC object at all (an item script) the effect will be centered on the
-character who's RID got attached to the script, if any. For usable item
-scripts, this command will create an effect centered on the player using
-the item.
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use specialeffect instead,
-ie: specialeffect(<effect number>, <send target>, <unit id>)
-
----------------------------------------
-
-*soundeffect("<effect filename>", <type>)
+*soundeffect("<effect filename>", <type>{, <term>})
 *soundeffectall("<effect filename>", <type>{, "<map name>"}{, <x0>, <y0>, <x1>, <y1>})
+*soundeffectall2("<effect filename>", <type>{, <term>{, "<map name>"}}{, <x0>, <y0>, <x1>, <y1>})
 
 These two commands will play a sound effect to either the invoking
 character only (soundeffect()) or multiple characters (soundeffectall()).
@@ -8422,10 +8416,12 @@ If it does, it will be centered on that object. (an NPC sprite)
 
 Effect filename is the filename in a GRF. It must have the .wav extension.
 
-It's not quite certain what the 'type' actually does, it is sent to the
-client directly. It probably determines which directory to play the effect
-from. It's certain that giving 0 for the number will play sound files from
-'\data\wav\', but where the other numbers will read from is unclear.
+Possible values for type:
+	PLAY_SOUND_ONCE   - play sound file once (default)
+	PLAY_SOUND_REPEAT - play sound in repeat mode. Term parameter set delay before next sound play.
+	PLAY_SOUND_STOP   - stop repeated sound. Not stop already playing sound but terminate future repeats.
+
+Term parameter make sense only for type PLAY_SOUND_REPEAT.
 
 The sound files themselves must be in the PCM format, and file names
 should also have a maximum length of 23 characters including the .wav
@@ -8438,14 +8434,22 @@ You can add your own effects this way, naturally.
 
 ---------------------------------------
 
-*playbgm("<BGM filename>")
+*playbgm("<BGM filename>"{, <type>})
 *playbgmall("<BGM filename>"{, "<map name>"{, <x0>, <y0>, <x1>, <y1>}})
+*playbgmall2("<BGM filename>"{, <type>{, "<map name>"{, <x0>, <y0>, <x1>, <y1>}}})
 
 These two commands will play a Background Music to either the invoking
-character only (playbgm()) or multiple characters (playbgmall()).
+character only (playbgm()) or multiple characters (playbgmall(), playbgmall2()).
 
 BGM filename is the filename in /BGM/ folder. It has to be in .mp3
 extension, but it's not required to specify the extension in the script.
+
+type set play type and can be:
+	PLAY_BGM_LOOP - play music in loop
+	PLAY_BGM_OMCE - play music once
+	PLAY_BGM_STOP - stop music
+
+Parameter type make sense only for clients main 20220504 and newer.
 
 If coordinates are omitted, BGM will be broadcasted on the entire map. If
 the map name is also omitted the BGM will be played for the entire server.
@@ -8857,23 +8861,6 @@ For an example of this in use, see doc/sample/npc_test_pcre.txt
 With this you could, for example, automatically punish players for asking
 for Zeny in public places, or alternatively, automatically give them Zeny
 instead if they want it so much.
-
----------------------------------------
-
-*pow(<number>, <power>)
-
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @ /!\ This command is deprecated @
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-Returns the result of the calculation.
-
-Example:
-	.@i = pow(2, 3); // .@i will be 8
-
-This command is deprecated and it should not be used in new scripts, as it is
-likely to be removed at a later time. Please use the exponentiation operator,
-ie: (2 ** 3) instead of pow(2, 3)
 
 ---------------------------------------
 
@@ -10621,6 +10608,7 @@ Applicable Data Types (available as constants) -
 	UDT_STATADD:              Status Points - for NPCs.
 	UDT_GROUP:                group id
 	UDT_DAMAGE_TAKEN_RATE:    damage taken rate of a unit.
+	UDT_OPTIONS:              options
 
 returns 0 if value could not be set, 1 if successful.
 
@@ -10685,6 +10673,7 @@ Applicable Data types (available as constants) -
 	UDT_MERC_KILLCOUNT:       Kill count for mercenaries.
 	UDT_GROUP:                group id
 	UDT_DAMAGE_TAKEN_RATE:    damage taken rate of a unit.
+	UDT_OPTIONS:              options
 
 returns -1 if value could not be retrieved.
 
@@ -10930,3 +10919,92 @@ Opens lapine ddukddak user interface for the player
 returns true on success and false on failure
 
 ---------------------------------------
+*openlapineupgradeui(<item_id>)
+
+Opens lapine ddukddak upgrade user interface for the player
+returns true on success and false on failure
+
+---------------------------------------
+*getgrade()
+
+This function will return the grade level of the equipment from which
+the function is called. This function is intended for use in item scripts.
+
+	if (getgrade() == 1)
+		mes("Wow. That's a 1st grade weapon.");
+
+---------------------------------------
+*getequipisenablegrade(<equipment slot>)
+
+Will return true if the item equipped on the invoking character in the
+specified equipment slot is gradable, and false if it isn't. For a list
+of equipment slots see getequipid().
+
+---------------------------------------
+*getequipgrade(<equipment slot>);
+
+Gets the grade level of an equipment.
+
+---------------------------------------
+*setdialogalign(<align>);
+
+Set vertical or horizontal align in npc dialog.
+Valid aligns:
+horizontal align:
+ DIALOG_ALIGN_LEFT
+ DIALOG_ALIGN_RIGHT
+ DIALOG_ALIGN_CENTER
+vertical align:
+ DIALOG_ALIGN_TOP
+ DIALOG_ALIGN_MIDDLE
+ DIALOG_ALIGN_BOTTOM
+
+Works from clients: main 20210203, re 20211103
+
+---------------------------------------
+
+*setdialogsize(<width>, <height>)
+
+Set size for npc dialog.
+
+Works from clients: main 20220504.
+
+---------------------------------------
+
+*setdialogpos(<x>, <y>)
+
+Set position for npc dialog in pixels.
+
+Works from clients: main 20220504.
+
+---------------------------------------
+
+*setdialogpospercent(<x>, <y>)
+
+Set position for npc dialog in screen size percent.
+
+Works from clients: main 20220504.
+
+---------------------------------------
+
+*opengradeui()
+
+Opens Grade Enchant user interface for the player
+returns true on success and false on failure
+
+---------------------------------------
+*calldynamicnpc("<npc name>");
+
+Creates a dynamic npc copy in range of the player with certain criteria:
+	- Only the owner of the npc can see and interact with the npc
+	- The npc will despawn after a certain period of inactivity
+
+a dynamic npc cannot be created from a FAKE_NPC source
+and it does not run OnInit event when created but rather uses OnDynamicNpcInit.
+returns true on success and false on failure
+
+---------------------------------------
+*openreformui(<item id>)
+
+Opens Item Reform user interface for the given item
+returns true on success and false on failure

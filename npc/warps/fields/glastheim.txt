@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) L0ne_W0lf
 //= Copyright (C) Lupus
@@ -73,6 +73,8 @@ gl_knt02,157,292,0	warp	gl16-1	1,1,gl_knt01,150,286
 gl_knt02,289,138,0	warp	gl17-1	1,1,gl_knt01,292,144
 gl_prison,149,183,0	warp	gl18-1	1,1,gl_prison1,150,14
 gl_prison,11,70,0	script	gl18-2	WARPNPC,1,1,{
+	if (checkhiding())
+		end;
 	switch(rand(4)) {
 		case 0: warp "gl_cas01",163,193; end;
 		case 1: warp "gl_cas01",238,192; end;

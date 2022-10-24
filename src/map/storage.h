@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -63,7 +63,8 @@ struct guild_storage_interface {
 	void (*init) (bool minimal);
 	void (*final) (void);
 	/* */
-	int (*delete) (int guild_id);
+	int (*final_sub) (union DBKey key, struct DBData *data, va_list ap);
+	void (*delete) (int guild_id);
 	int (*open) (struct map_session_data *sd);
 	int (*additem) (struct map_session_data *sd,struct guild_storage *stor,struct item *item_data,int amount);
 	int (*delitem) (struct map_session_data *sd,struct guild_storage *stor,int n,int amount);

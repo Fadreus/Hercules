@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) Joseph
 //= Copyright (C) Gepard
@@ -327,6 +327,7 @@ OnTouch:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 // Original name: "#102Administrator Mode104"
 e_tower,1,1,2	script	#102Administrator Mode	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
@@ -352,7 +353,11 @@ e_tower,1,1,2	script	#102Administrator Mode	CLEAR_NPC,{
 		mes("Enter the password exactly.");
 		close();
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 e_tower,69,117,4	script	Purification Stone#et1	2_MONEMUS,{
 	etower_timer = 0;
@@ -385,6 +390,7 @@ OnTimer1800000:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 e_tower,151,185,4	script	Purification Stone#et2	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	etower_timer = 0;
@@ -392,7 +398,10 @@ e_tower,151,185,4	script	Purification Stone#et2	CLEAR_NPC,{
 	close2();
 	warp("e_tower", 75, 108);
 	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Core Functions ========================================
 function	script	F_Tower_Monster	{
@@ -1174,7 +1183,9 @@ OnEnable:
 	callfunc("F_Tower_Monster", atoi(replacestr(strnpcinfo(NPC_NAME), "FGate102tower", "")) + 1, strnpcinfo(NPC_MAP), instance_npcname(strnpcinfo(NPC_NAME))+"::OnMyMobDead");
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	callfunc("F_Tower_Warp", atoi(replacestr(strnpcinfo(NPC_NAME), "FGate102tower", "")) + 1, strnpcinfo(NPC_MAP));
 	end;
 
@@ -1246,7 +1257,9 @@ OnEnable:
 	initnpctimer();
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	getitem(Dark_Ashes, 1);
 	warp(instance_mapname("2@tower"), 52, 354);
 	end;
@@ -1269,7 +1282,9 @@ OnEnable:
 	enablenpc(instance_npcname("25FGate102tower-2"));
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	warp(instance_mapname("2@tower"), 52, 354);
 	end;
 }
@@ -1291,6 +1306,7 @@ OnTimer120000:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 1@tower,71,1,0	script	#Manager Mode1	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	mes("Please enter the password.");
@@ -1310,7 +1326,10 @@ OnTimer120000:
 		}
 	}
 	close();
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Levels 26-50 ==========================================
 2@tower,29,365,2	script	Immortal Furnace#1	CLEAR_NPC,{
@@ -1375,7 +1394,9 @@ OnEnable:
 	initnpctimer();
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	getitem(Dark_Ashes, 1);
 	warp(instance_mapname("3@tower"), 52, 354);
 	end;
@@ -1398,11 +1419,14 @@ OnEnable:
 	enablenpc(instance_npcname("50FGate102tower-2"));
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	warp(instance_mapname("3@tower"), 52, 354);
 	end;
 }
 
+/*@LOADGMSCRIPTS
 2@tower,71,1,0	script	#Manager Mode2	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	mes("Please enter the password.");
@@ -1422,7 +1446,10 @@ OnTouch_:
 		}
 	}
 	close();
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Levels 51-75 ==========================================
 3@tower,29,365,2	script	Immortal Furnace#2	CLEAR_NPC,{
@@ -1487,7 +1514,9 @@ OnEnable:
 	initnpctimer();
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	getitem(Dark_Ashes, 1);
 	warp(instance_mapname("4@tower"), 52, 354);
 	end;
@@ -1510,11 +1539,14 @@ OnEnable:
 	enablenpc(instance_npcname("75FGate102tower-2"));
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	warp(instance_mapname("4@tower"), 52, 354);
 	end;
 }
 
+/*@LOADGMSCRIPTS
 3@tower,71,1,0	script	#Manager Mode3	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	mes("Please enter the password.");
@@ -1534,7 +1566,10 @@ OnTouch_:
 		}
 	}
 	close();
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Levels 76-99 ==========================================
 4@tower,29,365,2	script	Immortal Furnace#3	CLEAR_NPC,{
@@ -1598,7 +1633,9 @@ OnEnable:
 	initnpctimer();
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	getitem(Dark_Ashes, 1);
 	warp(instance_mapname("5@tower"), 101, 72);
 	end;
@@ -1621,11 +1658,14 @@ OnEnable:
 	enablenpc(instance_npcname("99FGate102tower-2"));
 	end;
 
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	warp(instance_mapname("5@tower"), 101, 72);
 	end;
 }
 
+/*@LOADGMSCRIPTS
 4@tower,71,1,0	script	#Manager Mode4	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	mes("Please enter the password.");
@@ -1645,7 +1685,10 @@ OnTouch_:
 		}
 	}
 	close();
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Level 100 =============================================
 5@tower,106,109,2	script	Lucid Crystal#102	CLEAR_NPC,{
@@ -1828,6 +1871,7 @@ OnEnable:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 5@tower,71,1,0	script	#Manager Mode5	CLEAR_NPC,{
 	callfunc("F_GM_NPC");
 	mes("This NPC manages the crystal on the 100th Level. Please enter the password.");
@@ -1839,7 +1883,10 @@ OnEnable:
 	} else
 		mes("Please enter the correct password.");
 	close();
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Level 101 =============================================
 6@tower,45,89,2	script	Life Spring#1	CLEAR_NPC,{

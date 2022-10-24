@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -302,12 +302,11 @@ static void pincode_notifyLoginPinError(int account_id)
 
 static void pincode_decrypt(unsigned int userSeed, char *pin)
 {
-	int i;
-	char tab[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-
 	nullpo_retv(pin);
 
-	for (i = 1; i < 10; i++) {
+	unsigned char tab[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+	for (int i = 1; i < 10; i++) {
 		int pos;
 		userSeed = pincode->baseSeed + userSeed * pincode->multiplier;
 		pos = userSeed % (i + 1);
@@ -318,7 +317,7 @@ static void pincode_decrypt(unsigned int userSeed, char *pin)
 		}
 	}
 
-	for (i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		if (pin[i] < '0' || pin[i] > '9')
 			pin[i] = '0';
 		else

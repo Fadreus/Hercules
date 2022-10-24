@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 
 #include "common/cbasetypes.h"
 #include "common/memmgr.h"
+#include "common/nullpo.h"
 #include "common/showmsg.h"
 
 #include <errno.h>
@@ -43,6 +44,8 @@ struct sv_interface *sv;
 // escapes a string in-place (' -> \' , \ -> \\ , % -> _)
 static char *jstrescape(char *pt)
 {
+	nullpo_retr(NULL, pt);
+
 	//copy from here
 	char *ptr;
 	int i = 0, j = 0;
@@ -371,31 +374,6 @@ static char *strlib_safestrncpy(char *dst, const char *src, size_t n)
 static size_t strlib_safestrnlen(const char *string, size_t maxlen)
 {
 	return ( string != NULL ) ? strnlen(string, maxlen) : 0;
-}
-
-/// Works like snprintf, but always null-terminates the buffer.
-/// Returns the size of the string (without null-terminator)
-/// or -1 if the buffer is too small.
-///
-/// @param buf Target buffer
-/// @param sz Size of the buffer (including null-terminator)
-/// @param fmt Format string
-/// @param ... Format arguments
-/// @return The size of the string or -1 if the buffer is too small
-static int strlib_safesnprintf(char *buf, size_t sz, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
-static int strlib_safesnprintf(char *buf, size_t sz, const char *fmt, ...)
-{
-	va_list ap;
-	int ret;
-
-	va_start(ap,fmt);
-	ret = vsnprintf(buf, sz, fmt, ap);
-	va_end(ap);
-	if (ret < 0 || (size_t)ret >= sz) { // overflow
-		buf[sz-1] = '\0';// always null-terminate
-		return -1;
-	}
-	return ret;
 }
 
 /// Returns the line of the target position in the string.
@@ -1030,6 +1008,7 @@ static int StringBuf_Printf(StringBuf *self, const char *fmt, ...)
 }
 
 /// Appends the result of vprintf to the StringBuf
+static int StringBuf_Vprintf(StringBuf *self, const char *fmt, va_list ap) __attribute__((format(printf, 2, 0)));
 static int StringBuf_Vprintf(StringBuf *self, const char *fmt, va_list ap)
 {
 	for(;;) {
@@ -1146,7 +1125,6 @@ void strlib_defaults(void)
 	strlib->config_switch_ = strlib_config_switch;
 	strlib->safestrncpy_ = strlib_safestrncpy;
 	strlib->safestrnlen_ = strlib_safestrnlen;
-	strlib->safesnprintf_ = strlib_safesnprintf;
 	strlib->strline_ = strlib_strline;
 	strlib->bin2hex_ = strlib_bin2hex;
 

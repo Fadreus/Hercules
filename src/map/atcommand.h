@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -41,7 +41,7 @@ struct config_setting_t;
  * Defines
  **/
 #define ATCOMMAND_LENGTH 50
-#define MAX_MSG 1520
+#define MAX_MSG 1530
 #define msg_txt(idx) atcommand->msg(idx)
 #define msg_sd(sd,msg_number) atcommand->msgsd((sd),(msg_number))
 #define msg_fd(fd,msg_number) atcommand->msgfd((fd),(msg_number))

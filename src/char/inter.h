@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 
 #include "common/hercules.h"
 #include "common/db.h"
+#include "common/packets_struct.h"
 
 #include <stdarg.h>
 
@@ -40,12 +41,12 @@ struct inter_interface {
 	bool (*msg_config_read) (const char *cfg_name, bool allow_override);
 	void (*do_final_msg) (void);
 	const char* (*job_name) (int class);
-	void (*vmsg_to_fd) (int fd, int u_fd, int aid, char* msg, va_list ap);
+	void (*vmsg_to_fd) (int fd, int u_fd, int aid, char* msg, va_list ap) __attribute__((format(printf, 4, 0)));
 	void (*msg_to_fd) (int fd, int u_fd, int aid, char *msg, ...) __attribute__((format(printf, 4, 5)));
 	void (*savereg) (int account_id, int char_id, const char *key, unsigned int index, intptr_t val, bool is_string);
 	int (*accreg_fromsql) (int account_id,int char_id, int fd, int type);
-	int (*vlog) (char* fmt, va_list ap);
-	int (*log) (char* fmt, ...);
+	int (*vlog) (char* fmt, va_list ap) __attribute__((format(printf, 1, 0)));
+	int (*log) (char* fmt, ...) __attribute__((format(printf, 1, 2)));
 	int (*init_sql) (const char *file);
 	int (*mapif_init) (int fd);
 	int (*check_length) (int fd, int length);

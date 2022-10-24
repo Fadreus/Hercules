@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -283,7 +283,7 @@ static void channel_send(struct channel_data *chan, struct map_session_data *sd,
 	} else if (sd) {
 		int i;
 
-		safesnprintf(message, 150, "[ #%s ] %s : %s", chan->name, sd->status.name, msg);
+		snprintf(message, 150, "[ #%s ] %s : %s", chan->name, sd->status.name, msg);
 		clif->channel_msg(chan,sd,message);
 		if (chan->type == HCS_TYPE_IRC)
 			ircbot->relay(sd->status.name,msg);
@@ -297,7 +297,7 @@ static void channel_send(struct channel_data *chan, struct map_session_data *sd,
 			}
 		}
 	} else {
-		safesnprintf(message, 150, "[ #%s ] %s", chan->name, msg);
+		snprintf(message, 150, "[ #%s ] %s", chan->name, msg);
 		clif->channel_msg2(chan, message);
 		if (chan->type == HCS_TYPE_IRC)
 			ircbot->relay(NULL, msg);

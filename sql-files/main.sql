@@ -1,7 +1,7 @@
 -- This file is part of Hercules.
 -- http://herc.ws - http://github.com/HerculesWS/Hercules
 --
--- Copyright (C) 2012-2021 Hercules Dev Team
+-- Copyright (C) 2012-2022 Hercules Dev Team
 -- Copyright (C) Athena Dev Teams
 --
 -- Hercules is free software: you can redistribute it and/or modify
@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `auction` (
   `item_name` VARCHAR(50) NOT NULL DEFAULT '',
   `type` SMALLINT NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
@@ -153,6 +154,7 @@ CREATE TABLE IF NOT EXISTS `cart_inventory` (
   `equip` INT UNSIGNED NOT NULL DEFAULT '0',
   `identify` SMALLINT NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
@@ -389,6 +391,7 @@ CREATE TABLE IF NOT EXISTS `guild` (
   `guild_lv` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `connect_member` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `max_member` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `max_storage` SMALLINT UNSIGNED NOT NULL DEFAULT '0',
   `average_lv` SMALLINT UNSIGNED NOT NULL DEFAULT '1',
   `exp` BIGINT UNSIGNED NOT NULL DEFAULT '0',
   `next_exp` INT UNSIGNED NOT NULL DEFAULT '0',
@@ -486,7 +489,7 @@ CREATE TABLE IF NOT EXISTS `guild_position` (
   `guild_id` INT UNSIGNED NOT NULL DEFAULT '0',
   `position` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `name` VARCHAR(24) NOT NULL DEFAULT '',
-  `mode` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `mode` SMALLINT UNSIGNED NOT NULL DEFAULT '0',
   `exp_mode` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   PRIMARY KEY (`guild_id`,`position`)
 ) ENGINE=MyISAM;
@@ -514,6 +517,7 @@ CREATE TABLE IF NOT EXISTS `guild_storage` (
   `equip` INT UNSIGNED NOT NULL DEFAULT '0',
   `identify` SMALLINT UNSIGNED NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
@@ -589,6 +593,7 @@ CREATE TABLE IF NOT EXISTS `inventory` (
   `equip` INT UNSIGNED NOT NULL DEFAULT '0',
   `identify` SMALLINT NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
@@ -724,6 +729,7 @@ CREATE TABLE IF NOT EXISTS `mail` (
   `nameid` INT UNSIGNED NOT NULL DEFAULT '0',
   `amount` INT UNSIGNED NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `identify` SMALLINT NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
@@ -953,6 +959,9 @@ INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1588301040); -- 2020-05-0
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1589145060); -- 2020-05-10--23-11.sql
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1597467600); -- 2020-08-15--13-00.sql
 INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1612286353); -- 2021-05-03--10-19.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1628121360); -- 2021-08-04--23-56.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1634838524); -- 2021-10-21--18-49.sql
+INSERT IGNORE INTO `sql_updates` (`timestamp`) VALUES (1641405640); -- 2022-01-05--19-00.sql
 
 --
 -- Table structure for table `storage`
@@ -966,6 +975,7 @@ CREATE TABLE IF NOT EXISTS `storage` (
   `equip` INT UNSIGNED NOT NULL DEFAULT '0',
   `identify` SMALLINT UNSIGNED NOT NULL DEFAULT '0',
   `refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+  `grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `attribute` TINYINT UNSIGNED NOT NULL DEFAULT '0',
   `card0` INT NOT NULL DEFAULT '0',
   `card1` INT NOT NULL DEFAULT '0',
@@ -996,6 +1006,7 @@ CREATE TABLE IF NOT EXISTS `rodex_items` (
 	`equip` INT UNSIGNED NOT NULL DEFAULT '0',
 	`identify` SMALLINT NOT NULL DEFAULT '0',
 	`refine` TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	`grade` TINYINT UNSIGNED NOT NULL DEFAULT '0',
 	`attribute` TINYINT NOT NULL DEFAULT '0',
 	`card0` INT NOT NULL DEFAULT '0',
 	`card1` INT NOT NULL DEFAULT '0',

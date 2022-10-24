@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ HPMHooks.source.DB = *DB;
 HPMHooks.source.des = *des;
 HPMHooks.source.duel = *duel;
 HPMHooks.source.elemental = *elemental;
+HPMHooks.source.grader = *grader;
 HPMHooks.source.grfio = *grfio;
 HPMHooks.source.guild = *guild;
 HPMHooks.source.gstorage = *gstorage;
@@ -53,6 +54,7 @@ HPMHooks.source.ircbot = *ircbot;
 HPMHooks.source.itemdb = *itemdb;
 HPMHooks.source.libconfig = *libconfig;
 HPMHooks.source.logs = *logs;
+HPMHooks.source.macro = *macro;
 HPMHooks.source.mail = *mail;
 HPMHooks.source.map = *map;
 HPMHooks.source.mapindex = *mapindex;

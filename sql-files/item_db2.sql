@@ -1,7 +1,7 @@
 -- This file is part of Hercules.
 -- http://herc.ws - http://github.com/HerculesWS/Hercules
 --
--- Copyright (C) 2013-2021 Hercules Dev Team
+-- Copyright (C) 2013-2022 Hercules Dev Team
 --
 -- Hercules is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -50,12 +50,19 @@ CREATE TABLE `item_db2` (
   `equip_level_min` smallint UNSIGNED DEFAULT NULL,
   `equip_level_max` smallint UNSIGNED DEFAULT NULL,
   `refineable` tinyint UNSIGNED DEFAULT NULL,
+  `gradeable` tinyint UNSIGNED DEFAULT NULL,
   `disable_options` tinyint UNSIGNED DEFAULT NULL,
   `view_sprite` smallint UNSIGNED DEFAULT NULL,
   `bindonequip` tinyint UNSIGNED DEFAULT NULL,
   `forceserial` tinyint UNSIGNED DEFAULT NULL,
   `buyingstore` tinyint UNSIGNED DEFAULT NULL,
   `delay` mediumint UNSIGNED DEFAULT NULL,
+  `keepafteruse` tinyint UNSIGNED DEFAULT NULL,
+  `dropannounce` tinyint UNSIGNED DEFAULT NULL,
+  `showdropeffect` tinyint UNSIGNED DEFAULT NULL,
+  `dropeffectmode` tinyint UNSIGNED DEFAULT NULL,
+  `ignorediscount` tinyint UNSIGNED DEFAULT NULL,
+  `ignoreovercharge` tinyint UNSIGNED DEFAULT NULL,
   `trade_flag` smallint UNSIGNED DEFAULT NULL,
   `trade_group` smallint UNSIGNED DEFAULT NULL,
   `nouse_flag` smallint UNSIGNED DEFAULT NULL,
@@ -66,6 +73,8 @@ CREATE TABLE `item_db2` (
   `script` text,
   `equip_script` text,
   `unequip_script` text,
+  `rental_start_script` text,
+  `rental_end_script` text,
  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM;
 

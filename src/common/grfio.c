@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -281,7 +281,10 @@ static unsigned long grfio_crc32(const unsigned char *buf, unsigned int len)
 /// @copydoc grfio_interface::decode_zip
 static int grfio_decode_zip(void *dest, unsigned long *dest_len, const void *source, unsigned long source_len)
 {
-	return uncompress(dest, dest_len, source, source_len);
+	const int ret = uncompress(dest, dest_len, source, source_len);
+	if (ret != Z_OK)
+		grfio->report_error(ret);
+	return ret;
 }
 
 /// @copydoc grfio_interface::encode_zip
@@ -293,7 +296,10 @@ static int grfio_encode_zip(void *dest, unsigned long *dest_len, const void *sou
 		/* [Ind/Hercules] */
 		CREATE(dest, unsigned char, *dest_len);
 	}
-	return compress(dest, dest_len, source, source_len);
+	const int ret = compress(dest, dest_len, source, source_len);
+	if (ret != Z_OK)
+		grfio->report_error(ret);
+	return ret;
 }
 
 /* File List Subroutines */
@@ -447,9 +453,9 @@ static void grfio_localpath_create(char *buffer, size_t size, const char *filena
 	len = strlen(data_dir);
 
 	if (data_dir[0] == '\0' || data_dir[len-1] == '/' || data_dir[len-1] == '\\')
-		safesnprintf(buffer, size, "%s%s", data_dir, filename);
+		snprintf(buffer, size, "%s%s", data_dir, filename);
 	else
-		safesnprintf(buffer, size, "%s/%s", data_dir, filename);
+		snprintf(buffer, size, "%s/%s", data_dir, filename);
 
 	// normalize path
 	for (i = 0; buffer[i] != '\0'; ++i)
@@ -463,7 +469,7 @@ static void *grfio_reads(const char *fname, int *size)
 	struct grf_filelist *entry = grfio_filelist_find(fname);
 	if (entry == NULL || entry->gentry <= 0) {
 		// LocalFileCheck
-		char lfname[256];
+		char lfname[2048];
 		FILE *in;
 		grfio_localpath_create(lfname, sizeof(lfname), (entry && entry->fnd) ? entry->fnd : fname);
 
@@ -654,7 +660,7 @@ static int grfio_entryread(const char *grfname, int gentry)
 			int ofs2 = ofs+getlong(grf_filelist+ofs)+4;
 			unsigned char type = grf_filelist[ofs2+12];
 			if (type&FILELIST_TYPE_FILE) {
-				char *fname = grfio_decode_filename(grf_filelist+ofs+6, grf_filelist[ofs]-6);
+				char *fname = grfio->decode_filename(grf_filelist+ofs+6, grf_filelist[ofs]-6);
 				int srclen = getlong(grf_filelist+ofs2+0) - getlong(grf_filelist+ofs2+8) - 715;
 
 				if (strlen(fname) > sizeof(aentry.fn) - 1) {
@@ -775,7 +781,7 @@ static int grfio_entryread(const char *grfname, int gentry)
 static bool grfio_parse_restable_row(const char *row)
 {
 	char w1[256], w2[256];
-	char src[256], dst[256];
+	char src[261], dst[261];
 	char local[256];
 	struct grf_filelist *entry = NULL;
 
@@ -786,8 +792,8 @@ static bool grfio_parse_restable_row(const char *row)
 	if (strstr(w2, ".gat") == NULL && strstr(w2, ".rsw") == NULL)
 		return false; // we only need the maps' GAT and RSW files
 
-	safesnprintf(src, 256, "data\\%s", w1);
-	safesnprintf(dst, 256, "data\\%s", w2);
+	snprintf(src, 261, "data\\%s", w1);
+	snprintf(dst, 261, "data\\%s", w2);
 
 	entry = grfio_filelist_find(dst);
 	if (entry != NULL) {
@@ -956,6 +962,26 @@ static void grfio_init(const char *fname)
 	grfio_resourcecheck();
 }
 
+static void grfio_report_error(int err)
+{
+	switch (err) {
+		case Z_OK:
+			return;
+		case Z_BUF_ERROR:
+			ShowError("Zlib buffer error. Probably destination buffer too small\n");
+			break;
+		case Z_MEM_ERROR:
+			ShowError("Zlib buffer error. Insufficient memory\n");
+			break;
+		case Z_DATA_ERROR:
+			ShowError("Zlib buffer error. Compressed data was corrupted\n");
+			break;
+		default:
+			ShowError("Unknown zlib error: %d: %s\n", err, zError(err));
+			break;
+	}
+}
+
 /// Interface base initialization.
 void grfio_defaults(void)
 {
@@ -967,4 +993,6 @@ void grfio_defaults(void)
 	grfio->crc32 = grfio_crc32;
 	grfio->decode_zip = grfio_decode_zip;
 	grfio->encode_zip = grfio_encode_zip;
+	grfio->report_error = grfio_report_error;
+	grfio->decode_filename = grfio_decode_filename;
 }

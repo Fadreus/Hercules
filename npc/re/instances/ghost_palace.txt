@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2016-2021 Hercules Dev Team
+//= Copyright (C) 2016-2022 Hercules Dev Team
 //= Copyright (C) Asheraf
 //= Copyright (C) pengc2010
 //=
@@ -306,6 +306,8 @@ OnInstanceInit:
 }
 
 1@spa,54,28,0	script	#gp3warp	WARPNPC,1,1,{
+	if (checkhiding())
+		end;
 	if (!'gp5) {
 		warp("1@spa", 218, 186);
 	} else {

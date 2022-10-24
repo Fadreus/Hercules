@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -396,7 +396,6 @@ struct Battle_Config {
 
 	int ignore_items_gender; //[Lupus]
 
-	int copyskill_restrict; // [Aru]
 	int berserk_cancels_buffs; // [Aru]
 	int mob_ai; //Configures various mob_ai settings to make them smarter or dumber(official). [Skotlex]
 	int hom_setting; //Configures various homunc settings which make them behave unlike normal characters.. [Skotlex]
@@ -629,9 +628,19 @@ struct Battle_Config {
 	int merc_natural_heal_hp;
 	int merc_natural_heal_sp;
 	int merc_natural_heal_cap;
+
+	int macro_detect_retry;
+	int macro_detect_timeout;
+
+	int roulette_gold_step;
+	int roulette_silver_step;
+	int roulette_bronze_step;
+	int grader_max_used;
+	int dynamic_npc_timeout;
+	int dynamic_npc_range;
 };
 
-/* criteria for battle_config.idletime_critera */
+/* criteria for battle_config.idletime_criteria */
 enum e_battle_config_idletime {
 	BCIDLE_WALK          = 0x001,
 	BCIDLE_USESKILLTOID  = 0x002,
@@ -667,7 +676,7 @@ struct delay_damage {
 struct battle_interface {
 	/* */
 	struct Battle_Config *bc;
-	/* */
+	/* elemental damage rate. [Defending Element Level][Attacking Element][Defending Element] */
 	int attr_fix_table[4][ELE_MAX][ELE_MAX];
 	struct eri *delay_damage_ers; //For battle delay damage structures.
 	/* init */

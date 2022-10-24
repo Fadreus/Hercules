@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -440,6 +440,16 @@ enum elements {
 };
 
 /**
+ * Types of Ball Types
+ * Used by clif_spiritball [KeiKun]
+ */
+enum spirit_ball_types {
+	BALL_TYPE_NONE = 0,
+	BALL_TYPE_SPIRIT,
+	BALL_TYPE_SOUL
+};
+
+/**
  * Types of spirit charms.
  *
  * Note: Code assumes that this matches the first entries in enum elements.
@@ -475,7 +485,8 @@ enum search_freecell {
 struct block_list {
 	struct block_list *next,*prev;
 	int id;
-	int16 m,x,y;
+	int16 m, x, y;
+	bool deleted;
 	enum bl_type type;
 };
 
@@ -772,6 +783,8 @@ enum status_point_types { //we better clean up this enum and change it name [Hem
 	SP_SUB_DEF_ELE = 2063,
 	SP_MAGIC_SUB_DEF_ELE = 2064,
 	SP_STATE_NO_RECOVER_RACE = 2065,
+	SP_SUB_SKILL = 2066,
+	SP_ADD_DROP_RACE = 2067,
 
 #ifndef SP_LAST_KNOWN
 	SP_LAST_KNOWN
@@ -907,6 +920,18 @@ enum map_zone_merge_type {
 	MZMT_NEVERMERGE, ///< Cannot merge with any zones.
 };
 
+/**
+ * align for packet ZC_SAY_DIALOG_ALIGN
+ **/
+enum say_dialog_align {
+	DIALOG_ALIGN_LEFT   = 0,
+	DIALOG_ALIGN_RIGHT  = 1,
+	DIALOG_ALIGN_CENTER = 2,
+	DIALOG_ALIGN_TOP    = 3,
+	DIALOG_ALIGN_MIDDLE = 4,
+	DIALOG_ALIGN_BOTTOM = 5
+};
+
 struct map_zone_data {
 	char name[MAP_ZONE_NAME_LENGTH];/* 20'd */
 	enum map_zone_merge_type merge_type;
@@ -932,6 +957,11 @@ struct map_drop_list {
 	int drop_type;
 	int drop_per;
 };
+
+/**
+ * Map ID (m) for "none" or unallocated map.
+ */
+#define MAPID_NONE -1
 
 struct map_data {
 	char name[MAP_NAME_LENGTH];
@@ -1318,6 +1348,9 @@ struct map_interface {
 	struct DBMap *iwall_db;
 	struct block_list **block_free;
 	int block_free_count, block_free_lock, block_free_list_size;
+#ifdef SANITIZE
+	int **block_free_sanitize;
+#endif  // SANITIZE
 	struct block_list **bl_list;
 	int bl_list_count, bl_list_size;
 BEGIN_ZEROED_BLOCK; // This block is zeroed in map_defaults()
@@ -1494,6 +1527,12 @@ END_ZEROED_BLOCK;
 	int (*readgat) (struct map_data *m);
 	int (*readallmaps) (void);
 	bool (*config_read) (const char *filename, bool imported);
+	bool (*config_read_console) (const char *filename, struct config_t *config, bool imported);
+	bool (*config_read_connection) (const char *filename, struct config_t *config, bool imported);
+	bool (*config_read_inter) (const char *filename, struct config_t *config, bool imported);
+	bool (*config_read_database) (const char *filename, struct config_t *config, bool imported);
+	bool (*config_read_map_list) (const char *filename, struct config_t *config, bool imported);
+
 	bool (*read_npclist) (const char *filename, bool imported);
 	bool (*inter_config_read) (const char *filename, bool imported);
 	bool (*inter_config_read_database_names) (const char *filename, const struct config_t *config, bool imported);
@@ -1520,6 +1559,7 @@ END_ZEROED_BLOCK;
 
 #ifdef HERCULES_CORE
 void map_defaults(void);
+void mapit_defaults(void);
 #endif // HERCULES_CORE
 
 HPShared struct mapit_interface *mapit;

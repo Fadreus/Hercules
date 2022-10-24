@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -266,6 +266,7 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(login->clear_client_hash_nodes, HP_login_clear_client_hash_nodes) },
 	{ HP_POP(login->config_set_md5hash, HP_login_config_set_md5hash) },
 	{ HP_POP(login->convert_users_to_colors, HP_login_convert_users_to_colors) },
+	{ HP_POP(login->check_client_version, HP_login_check_client_version) },
 /* loginlog_interface */
 	{ HP_POP(loginlog->failedattempts, HP_loginlog_failedattempts) },
 	{ HP_POP(loginlog->log, HP_loginlog_log) },
@@ -298,6 +299,9 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(packets->final, HP_packets_final) },
 	{ HP_POP(packets->addLens, HP_packets_addLens) },
 	{ HP_POP(packets->addLen, HP_packets_addLen) },
+	{ HP_POP(packets->addLenIntif, HP_packets_addLenIntif) },
+	{ HP_POP(packets->addLenInter, HP_packets_addLenInter) },
+	{ HP_POP(packets->addLenChrif, HP_packets_addLenChrif) },
 /* rnd_interface */
 	{ HP_POP(rnd->init, HP_rnd_init) },
 	{ HP_POP(rnd->final, HP_rnd_final) },
@@ -428,8 +432,10 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(sysinfo->vcsrevision_src, HP_sysinfo_vcsrevision_src) },
 	{ HP_POP(sysinfo->vcsrevision_scripts, HP_sysinfo_vcsrevision_scripts) },
 	{ HP_POP(sysinfo->build_revision, HP_sysinfo_build_revision) },
+	{ HP_POP(sysinfo->fflags, HP_sysinfo_fflags) },
 	{ HP_POP(sysinfo->vcsrevision_reload, HP_sysinfo_vcsrevision_reload) },
 	{ HP_POP(sysinfo->is_superuser, HP_sysinfo_is_superuser) },
+	{ HP_POP(sysinfo->zlib, HP_sysinfo_zlib) },
 	{ HP_POP(sysinfo->init, HP_sysinfo_init) },
 	{ HP_POP(sysinfo->final, HP_sysinfo_final) },
 /* thread_interface */
@@ -458,6 +464,9 @@ struct HookingPointData HookingPoints[] = {
 	{ HP_POP(timer->perform, HP_timer_perform) },
 	{ HP_POP(timer->init, HP_timer_init) },
 	{ HP_POP(timer->final, HP_timer_final) },
+	{ HP_POP(timer->check_timers, HP_timer_check_timers) },
+	{ HP_POP(timer->get_current_clocksource, HP_timer_get_current_clocksource) },
+	{ HP_POP(timer->get_available_clocksource, HP_timer_get_available_clocksource) },
 };
 
 int HookingPointsLenMax = 42;

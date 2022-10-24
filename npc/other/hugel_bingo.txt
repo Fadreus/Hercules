@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) Kisuka
 //= Copyright (C) Samuray22
@@ -669,7 +669,7 @@ OnInit:
 OnTouch:
 	if ($@bingowinner$ != strcharinfo(PC_NAME)) end;
 	specialeffect EF_SUI_EXPLOSION;
-	soundeffect "tming_success.wav",1;
+	soundeffect "tming_success.wav", PLAY_SOUND_ONCE;
 	if ($@bingoresult == 16) getitem 7515,50;
 	else getitem 7515,1;
 	initnpctimer;
@@ -767,6 +767,8 @@ OnTouch:
 que_bingo,49,136,0	script	go3#bingo	WARPNPC,1,1,{
 
 OnTouch:
+	if (checkhiding())
+		end;
 	switch($@hu_bingob) {
 		case 0: warp "que_bingo",49,125; break;
 		case 1: warp "que_bingo",53,121; break;

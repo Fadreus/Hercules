@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -178,6 +178,9 @@ struct mapif_interface {
 	void (*parse_ItemBoundRetrieve) (int fd);
 	void (*parse_accinfo) (int fd);
 	int (*account_reg_reply) (int fd,int account_id,int char_id, int type);
+#if 0
+	void (*account_reg) (int fd, unsigned char *src);
+#endif
 	int (*disconnectplayer) (int fd, int account_id, int char_id, int reason);
 	int (*parse_Registry) (int fd);
 	int (*parse_RegistryRequest) (int fd);

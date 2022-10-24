@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 
 PRAGMA_GCC5(GCC diagnostic push)
 PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
+PRAGMA_GCC5(GCC diagnostic ignored "-Wsuggest-attribute=format")
 #if defined (HPMHOOKING_LOGIN)
 #define HPM_SERVER_TYPE SERVER_TYPE_LOGIN
 #define HPM_CORE_INCLUDE "HPMHooking/HPMHooking_login.HPMHooksCore.inc"
@@ -86,6 +87,7 @@ PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
 #include "map/clif.h"
 #include "map/duel.h"
 #include "map/elemental.h"
+#include "map/grader.h"
 #include "map/guild.h"
 #include "map/homunculus.h"
 #include "map/instance.h"
@@ -231,6 +233,7 @@ HPExport bool HPM_Plugin_AddHook(enum HPluginHookType type, const char *target, 
 
 PRAGMA_GCC5(GCC diagnostic push)
 PRAGMA_GCC5(GCC diagnostic ignored "-Wdiscarded-qualifiers")
+PRAGMA_GCC5(GCC diagnostic ignored "-Wsuggest-attribute=format")
 #include HPM_HOOKS_INCLUDE
 PRAGMA_GCC5(GCC diagnostic pop)
 

@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) Kisuka
 //= Copyright (C) L0ne_W0lf
@@ -1743,7 +1743,7 @@ prontera,126,335,5	script	Arthail	1_M_BARD,{
 		next;
 		mes "[???]";
 		mes "...";
-		soundeffectall "se_littlewaves02.wav",0;
+		soundeffectall "se_littlewaves02.wav", PLAY_SOUND_ONCE;
 		next;
 		mes "["+strcharinfo(PC_NAME)+"]";
 		mes "Huh?";
@@ -1753,7 +1753,7 @@ prontera,126,335,5	script	Arthail	1_M_BARD,{
 		mes "[????]";
 		mes "AAAAAAAAAAAAAAAHHHHHHHHHHH!!!!!";
 		emotion e_omg;
-		soundeffectall "se_scream_w01.wav",0;
+		soundeffectall "se_scream_w01.wav", PLAY_SOUND_ONCE;
 		next;
 		mes "["+strcharinfo(PC_NAME)+"]";
 		mes "What the--?!";

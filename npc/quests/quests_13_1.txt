@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Joseph
 //= Copyright (C) Masao
 //= Copyright (C) Euphy
@@ -1938,6 +1938,7 @@ moc_ruins,137,89,5	script	Time-Space Gap Guard	4_M_MOC_SOLDIER,{
 	close;
 }
 
+/*@LOADGMSCRIPTS
 moc_fild22b,370,370,3	script	Allied Manager#gm	4W_SAILOR,{
 	callfunc "F_GM_NPC";
 	mes "[Manager]";
@@ -1973,7 +1974,11 @@ moc_fild22b,370,370,3	script	Allied Manager#gm	4W_SAILOR,{
 			close;
 		}
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== New Surroundings :: ep13_newbs ========================
 mid_camp,222,283,4	script	Marian#ep13bs	4_F_JOB_HUNTER,{
@@ -6956,6 +6961,7 @@ OnTimer300000:
 }
 
 //== Part Time Work :: ep13_alba ===========================
+/*@LOADGMSCRIPTS
 mid_camp,1,1,0	script	#timer_alba01	CLEAR_NPC,{
 	callfunc "F_GM_NPC";
 	mes "Please enter the password";
@@ -6995,6 +7001,12 @@ mid_camp,1,1,0	script	#timer_alba01	CLEAR_NPC,{
 	}
 
 OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
+//@*/
+/*@!LOADGMSCRIPTS*/
+-	script	#timer_alba01	FAKE_NPC,{
+OnInit:
+//@*/
 	$@PartTimeOn = 0;
 	$@PartTimeSlots = 0;
 OnEnable:
@@ -8471,6 +8483,7 @@ man_fild03,104,248,0	duplicate(manukrock)	Mysterious Rock#16	CLEAR_NPC
 man_fild03,91,272,0	duplicate(manukrock)	Mysterious Rock#17	CLEAR_NPC
 man_fild03,95,301,0	duplicate(manukrock)	Mysterious Rock#18	CLEAR_NPC
 
+/*@LOADGMSCRIPTS
 sec_in02,80,171,0	script	Piece of crack#sec	2_MONEMUS,{
 	callfunc "F_GM_NPC";
 	mes "1~3000";
@@ -8483,7 +8496,10 @@ sec_in02,80,171,0	script	Piece of crack#sec	2_MONEMUS,{
 	}
 	ep13_yong1 = .@input;
 	close;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Report from the New World :: ep13_1_edq ===============
 mid_campin,90,121,5	script	Hibba Agip	4_M_REDSWORD,{
@@ -11978,6 +11994,8 @@ morocc,43,108,5	script	Sharp-Looking Boy#dan_07	4_KID01,{
 
 morocc,45,110,0	script	que_job01#01	WARPNPC,2,2,{
 OnTouch:
+	if (checkhiding())
+		end;
 	if (BaseJob == Job_Assassin) {
 		warp "que_job01",9,94;
 		end;
@@ -12205,6 +12223,8 @@ que_job01,82,95,3	script	Bar Master#moc2_01	1_ETC_01,{
 
 que_job01,80,77,0	script	que_job01#04	WARPNPC,2,2,{
 OnTouch:
+	if (checkhiding())
+		end;
 	if (BaseJob == Job_Assassin || mao_request > 0 || mao_morocc2 > 4) {
 		warp "que_job01",61,50;
 		end;
@@ -12413,6 +12433,8 @@ OnReset:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	mes "[Tao]";
 	if (prt_curse == 24) {
 		if ($@moc_mao_room1 == 0) {
@@ -12519,6 +12541,8 @@ OnTouch:
 
 que_job01,11,4,0	script	que_job01#room1_out	WARPNPC,1,1,{
 OnTouch:
+	if (checkhiding())
+		end;
 	warp "que_job01",52,50;
 	donpcevent " #room1timer::OnStop";
 	end;
@@ -12573,6 +12597,8 @@ OnReset:
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	if ((mao_morocc2 > 4) && (mao_morocc2 < 10)) {
 		if ($@moc_mao_room2 == 0) {
 			$@moc_mao_room2 = 1; //Global Variable
@@ -12717,6 +12743,8 @@ OnTouch:
 
 que_job01,80,27,0	script	que_job01#room2_1_out	WARPNPC,1,1,{
 OnTouch:
+	if (checkhiding())
+		end;
 	warp "que_job01",52,50;
 	donpcevent " #room2timer::OnStop";
 	end;
@@ -12724,6 +12752,8 @@ OnTouch:
 
 que_job01,144,61,0	script	que_job01#room2_2_out	WARPNPC,1,1,{
 OnTouch:
+	if (checkhiding())
+		end;
 	warp "que_job01",52,50;
 	donpcevent " #room2timer::OnStop";
 	end;
@@ -13490,7 +13520,7 @@ OnEnable:
 	end;
 
 OnTouch:
-	soundeffect "wander_man_move.wav",1;
+	soundeffect "wander_man_move.wav", PLAY_SOUND_ONCE;
 	sc_start SC_BLIND,600000,0;
 	mes "As soon as you touched the crystal,";
 	mes "you feel your body being pulled into the space gap.";
@@ -13520,7 +13550,7 @@ OnTouch:
 	mes "Shut up! It's creepy that you all look alike. Bring it on! I'm not afraid of you!";
 	mes "I'm not going to let you run away again!";
 	next;
-	soundeffect "wander_man_move.wav",1;
+	soundeffect "wander_man_move.wav", PLAY_SOUND_ONCE;
 	sc_end SC_BLIND;
 	mes "[" + strcharinfo(PC_NAME) + "]";
 	mes "... !!!!";

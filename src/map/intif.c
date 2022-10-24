@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -45,10 +45,12 @@
 
 #include "common/memmgr.h"
 #include "common/nullpo.h"
+#include "common/packets_struct.h"
 #include "common/showmsg.h"
 #include "common/socket.h"
 #include "common/strlib.h"
 #include "common/timer.h"
+#include "common/packets.h"
 
 #include <fcntl.h>
 #include <signal.h>
@@ -77,21 +79,22 @@ static int intif_create_pet(int account_id, int char_id, int pet_class, int pet_
 	if (intif->CheckForCharServer())
 		return 0;
 	nullpo_ret(pet_name);
-	WFIFOHEAD(inter_fd, 32 + NAME_LENGTH);
-	WFIFOW(inter_fd, 0) = 0x3080;
-	WFIFOL(inter_fd, 2) = account_id;
-	WFIFOL(inter_fd, 6) = char_id;
-	WFIFOL(inter_fd, 10) = pet_class;
-	WFIFOL(inter_fd, 14) = pet_lv;
-	WFIFOL(inter_fd, 18) = pet_egg_id;
-	WFIFOL(inter_fd, 22) = pet_equip;
-	WFIFOW(inter_fd, 26) = intimate;
-	WFIFOW(inter_fd, 28) = hungry;
-	WFIFOB(inter_fd, 30) = rename_flag;
-	WFIFOB(inter_fd, 31) = incubate;
-	memcpy(WFIFOP(inter_fd, 32), pet_name, NAME_LENGTH);
-	WFIFOSET(inter_fd, 32 + NAME_LENGTH);
 
+	WFIFOHEAD(inter_fd, sizeof(struct PACKET_INTER_CREATE_PET));
+	struct PACKET_INTER_CREATE_PET *p = WFIFOP(inter_fd, 0);
+	p->packet_id = HEADER_INTER_CREATE_PET;
+	p->account_id = account_id;
+	p->char_id = char_id;
+	p->pet_class = pet_class;
+	p->pet_lv = pet_lv;
+	p->pet_egg_id = pet_egg_id;
+	p->pet_equip = pet_equip;
+	p->intimate = intimate;
+	p->hungry = hungry;
+	p->rename_flag = rename_flag;
+	p->incubate = incubate;
+	safestrncpy(p->pet_name, pet_name, NAME_LENGTH);
+	WFIFOSET(inter_fd, sizeof(struct PACKET_INTER_CREATE_PET));
 	return 0;
 }
 
@@ -448,7 +451,7 @@ static int intif_request_guild_storage(int account_id, int guild_id)
  * Sends guild storage information for saving to the character server.
  *
  * @code{.unparsed}
- *	@packet 0x3019 [out] <packet_len>.W <account_id>.L <guild_id>.L <struct guild_storage>.P
+ *	@packet 0x3019 [out] <packet_len>.W <account_id>.L <guild_id>.L {<struct item>.P} * <capacity>
  * @endcode
  *
  * @attention If the size of packet 0x3019 changes,
@@ -461,19 +464,27 @@ static int intif_request_guild_storage(int account_id, int guild_id)
  * @param[in] gstor Pointer to the guild storage data containing the information to save.
  * @return Always 0. 
  *
- **/
+ */
 static int intif_send_guild_storage(int account_id, struct guild_storage *gstor)
 {
+	int size;
+
 	if (intif->CheckForCharServer())
-		return 0;
-	nullpo_ret(gstor);
-	WFIFOHEAD(inter_fd,sizeof(struct guild_storage)+12);
+		return 1;
+
+	nullpo_retr(1, gstor);
+	size = 20 + sizeof(gstor->items.data[0])*gstor->items.capacity;
+
+	WFIFOHEAD(inter_fd, size);
 	WFIFOW(inter_fd,0) = 0x3019;
-	WFIFOW(inter_fd,2) = (unsigned short)sizeof(struct guild_storage)+12;
+	WFIFOW(inter_fd,2) = size;
 	WFIFOL(inter_fd,4) = account_id;
 	WFIFOL(inter_fd,8) = gstor->guild_id;
-	memcpy( WFIFOP(inter_fd,12),gstor, sizeof(struct guild_storage) );
-	WFIFOSET(inter_fd,WFIFOW(inter_fd,2));
+	WFIFOL(inter_fd,12) = gstor->items.capacity;
+	WFIFOL(inter_fd,16) = gstor->items.amount;
+	if (gstor->items.data != NULL)
+		memcpy(WFIFOP(inter_fd, 20), gstor->items.data, sizeof(gstor->items.data[0])*gstor->items.capacity);
+	WFIFOSET(inter_fd, size);
 	return 0;
 }
 
@@ -827,12 +838,20 @@ static int intif_guild_change_memberinfo(int guild_id, int account_id, int char_
 	return 0;
 }
 
-// Request a change of Guild title
-static int intif_guild_position(int guild_id, int idx, struct guild_position *p)
+/**
+ * Requests a change of Guild title.
+ *
+ * @param guild_id The guild ID.
+ * @param idx      The guild position index.
+ * @param p        The edited guild position data.
+ * @retval false in case of errors.
+ */
+static bool intif_guild_position(int guild_id, int idx, struct guild_position *p)
 {
 	if (intif->CheckForCharServer())
-		return 0;
+		return false;
 	nullpo_ret(p);
+
 	WFIFOHEAD(inter_fd, sizeof(struct guild_position)+12);
 	WFIFOW(inter_fd,0)=0x303b;
 	WFIFOW(inter_fd,2)=sizeof(struct guild_position)+12;
@@ -840,7 +859,7 @@ static int intif_guild_position(int guild_id, int idx, struct guild_position *p)
 	WFIFOL(inter_fd,8)=idx;
 	memcpy(WFIFOP(inter_fd,12),p,sizeof(struct guild_position));
 	WFIFOSET(inter_fd,WFIFOW(inter_fd,2));
-	return 0;
+	return true;
 }
 
 // Request an update of Guildskill skill_id
@@ -1103,45 +1122,84 @@ static void intif_parse_Registers(int fd)
 		pc->reg_received(sd); //Received all registry values, execute init scripts and what-not. [Skotlex]
 }
 
+/**
+ * Loads received guild storage into memory.
+ *
+ * Expected packets:
+ * 0x3818 <len>.W <account id>.L <guild id != 0>.L <flag>.B <capacity>.L <amount>.L {<item>.P}*<capacity>
+ * 0x3818 <len>.W <account id>.L <guild id == 0>.L
+ * <flag> 0: Don't open storage
+ * <flag> 1: Open storage
+ *
+ * @param fd The receiving fd.
+ */
 static void intif_parse_LoadGuildStorage(int fd)
 {
-	struct guild_storage *gstor;
-	struct map_session_data *sd;
-	int guild_id, flag;
+	struct guild_storage *gstor = NULL;
+	struct map_session_data *sd = NULL;
 
-	guild_id = RFIFOL(fd,8);
-	flag = RFIFOL(fd,12);
-	if(guild_id <= 0)
+	int flag, storage_capacity, storage_amount, expected_size;
+	int account_id = RFIFOL(fd, 4);
+	int guild_id = RFIFOL(fd, 8);
+
+	if (guild_id <= 0)
 		return;
-	sd=map->id2sd( RFIFOL(fd,4) );
-	if( flag ){ //If flag != 0, we attach a player and open the storage
-		if(sd==NULL){
-			ShowError("intif_parse_LoadGuildStorage: user not found %u\n", RFIFOL(fd,4));
-			return;
-		}
-	}
-	gstor=gstorage->ensure(guild_id);
-	if(!gstor) {
-		ShowWarning("intif_parse_LoadGuildStorage: error guild_id %d not exist\n",guild_id);
+
+	flag = RFIFOB(fd,12);
+	storage_capacity = RFIFOL(fd, 13);
+	storage_amount = RFIFOL(fd, 17);
+	if (storage_capacity < storage_amount)
+		storage_capacity = storage_amount;
+
+	expected_size = 21 + (sizeof(gstor->items.data[0])*storage_capacity);
+	if (RFIFOW(fd,2) != expected_size) {
+		ShowError("intif_parse_LoadGuildStorage: data size mismatch! Expected: %d Received: %d\n",
+			expected_size, RFIFOW(fd,2));
 		return;
 	}
-	if (gstor->storage_status == 1) { // Already open.. lets ignore this update
-		ShowWarning("intif_parse_LoadGuildStorage: storage received for a client already open (User %d:%d)\n", flag?sd->status.account_id:0, flag?sd->status.char_id:0);
+
+	sd = map->id2sd(account_id);
+	// When flag is true a player should always be attached, otherwise it's not possible
+	// to open the storage later
+	if ((flag&1) == 1 && sd == NULL) // Player logged off/invalid data
+		return;
+
+	gstor = gstorage->ensure(guild_id);
+	if (gstor == NULL) {
+		ShowWarning("intif_parse_LoadGuildStorage: Invalid guild_id (%d)!\n", guild_id);
 		return;
 	}
+	if (gstor->in_use) {
+		// Already open.. lets ignore this update
+		ShowWarning("intif_parse_LoadGuildStorage: storage received for a client was already opened (User AID %d: CID %d)\n",
+			flag?sd->status.account_id:0, flag?sd->status.char_id:0);
+		return;
+	}
+
 	if (gstor->dirty) { // Already have storage, and it has been modified and not saved yet! Exploit! [Skotlex]
-		ShowWarning("intif_parse_LoadGuildStorage: received storage for an already modified non-saved storage! (User %d:%d)\n", flag?sd->status.account_id:0, flag?sd->status.char_id:0);
-		return;
-	}
-	if (RFIFOW(fd,2)-13 != sizeof(struct guild_storage)) {
-		ShowError("intif_parse_LoadGuildStorage: data size mismatch %d != %"PRIuS"\n", RFIFOW(fd,2)-13, sizeof(struct guild_storage));
-		gstor->storage_status = 0;
+		ShowWarning("intif_parse_LoadGuildStorage: received storage for an already modified non-saved storage! (User AID %d: CID%d)\n",
+			flag?sd->status.account_id:0, flag?sd->status.char_id:0);
 		return;
 	}
 
-	memcpy(gstor,RFIFOP(fd,13),sizeof(struct guild_storage));
-	if( flag )
+	// Clear current storage information and fetch new data
+	gstor->in_use = false;
+	gstor->locked = false;
+	gstor->dirty = false;
+	gstor->items.capacity = max(storage_capacity, 1);
+	gstor->items.amount = storage_amount;
+	if (gstor->items.data != NULL) {
+		aFree(gstor->items.data);
+	}
+	gstor->items.data = aCalloc(gstor->items.capacity, sizeof(gstor->items.data[0]));
+	if (storage_capacity > 0) {
+		memcpy(gstor->items.data, RFIFOP(fd, 21), sizeof(gstor->items.data[0])*storage_capacity);
+	}
+
+	if ((flag&1) == 1)
 		gstorage->open(sd);
+
+	return;
 }
 
 // ACK guild_storage saved
@@ -2338,7 +2396,7 @@ static void intif_itembound_req(int char_id, int aid, int guild_id)
 	WFIFOW(inter_fd,10) = guild_id;
 	WFIFOSET(inter_fd,12);
 	if(gstor)
-		gstor->lock = 1; //Lock for retrieval process
+		gstor->locked = true; //Lock for retrieval process
 #endif
 }
 
@@ -2351,7 +2409,7 @@ static void intif_parse_Itembound_ack(int fd)
 
 	gstor = idb_get(gstorage->db,guild_id);
 	if(gstor)
-		gstor->lock = 0; //Unlock now that operation is completed
+		gstor->locked = false; //Unlock now that operation is completed
 #endif
 }
 
@@ -2629,13 +2687,11 @@ static int intif_parse(int fd)
 	int packet_len, cmd;
 	cmd = RFIFOW(fd,0);
 	// Verify ID of the packet
-	if (cmd < 0x3800 || cmd >= 0x3800+(sizeof(intif->packet_len_table)/sizeof(intif->packet_len_table[0]))
-	 || intif->packet_len_table[cmd-0x3800] == 0
-	) {
+	if (cmd < MIN_INTIF_PACKET_DB || cmd >= MAX_INTIF_PACKET_DB || packets->intif_db[cmd - MIN_INTIF_PACKET_DB] == 0) {
 		return 0;
 	}
 	// Check the length of the packet
-	packet_len = intif->packet_len_table[cmd-0x3800];
+	packet_len = packets->intif_db[cmd - MIN_INTIF_PACKET_DB];
 	if(packet_len==-1){
 		if(RFIFOREST(fd)<4)
 			return 2;
@@ -2747,23 +2803,7 @@ static int intif_parse(int fd)
  *-------------------------------------*/
 void intif_defaults(void)
 {
-	const int packet_len_table [INTIF_PACKET_LEN_TABLE_SIZE] = {
-		 0, 0, 0, 0, -1,-1,37,-1,  7, 0, 0, 0,  0, 0,  0, 0, //0x3800-0x380f
-		-1, 0, 0, 0,  0, 0, 0, 0, -1,11, 0, 0,  0, 0,  0, 0, //0x3810 Achievements [Smokexyz/Hercules]
-		39,-1,15,15, 14,19, 7, 0,  0, 0, 0, 0,  0, 0,  0, 0, //0x3820
-		10,-1,15, 0, 79,25, 7, 0,  0,-1,-1,-1, 14,67,186,-1, //0x3830
-		-1, 0, 0,14,  0, 0, 0, 0, -1,74,-1,11, 11,-1,  0, 0, //0x3840
-		-1,-1, 7, 7,  7,11, 8, 0, 10, 0, 0, 0,  0, 0,  0, 0, //0x3850  Auctions [Zephyrus] itembound[Akinari] Clan System[Murilo BiO]
-		-1, 7, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0,  0, 0, //0x3860  Quests [Kevin] [Inkfish]
-		-1, 3, 3, 0,  0, 0, 0, 0,  0, 0, 0, 0, -1, 3,  3, 0, //0x3870  Mercenaries [Zephyrus] / Elemental [pakpil]
-		14,-1, 7, 3,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0,  0, 0, //0x3880
-		-1,-1, 7, 3,  0,-1, 7, 15,18 + NAME_LENGTH, 23, 16 + sizeof(struct rodex_item) * RODEX_MAX_ITEM, 0, 0, 0, 0, 0, //0x3890  Homunculus [albator] / RoDEX [KirieZ]
-	};
-
 	intif = &intif_s;
-
-	/* */
-	memcpy(intif->packet_len_table,&packet_len_table,sizeof(intif->packet_len_table));
 
 	/* funcs */
 	intif->parse = intif_parse;

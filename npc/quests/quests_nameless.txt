@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Euphy
 //= Copyright (C) brianluau
 //= Copyright (C) Yommy
@@ -1134,6 +1134,8 @@ nameless_in,12,37,0	script	Out_from_Monastery	WARPNPC,1,1,{
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	if (aru_monas == 19) {
 		aru_monas = 20;
 		warp "nameless_n",168,252;
@@ -1149,6 +1151,8 @@ nameless_i,168,257,0	script	outtoin_01#mo	WARPNPC,1,1,{
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	if (aru_monas == 18 || aru_monas == 19) {
 		warp "nameless_in",12,41;
 		end;
@@ -1483,6 +1487,7 @@ OnTouch:
 	}
 }
 
+/*@LOADGMSCRIPTS
 sec_in02,15,15,4	script	boss::boss_aru_monas	1_M_SIGNMONK,{
 	callfunc "F_GM_NPC";
 	mes "[Patch]";
@@ -1512,7 +1517,11 @@ sec_in02,15,15,4	script	boss::boss_aru_monas	1_M_SIGNMONK,{
 		lost_boy = 0;
 		close;
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Rachel Addition :: aruna_nir ==========================
 ra_temple,165,57,5	script	Niren#ss	4_F_MADAME,{

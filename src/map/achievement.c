@@ -2,7 +2,7 @@
 * This file is part of Hercules.
 * http://herc.ws - http://github.com/HerculesWS/Hercules
 *
-* Copyright (C) 2017-2021 Hercules Dev Team
+* Copyright (C) 2017-2022 Hercules Dev Team
 * Copyright (C) Smokexyz
 * Copyright (C) Dastgir
 *
@@ -1523,7 +1523,7 @@ static bool achievement_readdb_validate_criteria_achievement(const struct config
 static bool achievement_readdb_objective_sub(const struct config_setting_t *conf, int index, struct achievement_data *entry)
 {
 	struct config_setting_t *tt = NULL;
-	char objnum[12];
+	char objnum[13];
 
 	nullpo_retr(false, conf);
 	nullpo_retr(false, entry);

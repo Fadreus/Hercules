@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -104,6 +104,15 @@ struct grfio_interface {
 	 * @param[in]     source_len Source data length.
 	 */
 	int (*encode_zip) (void *dest, unsigned long *dest_len, const void *source, unsigned long source_len);
+
+	/**
+	 * Report zlib error
+	 *
+	 * @param[in] err    Error code to report.
+	 */
+	void (*report_error) (int err);
+
+	char *(*decode_filename) (unsigned char *buf, int len);
 };
 
 /**

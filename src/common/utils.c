@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -232,7 +232,10 @@ void findfile(const char *p, const char *pat, void (func)(const char *, void *co
 		if (strcmp(entry->d_name, "..") == 0)
 			continue;
 
-		safesnprintf(tmppath, sizeof(tmppath), "%s%c%s", path, PATHSEP, entry->d_name);
+		if (snprintf(tmppath, sizeof(tmppath), "%s%c%s", path, PATHSEP, entry->d_name) >= sizeof(tmppath)) {
+			ShowError("findfile: too long path would be truncated: '%s' - skipping\n", tmppath);
+			continue;
+		}
 
 		// check if the pattern matches.
 		if (strstr(entry->d_name, pattern)) {

@@ -157,6 +157,7 @@
     <ClInclude Include="..\src\common\mmo.h" />
     <ClInclude Include="..\src\common\mutex.h" />
     <ClInclude Include="..\src\common\nullpo.h" />
+    <ClInclude Include="..\src\common\packets_struct.h" />
     <ClInclude Include="..\src\common\random.h" />
     <ClInclude Include="..\src\common\showmsg.h" />
     <ClInclude Include="..\src\common\socket.h" />
@@ -181,11 +182,13 @@
     <ClInclude Include="..\src\map\date.h" />
     <ClInclude Include="..\src\map\duel.h" />
     <ClInclude Include="..\src\map\elemental.h" />
+    <ClInclude Include="..\src\map\grader.h" />
     <ClInclude Include="..\src\map\guild.h" />
     <ClInclude Include="..\src\map\intif.h" />
     <ClInclude Include="..\src\map\irc-bot.h" />
     <ClInclude Include="..\src\map\itemdb.h" />
     <ClInclude Include="..\src\map\log.h" />
+    <ClInclude Include="..\src\map\macro.h" />
     <ClInclude Include="..\src\map\mail.h" />
     <ClInclude Include="..\src\map\map.h" />
     <ClInclude Include="..\src\map\mapreg.h" />
@@ -268,11 +271,13 @@
     <ClCompile Include="..\src\map\date.c" />
     <ClCompile Include="..\src\map\duel.c" />
     <ClCompile Include="..\src\map\elemental.c" />
+    <ClCompile Include="..\src\map\grader.c" />
     <ClCompile Include="..\src\map\guild.c" />
     <ClCompile Include="..\src\map\intif.c" />
     <ClCompile Include="..\src\map\irc-bot.c" />
     <ClCompile Include="..\src\map\itemdb.c" />
     <ClCompile Include="..\src\map\log.c" />
+    <ClCompile Include="..\src\map\macro.c" />
     <ClCompile Include="..\src\map\mail.c" />
     <ClCompile Include="..\src\map\map.c" />
     <ClCompile Include="..\src\map\mapreg_sql.c" />

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -74,6 +74,10 @@ struct hplugin_data_store;
 #endif
 #if MAX_ITEM_ID > 0xFFFF && PACKETVER_MAIN_NUM < 20181121 && PACKETVER_RE_NUM < 20180704 && PACKETVER_ZERO_NUM < 20181114
 #error "For clients before 20181121 Main and 20180704 RE and 20181114 zero, MAX_ITEM_ID must be smaller than 0x10000"
+#endif
+
+#ifndef MAX_ITEM_GRADE
+#define MAX_ITEM_GRADE 7
 #endif
 
 enum item_itemid {
@@ -197,6 +201,9 @@ enum item_itemid {
 	ITEMID_WYRD                  = 12732,
 	ITEMID_HAGALAZ               = 12733,
 	ITEMID_C_WING_OF_FLY         = 12887,
+	ITEMID_SILVER_BULLET         = 13201,
+	ITEMID_SANCTIFIED_BULLET     = 13220,
+	ITEMID_SILVER_BULLET_        = 13221,
 	ITEMID_DUN_TELE_SCROLL1      = 14527,
 	ITEMID_BATTLE_MANUAL25       = 14532,
 	ITEMID_BATTLE_MANUAL100      = 14533,
@@ -427,6 +434,11 @@ enum item_name_search_flag {
 	IT_SEARCH_NAME_MAX,
 };
 
+enum item_reform_status {
+	IT_REFORM_SUCCESS = 0,
+	IT_REFORM_NOT_ENOUGH_MATERIALS = 3,
+};
+
 /** Convenience item list (entry) used in various functions */
 struct itemlist_entry {
 	int id;       ///< Item ID or (inventory) index
@@ -505,6 +517,30 @@ struct item_lapineddukddak {
 	struct script_code *script;
 };
 
+struct item_lapineupgrade {
+	int8 NeedRefineMin;
+	int8 NeedRefineMax;
+	int8 NeedOptionMin;
+	bool NoEnchant;
+	VECTOR_DECL(struct itemlist_entry) TargetItems;
+	struct script_code *script;
+};
+
+struct item_reform {
+	int Id;
+	int BaseItem;
+	int ResultItem;
+	VECTOR_DECL(struct itemlist_entry) Materials;
+	int8 NeedRefineMin;
+	int8 NeedRefineMax;
+	int8 NeedOptionNumMin;
+	bool IsEmptySocket;
+	int8 ChangeRefineValue;
+	bool PreserveSocketItem;
+	bool PreserveOptions;
+	bool PreserveGrade;
+};
+
 struct item_data {
 	int nameid;
 	char name[ITEM_NAME_LENGTH],jname[ITEM_NAME_LENGTH];
@@ -544,6 +580,7 @@ struct item_data {
 	struct {
 		unsigned available : 1;
 		unsigned no_refine : 1; // [celest]
+		unsigned no_grade : 1;
 		unsigned delay_consume : 1;     ///< Signifies items that are not consumed immediately upon double-click [Skotlex]
 		unsigned trade_restriction : 9; ///< Item trade restrictions mask (@see enum ItemTradeRestrictions)
 		unsigned autoequip : 1;
@@ -555,6 +592,8 @@ struct item_data {
 		unsigned no_options: 1; // < disallows use of item options on the item. (non-equippable items are automatically flagged) [Smokexyz]
 		unsigned drop_announce : 1; // Official Drop Announce [Jedzkie]
 		unsigned showdropeffect: 1; // < Allow showing effect on item drop [Asheraf]
+		unsigned ignore_discount : 1; // [Jedzkie]
+		unsigned ignore_overcharge : 1; // [Jedzkie]
 	} flag;
 	struct {// item stacking limitation
 		unsigned short amount;
@@ -575,6 +614,8 @@ struct item_data {
 	struct item_group *group;
 	struct item_package *package;
 	struct item_lapineddukddak *lapineddukddak;
+	struct item_lapineupgrade *lapineupgrade;
+	VECTOR_DECL(int) reform_list;
 	struct hplugin_data_store *hdata; ///< HPM Plugin Data Store
 };
 
@@ -647,6 +688,7 @@ struct itemdb_interface {
 	struct DBMap *other;// int nameid -> struct item_data*
 	struct DBMap *options; // int opt_id -> struct itemdb_option*
 	struct item_data dummy; //This is the default dummy item used for non-existant items. [Skotlex]
+	struct DBMap *reform; // int reform_id -> struct item_reform *
 	/* */
 	void (*read_groups) (void);
 	void (*read_chains) (void);
@@ -663,6 +705,7 @@ struct itemdb_interface {
 	struct item_data* (*search)(int nameid);
 	struct item_data* (*exists) (int nameid);
 	struct itemdb_option* (*option_exists) (int idx);
+	struct item_reform* (*reform_exists) (int idx);
 	bool (*in_group) (struct item_group *group, int nameid);
 	int (*group_item) (struct item_group *group);
 	int (*chain_item) (unsigned short chain_id, int *rate);
@@ -705,6 +748,7 @@ struct itemdb_interface {
 	void (*destroy_item_data) (struct item_data *self, int free_self);
 	int (*final_sub) (union DBKey key, struct DBData *data, va_list ap);
 	int (*options_final_sub) (union DBKey key, struct DBData *data, va_list ap);
+	int (*reform_final_sub) (union DBKey key, struct DBData *data, va_list ap);
 	void (*clear) (bool total);
 	struct item_combo * (*id2combo) (int id);
 	bool (*is_item_usable) (struct item_data *item);
@@ -714,6 +758,20 @@ struct itemdb_interface {
 	bool (*read_libconfig_lapineddukddak) (void);
 	bool (*read_libconfig_lapineddukddak_sub) (struct config_setting_t *it, const char *source);
 	bool (*read_libconfig_lapineddukddak_sub_sources) (struct config_setting_t *sources, struct item_data *data);
+
+	bool (*read_libconfig_lapineupgrade) (void);
+	bool (*read_libconfig_lapineupgrade_sub) (struct config_setting_t *it, const char *source);
+	bool (*read_libconfig_lapineupgrade_sub_targets) (struct config_setting_t *sources, struct item_data *data);
+	bool (*read_libconfig_item_reform_info) (void);
+	bool (*read_libconfig_item_reform_info_sub) (struct config_setting_t *it, const char *source);
+	bool (*read_libconfig_item_reform_info_materials) (struct config_setting_t *it, struct item_reform *ir);
+	bool (*read_libconfig_item_reform_info_reqinfo) (struct config_setting_t *it, struct item_reform *ir);
+	bool (*read_libconfig_item_reform_info_behinfo) (struct config_setting_t *it, struct item_reform *ir);
+	bool (*read_libconfig_item_reform_list) (void);
+	bool (*read_libconfig_item_reform_list_sub) (struct config_setting_t *it, const char *source);
+	void (*item_reform) (struct map_session_data *sd, const struct item_reform *ir, int idx);
+	const struct item_reform *(*search_reform_baseitem) (const struct item_data *itd, int nameid);
+
 };
 
 #ifdef HERCULES_CORE

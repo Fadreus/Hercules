@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2013-2021 Hercules Dev Team
+//= Copyright (C) 2013-2022 Hercules Dev Team
 //= Copyright (C) Dastgir
 //=
 //= Hercules is free software: you can redistribute it and/or modify
@@ -110,6 +110,8 @@ ecl_fild01,97,322,0	script	#ep14_2Entrance	WARPNPC,3,3,{
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	if (ep14_2_oliver < 3) {
 		mes "[Security Guard]";
 		mes "Please wait a minute.";
@@ -2330,6 +2332,8 @@ eclage,292,265,0	script	#ep14_2Yube Entrance	WARPNPC,2,2,{
 	end;
 
 OnTouch:
+	if (checkhiding())
+		end;
 	if (ep14_2_oliver < 15) {
 		mes "- Looks like the door is locked. -";
 		close;

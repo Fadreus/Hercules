@@ -2,7 +2,7 @@
 * This file is part of Hercules.
 * http://herc.ws - http://github.com/HerculesWS/Hercules
 *
-* Copyright (C) 2019-2021 Hercules Dev Team
+* Copyright (C) 2019-2022 Hercules Dev Team
 *
 * Hercules is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -112,6 +112,9 @@ static void refine_refinery_refine_request(struct map_session_data *sd, int item
 	if (rnd() % 100 >= refine_chance) {
 		clif->misceffect(&sd->bl, 2);
 
+		if ((req->announce & REFINE_ANNOUNCE_FAILURE) != 0)
+			clif->announce_refine_status(sd, sd->status.inventory[item_index].nameid, sd->status.inventory[item_index].refine, false, ALL_CLIENT);
+
 		int failure_behabior = (use_blacksmith_blessing) ? REFINE_FAILURE_BEHAVIOR_KEEP : req->req[i].failure_behavior;
 		switch (failure_behabior) {
 		case REFINE_FAILURE_BEHAVIOR_KEEP:
@@ -131,9 +134,6 @@ static void refine_refinery_refine_request(struct map_session_data *sd, int item
 			pc->delitem(sd, item_index, 1, 0, DELITEM_FAILREFINE, LOG_TYPE_REFINE);
 			break;
 		}
-
-		if ((req->announce & REFINE_ANNOUNCE_FAILURE) != 0)
-			clif->announce_refine_status(sd, sd->status.inventory[item_index].nameid, sd->status.inventory[item_index].refine, false, ALL_CLIENT);
 	} else {
 		sd->status.inventory[item_index].refine += 1;
 		sd->status.inventory[item_index].refine = cap_value(sd->status.inventory[item_index].refine, 0, MAX_REFINE);
@@ -602,10 +602,10 @@ static int refine_readdb_refine_libconfig(const char *filename)
 	bool duplicate[REFINE_TYPE_MAX];
 	struct config_t refine_db_conf;
 	struct config_setting_t *r;
-	char filepath[256];
+	char filepath[512];
 	int i = 0, count = 0;
 
-	safesnprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
 	if (!libconfig->load_file(&refine_db_conf, filepath))
 		return 0;
 

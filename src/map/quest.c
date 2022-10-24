@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -670,13 +670,13 @@ static struct quest_db *quest_read_db_sub(struct config_setting_t *cs, int n, co
  */
 static int quest_read_db(void)
 {
-	char filepath[256];
+	char filepath[512];
 	struct config_t quest_db_conf;
 	struct config_setting_t *qdb = NULL, *q = NULL;
 	int i = 0, count = 0;
 	const char *filename = "quest_db.conf";
 
-	safesnprintf(filepath, 256, "%s/%s", map->db_path, filename);
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
 	if (!libconfig->load_file(&quest_db_conf, filepath))
 		return -1;
 

@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Panikon
 //= Copyright (C) Michieru
 //= Copyright (C) Euphy
@@ -2724,7 +2724,9 @@ bra_in01,7,181,5	script	Curator#bra	4_M_BRZ_MAN2,{
 }
 
 bra_in01,12,185,0	script	inbathroom#bra	WARPNPC,1,1,{
-OnTouch_:
+OnTouch:
+	if (checkhiding())
+		end;
 	if (brazil_ghost > 6)
 		warp "bra_in01",138,176;
 	else {

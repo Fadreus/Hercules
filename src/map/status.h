@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -62,7 +62,9 @@ typedef enum sc_conf_type {
 	SC_MADO_NO_RESET = 0x040,
 	SC_NO_CLEAR      = 0x080,
 	SC_VISIBLE       = 0x100,
-	SC_NO_BOSS       = 0x200
+	SC_NO_BOSS       = 0x200,
+	SC_BB_NO_RESET   = 0x400,
+	SC_NO_MAGIC_BLOCK = 0x800
 } sc_conf_type;
 
 /**
@@ -862,6 +864,54 @@ typedef enum sc_type {
 	SC_SKF_CAST,
 	SC_ALMIGHTY,
 	SC_NO_RECOVER_STATE,
+
+	// Rebel
+	SC_FALLEN_ANGEL,
+	SC_HEAT_BARREL,
+	SC_PLATINUM_ALTER,
+	SC_ANTI_MATERIAL_BLAST,
+	SC_ETERNAL_CHAIN,
+	SC_CRIMSON_MARKER,
+	SC_QD_SHOT_READY,
+	SC_HOWLING_MINE,
+	SC_BIND_TRAP,
+
+	// Star Emperor
+	SC_SUNSTANCE,
+	SC_STARSTANCE,
+	SC_LUNARSTANCE,
+	SC_NEWMOON,
+	SC_FLASHKICK,
+	SC_FALLINGSTAR,
+	SC_LIGHTOFSUN,
+	SC_LIGHTOFMOON,
+	SC_LIGHTOFSTAR,
+	SC_UNIVERSESTANCE,
+	SC_NOVAEXPLOSING,
+	SC_GRAVITYCONTROL,
+	SC_CREATINGSTAR,
+	SC_DIMENSION,
+	SC_DIMENSION1,
+	SC_DIMENSION2,
+
+	// Soul Emperor
+	SC_SOULCOLLECT,
+	SC_SOULENERGY,
+	SC_SOULREAPER,
+	SC_SOULCURSE,
+	SC_SP_SHA,
+	SC_USE_SKILL_SP_SHA,
+	SC_SP_SPA,
+	SC_USE_SKILL_SP_SPA,
+	SC_SOULUNITY,
+	SC_SOULSHADOW,
+	SC_SOULFAIRY,
+	SC_SOULFALCON,
+	SC_SOULGOLEM,
+	SC_SOULDIVISION,
+
+	SC_ACTIVE_MONSTER_TRANSFORM,
+
 #ifndef SC_MAX
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 #endif
@@ -918,7 +968,8 @@ enum e_mode
 
 //opt1: Non stackable status changes.
 enum e_opt1 {
-	OPT1_STONE = 1, //Petrified
+	OPT1_NONE = 0,
+	OPT1_STONE, //Petrified
 	OPT1_FREEZE,
 	OPT1_STUN,
 	OPT1_SLEEP,
@@ -931,6 +982,7 @@ enum e_opt1 {
 
 //opt2: Stackable status changes.
 enum e_opt2 {
+	OPT2_NORMAL       = 0x0000,
 	OPT2_POISON       = 0x0001,
 	OPT2_CURSE        = 0x0002,
 	OPT2_SILENCE      = 0x0004,
@@ -963,6 +1015,7 @@ enum e_opt3 {
 	OPT3_SOULLINK         = 0x00008000,
 	OPT3_UNDEAD           = 0x00010000,
 	OPT3_CONTRACT         = 0x00020000,
+	OPT3_ELEMENTAL_VEIL   = 0x00040000,
 };
 
 //Defines for the manner system [Skotlex]

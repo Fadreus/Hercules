@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -201,7 +201,7 @@ static int pc_spiritball_timer(int tid, int64 tick, int id, intptr_t data)
 		memmove(sd->spirit_timer+i, sd->spirit_timer+i+1, (sd->spiritball-i)*sizeof(int));
 	sd->spirit_timer[sd->spiritball] = INVALID_TIMER;
 
-	clif->spiritball(&sd->bl);
+	clif->spiritball(&sd->bl, BALL_TYPE_SPIRIT, AREA);
 
 	return 0;
 }
@@ -266,7 +266,7 @@ static int pc_addspiritball_sub(struct map_session_data *sd)
 	if ((sd->job & MAPID_THIRDMASK) == MAPID_ROYAL_GUARD)
 		clif->millenniumshield(&sd->bl,sd->spiritball);
 	else
-		clif->spiritball(&sd->bl);
+		clif->spiritball(&sd->bl, BALL_TYPE_SPIRIT, AREA);
 	return 0;
 }
 
@@ -312,8 +312,63 @@ static int pc_delspiritball_sub(struct map_session_data *sd)
 	if ((sd->job & MAPID_THIRDMASK) == MAPID_ROYAL_GUARD)
 		clif->millenniumshield(&sd->bl,sd->spiritball);
 	else
-		clif->spiritball(&sd->bl);
+		clif->spiritball(&sd->bl, BALL_TYPE_SPIRIT, AREA);
 	return 0;
+}
+
+/**
+ * @brief Adds a soulball to player
+ * @param sd Player data
+ * @param max Maximum amount of soulballs
+ * @return (void)
+ */
+static void pc_addsoulball(struct map_session_data *sd, int max)
+{
+	nullpo_retv(sd);
+
+	const struct status_change *sc = status->get_sc(&sd->bl);
+
+	if (sc == NULL || sc->data[SC_SOULENERGY] == NULL) {
+		sc_start(&sd->bl, &sd->bl, SC_SOULENERGY, 100, 0, skill->get_time2(SP_SOULCOLLECT, 1));
+		sd->soulball = 0;
+	}
+
+	if (max > MAX_SOUL_BALL)
+		max = MAX_SOUL_BALL;
+
+	sd->soulball = cap_value(sd->soulball + 1, 0, max);
+	sc_start(&sd->bl, &sd->bl, SC_SOULENERGY, 100, sd->soulball, skill->get_time2(SP_SOULCOLLECT, 1));
+	clif->spiritball(&sd->bl, BALL_TYPE_SOUL, AREA);
+}
+
+/**
+ * @brief Removes number of soulball from player
+ * @param sd Player data
+ * @param count Amount to remove
+ * @param type true means doesn't give client effect
+ * @return (void)
+ */
+static void pc_delsoulball(struct map_session_data *sd, int count, bool type)
+{
+	nullpo_retv(sd);
+
+	if (count <= 0)
+		return;
+
+	struct status_change *sc = status->get_sc(&sd->bl);
+
+	if (sd->soulball <= 0 || sc == NULL || sc->data[SC_SOULENERGY] == NULL) {
+		sd->soulball = 0;
+	} else {
+		sd->soulball -= cap_value(count, 0, sd->soulball);
+		if (sd->soulball == 0)
+			status_change_end(&sd->bl, SC_SOULENERGY, INVALID_TIMER);
+		else
+			sc->data[SC_SOULENERGY]->val1 = sd->soulball;
+	}
+
+	if (type == 0)
+		clif->spiritball(&sd->bl, BALL_TYPE_SOUL, AREA);
 }
 
 static int pc_check_banding(struct block_list *bl, va_list ap)
@@ -894,7 +949,7 @@ static bool pc_isequipped(struct map_session_data *sd, int nameid)
 		if( sd->inventory_data[index]->nameid == nameid )
 			return true;
 
-		for( j = 0; j < sd->inventory_data[index]->slot; j++ )
+		for( j = 0; j < MAX_SLOTS; j++ )
 			if( sd->status.inventory[index].card[j] == nameid )
 				return true;
 	}
@@ -1210,6 +1265,7 @@ static bool pc_authok(struct map_session_data *sd, int login_id2, time_t expirat
 	sd->pvp_timer = INVALID_TIMER;
 	sd->fontcolor_tid = INVALID_TIMER;
 	sd->expiration_tid = INVALID_TIMER;
+	sd->macro_detect.timer = INVALID_TIMER;
 	/**
 	 * For the Secure NPC Timeout option (check config/Secure.h) [RR]
 	 **/
@@ -1650,6 +1706,7 @@ static int pc_calc_skilltree(struct map_session_data *sd)
 				case WL_SUMMON_ATK_GROUND:
 				case LG_OVERBRAND_BRANDISH:
 				case LG_OVERBRAND_PLUSATK:
+				case RL_R_TRIP_PLUSATK:
 					continue;
 				default:
 					break;
@@ -2308,71 +2365,67 @@ static int pc_endautobonus(int tid, int64 tick, int id, intptr_t data)
 	return 0;
 }
 
-static int pc_bonus_addele(struct map_session_data *sd, unsigned char ele, short rate, short flag)
+static void pc_bonus_addele(struct map_session_data *sd, unsigned char ele, short rate, short flag)
 {
 	int i;
-	struct weapon_data* wd;
+	struct weapon_data *wd;
 
-	nullpo_ret(sd);
+	nullpo_retv(sd);
 	wd = (sd->state.lr_flag ? &sd->left_weapon : &sd->right_weapon);
 
 	ARR_FIND(0, MAX_PC_BONUS, i, wd->addele2[i].rate == 0);
 
-	if (i == MAX_PC_BONUS)
-	{
+	if (i == MAX_PC_BONUS) {
 		ShowWarning("pc_addele: Reached max (%d) possible bonuses for this player.\n", MAX_PC_BONUS);
-		return 0;
+		return;
 	}
 
-	if (!(flag&BF_RANGEMASK))
-		flag |= BF_SHORT|BF_LONG;
-	if (!(flag&BF_WEAPONMASK))
+	if ((flag & BF_RANGEMASK) == 0)
+		flag |= BF_SHORT | BF_LONG;
+	if ((flag & BF_WEAPONMASK) == 0)
 		flag |= BF_WEAPON;
-	if (!(flag&BF_SKILLMASK))
-	{
-		if (flag&(BF_MAGIC|BF_MISC))
+	if ((flag & BF_SKILLMASK) == 0) {
+		if ((flag & (BF_MAGIC | BF_MISC)) != 0)
 			flag |= BF_SKILL;
-		if (flag&BF_WEAPON)
-			flag |= BF_NORMAL|BF_SKILL;
+		if ((flag & BF_WEAPON) != 0)
+			flag |= BF_NORMAL | BF_SKILL;
 	}
 
 	wd->addele2[i].ele = ele;
 	wd->addele2[i].rate = rate;
 	wd->addele2[i].flag = flag;
 
-	return 0;
+	return;
 }
 
-static int pc_bonus_subele(struct map_session_data *sd, unsigned char ele, short rate, short flag)
+static void pc_bonus_subele(struct map_session_data *sd, unsigned char ele, short rate, short flag)
 {
 	int i;
 
-	nullpo_ret(sd);
+	nullpo_retv(sd);
 	ARR_FIND(0, MAX_PC_BONUS, i, sd->subele2[i].rate == 0);
 
-	if (i == MAX_PC_BONUS)
-	{
+	if (i == MAX_PC_BONUS) {
 		ShowWarning("pc_subele: Reached max (%d) possible bonuses for this player.\n", MAX_PC_BONUS);
-		return 0;
+		return;
 	}
 
-	if (!(flag&BF_RANGEMASK))
-		flag |= BF_SHORT|BF_LONG;
-	if (!(flag&BF_WEAPONMASK))
+	if ((flag & BF_RANGEMASK) == 0)
+		flag |= BF_SHORT | BF_LONG;
+	if ((flag & BF_WEAPONMASK) == 0)
 		flag |= BF_WEAPON;
-	if (!(flag&BF_SKILLMASK))
-	{
-		if (flag&(BF_MAGIC|BF_MISC))
+	if ((flag & BF_SKILLMASK) == 0) {
+		if ((flag & (BF_MAGIC | BF_MISC)) != 0)
 			flag |= BF_SKILL;
-		if (flag&BF_WEAPON)
-			flag |= BF_NORMAL|BF_SKILL;
+		if ((flag & BF_WEAPON) != 0)
+			flag |= BF_NORMAL | BF_SKILL;
 	}
 
 	sd->subele2[i].ele = ele;
 	sd->subele2[i].rate = rate;
 	sd->subele2[i].flag = flag;
 
-	return 0;
+	return;
 }
 
 /**
@@ -3838,6 +3891,35 @@ static int pc_bonus2(struct map_session_data *sd, int type, int type2, int val)
 			}
 			break;
 #endif
+		case SP_SUB_SKILL:
+			if (sd->state.lr_flag == 2)
+				break;
+			ARR_FIND(0, ARRAYLENGTH(sd->subskill), i, sd->subskill[i].id == 0 || sd->subskill[i].id == type2);
+			if (i == ARRAYLENGTH(sd->subskill)) {
+				ShowDebug("script->run: bonus2 bSubSkill reached it's limit (%d skills per character), bonus skill %d (+%d%%) lost.\n",
+				          ARRAYLENGTH(sd->subskill), type2, val);
+				break;
+			}
+			if (sd->subskill[i].id == type2) {
+				sd->subskill[i].val += val;
+			} else {
+				sd->subskill[i].id = type2;
+				sd->subskill[i].val = val;
+			}
+			break;
+		case SP_ADD_DROP_RACE:
+		{
+			uint32 race_mask = map->race_id2mask(type2);
+			if (race_mask == RCMASK_NONE) {
+				ShowWarning("pc_bonus2: SP_ADD_DROP_RACE: Invalid Race (%d)\n", type2);
+				break;
+			}
+			if (sd->state.lr_flag == 2) 
+				break;
+			BONUS_FOREACH_RCARRAY_FROMMASK(i, race_mask)
+				sd->dropaddrace[i] += val;
+		}
+			break;
 		default:
 			ShowWarning("pc_bonus2: unknown type %d %d %d!\n",type,type2,val);
 			Assert_report(0);
@@ -3975,9 +4057,9 @@ static int pc_bonus3(struct map_session_data *sd, int type, int type2, int type3
 			if ( sd->state.lr_flag != 2 ) {
 				if ( type2 == ELE_ALL ) {
 					for ( i = ELE_NEUTRAL; i < ELE_MAX; i++ )
-						pc_bonus_addele(sd, (unsigned char)i, type3, val);
+						pc->bonus_addele(sd, (unsigned char)i, type3, val);
 				} else {
-					pc_bonus_addele(sd, (unsigned char)type2, type3, val);
+					pc->bonus_addele(sd, (unsigned char)type2, type3, val);
 				}
 			}
 			break;
@@ -3990,9 +4072,9 @@ static int pc_bonus3(struct map_session_data *sd, int type, int type2, int type3
 			if ( sd->state.lr_flag != 2 ) {
 				if ( type2 == ELE_ALL ) {
 					for ( i = ELE_NEUTRAL; i < ELE_MAX; i++ )
-						pc_bonus_subele(sd, (unsigned char)i, type3, val);
+						pc->bonus_subele(sd, (unsigned char)i, type3, val);
 				} else {
-					pc_bonus_subele(sd, (unsigned char)type2, type3, val);
+					pc->bonus_subele(sd, (unsigned char)type2, type3, val);
 				}
 			}
 			break;
@@ -4389,36 +4471,44 @@ static int pc_insert_card(struct map_session_data *sd, int idx_card, int idx_equ
 /*==========================================
  * Update buying value by skills
  *------------------------------------------*/
-static int pc_modifybuyvalue(struct map_session_data *sd, int orig_value)
+static int pc_modifybuyvalue(struct map_session_data *sd, int orig_value, bool ignore_discount)
 {
-	int skill_lv, rate1 = 0, rate2 = 0;
-	if ((skill_lv=pc->checkskill(sd,MC_DISCOUNT)) > 0)   // merchant discount
-		rate1 = 5+skill_lv*2-((skill_lv==10)? 1:0);
-	if ((skill_lv=pc->checkskill(sd,RG_COMPULSION)) > 0) // rogue discount
-		rate2 = 5+skill_lv*4;
-	if (rate1 < rate2)
-		rate1 = rate2;
-	if (rate1 != 0)
-		orig_value = apply_percentrate(orig_value, 100-rate1, 100);
+	if (!ignore_discount) {
+		int skill_lv, rate1 = 0, rate2 = 0;
+
+		if ((skill_lv = pc->checkskill(sd, MC_DISCOUNT)) > 0) // Merchant Discount
+			rate1 = 5 + skill_lv * 2 - ((skill_lv == 10) ? 1 : 0);
+		if ((skill_lv = pc->checkskill(sd, RG_COMPULSION)) > 0) // Rogue Discount
+			rate2 = 5 + skill_lv * 4;
+		if (rate1 < rate2)
+			rate1 = rate2;
+		if (rate1 != 0)
+			orig_value = apply_percentrate(orig_value, 100 - rate1, 100);
+	}
 
 	if (orig_value < battle_config.min_item_buy_price)
 		orig_value = battle_config.min_item_buy_price;
+
 	return orig_value;
 }
 
 /*==========================================
  * Update selling value by skills
  *------------------------------------------*/
-static int pc_modifysellvalue(struct map_session_data *sd, int orig_value)
+static int pc_modifysellvalue(struct map_session_data *sd, int orig_value, bool ignore_overcharge)
 {
-	int skill_lv, rate = 0;
-	if ((skill_lv=pc->checkskill(sd,MC_OVERCHARGE)) > 0) //OverCharge
-		rate = 5+skill_lv*2-((skill_lv==10)? 1:0);
-	if (rate != 0)
-		orig_value = apply_percentrate(orig_value, 100+rate, 100);
+	if (!ignore_overcharge) {
+		int skill_lv, rate = 0;
+
+		if ((skill_lv = pc->checkskill(sd, MC_OVERCHARGE)) > 0) // Merchant Overcharge
+			rate = 5 + skill_lv * 2 - ((skill_lv == 10) ? 1 : 0);
+		if (rate != 0)
+			orig_value = apply_percentrate(orig_value, 100 + rate, 100);
+	}
 
 	if (orig_value < battle_config.min_item_sell_price)
 		orig_value = battle_config.min_item_sell_price;
+
 	return orig_value;
 }
 
@@ -4811,7 +4901,7 @@ static int pc_additem(struct map_session_data *sd, const struct item *item_data,
  *   0 = success
  *   1 = invalid itemid or negative amount
  *------------------------------------------*/
-static int pc_delitem(struct map_session_data *sd, int n, int amount, int type, short reason, e_log_pick_type log_type)
+static int pc_delitem(struct map_session_data *sd, int n, int amount, int type, enum delitem_reason reason, e_log_pick_type log_type)
 {
 	nullpo_retr(1, sd);
 	Assert_retr(1, n >= 0 && n < sd->status.inventorySize);
@@ -6302,6 +6392,36 @@ static int pc_checkequip(struct map_session_data *sd, int pos)
 	}
 
 	return -1;
+}
+
+/**
+ * Get the skill current cooldown for player.
+ * (get the db base cooldown for skill + player specific cooldown)
+ * @param sd : player pointer
+ * @param id : skill id
+ * @param lv : skill lv
+ * @return player skill cooldown
+ */
+int pc_get_skill_cooldown(struct map_session_data *sd, uint16 skill_id, uint16 skill_lv)
+{
+	nullpo_ret(sd);
+	Assert_ret(skill_id > 0 && skill_lv > 0);
+
+	if (skill_id == SJ_NOVAEXPLOSING) {
+		const struct status_change *sc = status->get_sc(&sd->bl);
+		if (sc != NULL && sc->data[SC_DIMENSION] != NULL)
+			return 0;
+	}
+
+	int i;
+	int cooldown = skill->get_cooldown(skill_id, skill_lv);
+
+	ARR_FIND(0, ARRAYLENGTH(sd->skillcooldown), i, sd->skillcooldown[i].id == skill_id);
+
+	if (i < ARRAYLENGTH(sd->skillcooldown))
+		cooldown += sd->skillcooldown[i].val;
+
+	return max(0, cooldown);
 }
 
 /*==========================================
@@ -7889,6 +8009,19 @@ static int pc_skillatk_bonus(struct map_session_data *sd, uint16 skill_id)
 	return bonus;
 }
 
+static int pc_sub_skillatk_bonus(struct map_session_data *sd, uint16 skill_id)
+{
+	int i, bonus = 0;
+	nullpo_ret(sd);
+
+	ARR_FIND(0, ARRAYLENGTH(sd->subskill), i, sd->subskill[i].id == skill_id);
+	
+	if (i < ARRAYLENGTH(sd->subskill))
+		bonus = sd->subskill[i].val;
+
+	return bonus;
+}
+
 static int pc_skillheal_bonus(struct map_session_data *sd, uint16 skill_id)
 {
 	int i, bonus = sd->bonus.add_heal_rate;
@@ -8031,6 +8164,24 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 			sd->devotion[i] = 0;
 		}
 	}
+	for (int i = 0; i < MAX_STELLAR_MARKS; i++) {
+		if (sd->stellar_mark[i] != 0) {
+			struct map_session_data *smarksd = map->id2sd(sd->stellar_mark[i]);
+
+			if (smarksd != NULL)
+				status_change_end(&smarksd->bl, SC_FLASHKICK, INVALID_TIMER);
+			sd->stellar_mark[i] = 0;
+		}
+	}
+	for (int i = 0; i < MAX_UNITED_SOULS; i++) {
+		if (sd->united_soul[i]) {
+			struct map_session_data *usoulsd = map->id2sd(sd->united_soul[i]);
+
+			if (usoulsd != NULL)
+				status_change_end(&usoulsd->bl, SC_SOULUNITY, INVALID_TIMER);
+			sd->united_soul[i] = 0;
+		}
+	}
 
 	if (sd->status.pet_id > 0 && sd->pd != NULL) {
 		struct pet_data *pd = sd->pd;
@@ -8122,6 +8273,9 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 
 	if (sd->spiritball != 0)
 		pc->delspiritball(sd, sd->spiritball, 0);
+
+	if (sd->soulball != 0)
+		pc->delsoulball(sd, sd->soulball, false);
 
 	if (sd->charm_type != CHARM_TYPE_NONE && sd->charm_count > 0)
 		pc->del_charm(sd, sd->charm_count, sd->charm_type);
@@ -9134,13 +9288,12 @@ static int pc_jobchange(struct map_session_data *sd, int class, int upper)
 	} else if (sd->status.fame > 0) {
 		//It may be that now they are famous?
 		switch (sd->job & MAPID_UPPERMASK) {
-			case MAPID_BLACKSMITH:
-			case MAPID_ALCHEMIST:
-			case MAPID_TAEKWON:
-			case MAPID_BABY_TAEKWON:
-				chrif->save(sd,0);
-				chrif->buildfamelist();
-			break;
+		case MAPID_BLACKSMITH:
+		case MAPID_ALCHEMIST:
+		case MAPID_TAEKWON:
+			chrif->save(sd,0);
+			chrif->buildfamelist();
+		break;
 		}
 	}
 	quest->questinfo_refresh(sd);
@@ -10552,6 +10705,7 @@ static int pc_unequipitem(struct map_session_data *sd, int n, int flag)
 	pc->unequipitem_pos(sd, n, pos);
 	clif->unequipitemack(sd, n, pos, UIA_SUCCESS);
 
+	status_change_end(&sd->bl, SC_HEAT_BARREL, INVALID_TIMER);
 	if ((pos & EQP_ARMS) != 0 && sd->weapontype1 == W_FIST && sd->weapontype2 == W_FIST
 	    && (sd->sc.data[SC_TK_SEVENWIND] == NULL || sd->sc.data[SC_ASPERSIO] != NULL)) { // Check for Seven Wind. (But not level seven!)
 		skill->enchant_elemental_end(&sd->bl, -1);
@@ -10566,6 +10720,11 @@ static int pc_unequipitem(struct map_session_data *sd, int n, int flag)
 	if (battle->bc->bow_unequip_arrow != 0 && (pos & EQP_ARMS) != 0 && sd->equip_index[EQI_AMMO] > 0)
 		pc->unequipitem(sd, sd->equip_index[EQI_AMMO], PCUNEQUIPITEM_FORCE);
 #endif
+
+	if (sd->inventory_data[n] != NULL) {
+		if (sd->inventory_data[n]->type == IT_AMMO && (sd->inventory_data[n]->nameid != ITEMID_SILVER_BULLET || sd->inventory_data[n]->nameid != ITEMID_SANCTIFIED_BULLET || sd->inventory_data[n]->nameid != ITEMID_SILVER_BULLET_))
+			status_change_end(&sd->bl, SC_PLATINUM_ALTER, INVALID_TIMER);
+	}
 
 	if ((sd->state.autobonus & pos) != 0)  // Check for activated autobonus. [Inkfish]
 		sd->state.autobonus &= ~sd->status.inventory[n].equip;
@@ -10730,19 +10889,20 @@ static int pc_checkitem(struct map_session_data *sd)
 		if (sd->guild && sd->itemcheck & PCCHECKITEM_GSTORAGE) {
 			struct guild_storage *guild_storage = idb_get(gstorage->db,sd->guild->guild_id);
 			if (guild_storage) {
-				for (i = 0; i < MAX_GUILD_STORAGE; i++) {
-					if ((id = guild_storage->items[i].nameid) == 0)
+				for (i = 0; i < guild_storage->items.capacity; i++) {
+					if ((id = guild_storage->items.data[i].nameid) == 0)
 						continue;
 
 					if (!itemdb_available(id)) {
-						ShowWarning("pc_checkitem: Removed invalid/disabled item id %d from guild storage (amount=%d, char_id=%d, guild_id=%d).\n", id, guild_storage->items[i].amount, sd->status.char_id, sd->guild->guild_id);
-						gstorage->delitem(sd, guild_storage, i, guild_storage->items[i].amount);
+						ShowWarning("pc_checkitem: Removed invalid/disabled item id %d from guild storage (amount=%d, char_id=%d, guild_id=%d).\n",
+								id, guild_storage->items.data[i].amount, sd->status.char_id, sd->guild->guild_id);
+						gstorage->delitem(sd, guild_storage, i, guild_storage->items.data[i].amount);
 						gstorage->close(sd); // force closing
 						continue;
 					}
 
-					if (guild_storage->items[i].unique_id == 0 && !itemdb->isstackable(id))
-						guild_storage->items[i].unique_id = itemdb->unique_id(sd);
+					if (guild_storage->items.data[i].unique_id == 0 && !itemdb->isstackable(id))
+						guild_storage->items.data[i].unique_id = itemdb->unique_id(sd);
 				}
 			}
 
@@ -11422,13 +11582,13 @@ static void pc_read_skill_tree(void)
 {
 	struct config_t skill_tree_conf;
 	struct config_setting_t *skt = NULL;
-	char config_filename[128];
+	char config_filename[280];
 	int i = 0;
 	struct s_mapiterator *iter;
 	struct map_session_data *sd;
 	bool loaded[CLASS_COUNT] = { false };
 
-	safesnprintf(config_filename, sizeof(config_filename), "%s/"DBPATH"skill_tree.conf", map->db_path);
+	snprintf(config_filename, sizeof(config_filename), "%s/"DBPATH"skill_tree.conf", map->db_path);
 	if (!libconfig->load_file(&skill_tree_conf, config_filename))
 		return;
 
@@ -11765,19 +11925,149 @@ static bool pc_read_exp_db(void)
 	return true;
 }
 
+/**
+ * Reads the elemental damage modifiers table of a single defending element level.
+ * @param def_lv defending element level config
+ * @param def_ele defending element id
+ * @param lv defending element level
+ * @param def_ele_name constant of the defending element (for error messages)
+ * @returns number of modifiers read or -1 if something went wrong
+ */
+static int pc_read_attr_fix_db_level(struct config_setting_t *def_lv, enum elements def_ele, int lv, const char *def_ele_name)
+{
+	nullpo_retr(-1, def_lv);
+	nullpo_retr(-1, def_ele_name);
+
+	struct config_setting_t *atk_attr = NULL;
+	int i = 0;
+	int count = 0;
+	while ((atk_attr = libconfig->setting_get_elem(def_lv, i++)) != NULL) {
+		const char *atk_ele_name = config_setting_name(atk_attr);
+		int atk_ele;
+		if (!script->get_constant(atk_ele_name, &atk_ele)) {
+			ShowError("%s: Could not find attacking element '%s'. Skipping entry...\n", __func__, atk_ele_name);
+			continue;
+		}
+
+		if (atk_ele < ELE_NEUTRAL || atk_ele >= ELE_MAX) {
+			ShowError("%s: Invalid element '%s' (%d). Skipping entry...\n", __func__, atk_ele_name, atk_ele);
+			continue;
+		}
+
+		if (!config_setting_is_number(atk_attr)) {
+			ShowError("%s: Damage modifier for element '%s' (%u) attacked by '%s' (%d) is not numeric. Skipping entry...\n", __func__, def_ele_name, def_ele, atk_ele_name, atk_ele);
+			continue;
+		}
+
+		int dmg_mod = libconfig->setting_get_int(atk_attr);
+		battle->attr_fix_table[lv - 1][atk_ele][def_ele] = dmg_mod;
+		count++;
+
+#ifndef RENEWAL
+		if (battle_config.attr_recover == 0 && battle->attr_fix_table[lv - 1][atk_ele][def_ele] < 0)
+			battle->attr_fix_table[lv - 1][atk_ele][def_ele] = 0;
+#endif
+	}
+
+	return count;
+}
+
+/**
+ * Reads the elemental damage modifiers table of a single defending element.
+ * @param def_attr defending element config
+ * @param def_ele defending element id
+ * @param def_ele_name constant of the defending element (for error messages)
+ * @returns number of modifiers read or -1 if something went wrong
+ */
+static int pc_read_attr_fix_db_entry(struct config_setting_t *def_attr, enum elements def_ele, const char *def_ele_name)
+{
+	nullpo_retr(-1, def_attr);
+	nullpo_retr(-1, def_ele_name);
+
+	int count = 0;
+	for (int i = 1; i <= 4; ++i) {
+		char name[5];
+		snprintf(name, 5, "Lv%d", i);
+
+		struct config_setting_t *def_lv = libconfig->setting_lookup(def_attr, name);
+		if (def_lv != NULL) {
+			int result = pc->read_attr_fix_db_level(def_lv, def_ele, i, def_ele_name);
+			if (result == -1)
+				return -1;
+
+			count += result;
+		}
+	}
+
+	return count;
+}
+
+/**
+ * Reads elemental damage modifier table (attr_fix.conf)
+ * @returns true if it was loaded (even if partially), false if a fatal error happened.
+ */
+static bool pc_read_attr_fix_db(void)
+{
+	// Reset attr_fix to default, with all values as 100%
+	for (int i = 0; i < 4; ++i) {
+		for (int j = ELE_NEUTRAL; j < ELE_MAX; ++j) {
+			for (int k = ELE_NEUTRAL; k < ELE_MAX; ++k)
+				battle->attr_fix_table[i][j][k] = 100;
+		}
+	}
+	
+	char filepath[256];
+	libconfig->format_db_path(DBPATH"attr_fix.conf", filepath, sizeof(filepath));
+
+	struct config_t attr_fix_conf;
+	if (!libconfig->load_file(&attr_fix_conf, filepath))
+		return false;
+
+#ifdef ENABLE_CASE_CHECK
+	script->parser_current_file = filepath;
+#endif // ENABLE_CASE_CHECK
+
+	struct config_setting_t *def_attr = NULL;
+	int i = 0;
+	int count = 0;
+	while ((def_attr = libconfig->setting_get_elem(attr_fix_conf.root, i++)) != NULL) {
+		const char *def_ele_name = config_setting_name(def_attr);
+		int def_ele;
+		if (!script->get_constant(def_ele_name, &def_ele)) {
+			ShowError("%s: Could not find defending element '%s'. Skipping entry...\n", __func__, def_ele_name);
+			continue;
+		}
+
+		if (def_ele < ELE_NEUTRAL || def_ele >= ELE_MAX) {
+			ShowError("%s: Invalid element '%s' (%d). Skipping entry...\n", __func__, def_ele_name, def_ele);
+			continue;
+		}
+
+		int result = pc->read_attr_fix_db_entry(def_attr, (enum elements) def_ele, def_ele_name);
+		if (result == -1)
+			return false;
+
+		count += result;
+	}
+
+#ifdef ENABLE_CASE_CHECK
+	script->parser_current_file = NULL;
+#endif // ENABLE_CASE_CHECK
+
+	libconfig->destroy(&attr_fix_conf);
+	
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, filepath);
+	return true;
+}
+
 /*==========================================
  * PC DB reading.
  * exp_group_db.conf - required experience values
  * skill_tree.txt    - skill tree for every class
- * attr_fix.txt      - elemental adjustment table
+ * attr_fix.conf     - elemental adjustment table
  *------------------------------------------*/
 static int pc_readdb(void)
 {
-	int i,j,k;
-	unsigned int count = 0;
-	FILE *fp;
-	char line[24000],*p;
-
 	/**
 	 * Read and load into memory, the exp_group_db.conf file.
 	 */
@@ -11789,10 +12079,10 @@ static int pc_readdb(void)
 	pc->read_skill_tree();
 #if defined(RENEWAL_DROP) || defined(RENEWAL_EXP)
 	sv->readdb(map->db_path, "re/level_penalty.txt", ',', 4, 4, -1, pc->readdb_levelpenalty);
-	for( k=1; k < 3; k++ ){ // fill in the blanks
-		for (j = RC_FORMLESS; j < RC_MAX; j++) {
+	for (int k = 1; k < 3; k++) { // fill in the blanks
+		for (int j = RC_FORMLESS; j < RC_MAX; j++) {
 			int tmp = 0;
-			for( i = 0; i < MAX_LEVEL*2; i++ ){
+			for (int i = 0; i < MAX_LEVEL * 2; i++) {
 				if( i == MAX_LEVEL+1 )
 					tmp = pc->level_penalty[k][j][0];// reset
 				if( pc->level_penalty[k][j][i] > 0 )
@@ -11805,70 +12095,22 @@ static int pc_readdb(void)
 #endif
 
 	// Reset then read attr_fix
-	for(i=0;i<4;i++)
-		for ( j = ELE_NEUTRAL; j<ELE_MAX; j++ )
-			for ( k = ELE_NEUTRAL; k<ELE_MAX; k++ )
-				battle->attr_fix_table[i][j][k]=100;
-
-	sprintf(line, "%s/"DBPATH"attr_fix.txt", map->db_path);
-
-	fp=fopen(line,"r");
-	if(fp==NULL){
-		ShowError("can't read %s\n", line);
+	if (!pc_read_attr_fix_db())
 		return 1;
-	}
-	while (fgets(line, sizeof(line), fp)) {
-		char *split[10];
-		int lv,n;
-		if (line[0]=='/' && line[1]=='/')
-			continue;
-		for (j = 0, p = line; j < 3 && p != NULL; j++) {
-			split[j] = p;
-			p = strchr(p,',');
-			if (p != NULL)
-				*p++ = 0;
-		}
-		if (j < 2)
-			continue;
 
-		lv=atoi(split[0]);
-		n=atoi(split[1]);
-		count++;
-		for ( i = ELE_NEUTRAL; i<n && i<ELE_MAX; ) {
-			if( !fgets(line, sizeof(line), fp) )
-				break;
-			if(line[0]=='/' && line[1]=='/')
-				continue;
-
-			for (j = ELE_NEUTRAL, p = line; j < n && j < ELE_MAX && p != NULL; j++) {
-				while (*p == ' ')
-					p++;
-				battle->attr_fix_table[lv-1][i][j]=atoi(p);
-#ifndef RENEWAL
-				if(battle_config.attr_recover == 0 && battle->attr_fix_table[lv-1][i][j] < 0)
-					battle->attr_fix_table[lv-1][i][j] = 0;
-#endif
-				p=strchr(p,',');
-				if (p != NULL)
-					*p++ = 0;
-			}
-
-			i++;
-		}
-	}
-	fclose(fp);
-	ShowStatus("Done reading '"CL_WHITE"%u"CL_RESET"' entries in '"CL_WHITE"%s/"DBPATH"%s"CL_RESET"'.\n",count,map->db_path,"attr_fix.txt");
-	count = 0;
 	// reset then read statspoint
 	memset(pc->statp,0,sizeof(pc->statp));
-	i=1;
-
+	int i = 1;
+	
+	char line[24000];
 	sprintf(line, "%s/"DBPATH"statpoint.txt", map->db_path);
-	fp=fopen(line,"r");
+	FILE *fp = fopen(line, "r");
 	if(fp == NULL){
 		ShowWarning("Can't read '"CL_WHITE"%s"CL_RESET"'... Generating DB.\n",line);
 		//return 1;
 	} else {
+		unsigned int count = 0;
+
 		while(fgets(line, sizeof(line), fp))
 		{
 			int stat;
@@ -11887,7 +12129,7 @@ static int pc_readdb(void)
 		ShowStatus("Done reading '"CL_WHITE"%u"CL_RESET"' entries in '"CL_WHITE"%s/"DBPATH"%s"CL_RESET"'.\n",count,map->db_path,"statpoint.txt");
 	}
 	// generate the remaining parts of the db if necessary
-	k = battle_config.use_statpoint_table; //save setting
+	int k = battle_config.use_statpoint_table; //save setting
 	battle_config.use_statpoint_table = 0; //temporarily disable to force pc->gets_status_point use default values
 	pc->statp[0] = 45; // seed value
 	for (; i <= MAX_LEVEL; i++)
@@ -12035,6 +12277,9 @@ static void pc_scdata_received(struct map_session_data *sd)
 		pc->autotrade_populate(sd);
 		pc->autotrade_start(sd);
 	}
+
+	if (sd->sc.data[SC_SOULENERGY] != NULL)
+		sd->soulball = sd->sc.data[SC_SOULENERGY]->val1;
 }
 static int pc_expiration_timer(int tid, int64 tick, int id, intptr_t data)
 {
@@ -12608,6 +12853,22 @@ static bool pc_auto_exp_insurance(struct map_session_data *sd)
 	return true;
 }
 
+/**
+* Clear Crimson Marker data from caster
+* @param sd: Player
+**/
+void pc_crimson_marker_clear(struct map_session_data *sd)
+{
+	nullpo_retv(sd);
+
+	for (int i = 0; i < MAX_SKILL_CRIMSON_MARKER; i++) {
+		struct block_list *bl = NULL;
+		if (sd->c_marker[i] && (bl = map->id2bl(sd->c_marker[i])))
+			status_change_end(bl, SC_CRIMSON_MARKER, INVALID_TIMER);
+		sd->c_marker[i] = 0;
+	}
+}
+
 static void do_final_pc(void)
 {
 
@@ -12745,6 +13006,7 @@ void pc_defaults(void)
 	pc->checkskill2 = pc_checkskill2;
 	pc->checkallowskill = pc_checkallowskill;
 	pc->checkequip = pc_checkequip;
+	pc->get_skill_cooldown = pc_get_skill_cooldown;
 
 	pc->calc_skilltree = pc_calc_skilltree;
 	pc->calc_skilltree_bonus = pc_calc_skilltree_bonus;
@@ -12787,6 +13049,9 @@ void pc_defaults(void)
 	pc->exeautobonus = pc_exeautobonus;
 	pc->endautobonus = pc_endautobonus;
 	pc->delautobonus = pc_delautobonus;
+
+	pc->bonus_addele = pc_bonus_addele;
+	pc->bonus_subele = pc_bonus_subele;
 
 	pc->bonus = pc_bonus;
 	pc->bonus2 = pc_bonus2;
@@ -12843,6 +13108,7 @@ void pc_defaults(void)
 	pc->autocast_remove = pc_autocast_remove;
 
 	pc->skillatk_bonus = pc_skillatk_bonus;
+	pc->sub_skillatk_bonus = pc_sub_skillatk_bonus;
 	pc->skillheal_bonus = pc_skillheal_bonus;
 	pc->skillheal2_bonus = pc_skillheal2_bonus;
 
@@ -12913,6 +13179,8 @@ void pc_defaults(void)
 	pc->addspiritball_sub = pc_addspiritball_sub;
 	pc->delspiritball = pc_delspiritball;
 	pc->delspiritball_sub = pc_delspiritball_sub;
+	pc->addsoulball = pc_addsoulball;
+	pc->delsoulball = pc_delsoulball;
 	pc->addfame = pc_addfame;
 	pc->fame_rank = pc_fame_rank;
 	pc->famelist_type = pc_famelist_type;
@@ -12923,6 +13191,9 @@ void pc_defaults(void)
 	pc->read_exp_db = pc_read_exp_db;
 	pc->read_exp_db_sub = pc_read_exp_db_sub;
 	pc->read_exp_db_sub_class = pc_read_exp_db_sub_class;
+	pc->read_attr_fix_db = pc_read_attr_fix_db;
+	pc->read_attr_fix_db_entry = pc_read_attr_fix_db_entry;
+	pc->read_attr_fix_db_level = pc_read_attr_fix_db_level;
 	pc->map_day_timer = map_day_timer; // by [yor]
 	pc->map_night_timer = map_night_timer; // by [yor]
 	// Rental System
@@ -13022,4 +13293,6 @@ void pc_defaults(void)
 	pc->has_second_costume = pc_has_second_costume;
 	pc->expandInventory = pc_expandInventory;
 	pc->auto_exp_insurance = pc_auto_exp_insurance;
+
+	pc->crimson_marker_clear = pc_crimson_marker_clear;
 }

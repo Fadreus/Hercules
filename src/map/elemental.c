@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -321,7 +321,7 @@ static int elemental_data_received(const struct s_elemental *ele, bool flag)
 		clif->spawn(&ed->bl);
 		clif->elemental_info(sd);
 		clif->elemental_updatestatus(sd,SP_HP);
-		clif->hpmeter_single(sd->fd,ed->bl.id,ed->battle_status.hp,ed->battle_status.max_hp);
+		clif->hpmeter_single(sd->fd, ed->bl.id, ed->battle_status.hp, ed->battle_status.max_hp, ed->battle_status.sp, ed->battle_status.max_sp);
 		clif->elemental_updatestatus(sd,SP_SP);
 	}
 

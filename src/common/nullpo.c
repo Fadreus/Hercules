@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -58,7 +58,7 @@ static char executable_path[PATH_MAX];
 
 static void nullpo_error_callback(void *data, const char *msg, int errnum)
 {
-	ShowError("Error: %s (%d)", msg, errnum);
+	ShowError("Error: %s (%d)\n", msg, errnum);
 }
 
 static int nullpo_print_callback(void *data, uintptr_t pc, const char *filename, int lineno, const char *function)

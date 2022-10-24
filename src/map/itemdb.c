@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -261,7 +261,7 @@ static void itemdb_package_item(struct map_session_data *sd, struct item_package
 		}
 
 		if( package->must_items[i].announce )
-			clif->package_announce(sd,package->must_items[i].id,package->id);
+			clif->package_announce(sd, package->must_items[i].id, package->id, it.refine);
 
 		if ( package->must_items[i].force_serial )
 			it.unique_id = itemdb->unique_id(sd);
@@ -305,7 +305,7 @@ static void itemdb_package_item(struct map_session_data *sd, struct item_package
 					}
 
 					if( entry->announce )
-						clif->package_announce(sd,entry->id,package->id);
+						clif->package_announce(sd, entry->id, package->id, it.refine);
 
 					get_count = itemdb->isstackable(entry->id) ? entry->qty : 1;
 
@@ -369,6 +369,16 @@ static struct item_data *itemdb_exists(int nameid)
 static struct itemdb_option *itemdb_option_exists(int idx)
 {
 	return (struct itemdb_option *)idb_get(itemdb->options, idx);
+}
+
+/**
+ * Searches for the item_reform data.
+ * @param index as the index of the item reform.
+ * @return pointer to struct itemdb_reform data or NULL.
+ */
+static struct item_reform *itemdb_reform_exists(int idx)
+{
+	return (struct item_reform *)idb_get(itemdb->reform, idx);
 }
 
 /// Returns human readable name for given item type.
@@ -1615,8 +1625,8 @@ static void itemdb_read_chains(void)
 static bool itemdb_read_combodb_libconfig(void)
 {
 	struct config_t combo_conf;
-	char filepath[256];
-	safesnprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_combo_db.conf");
+	char filepath[290];
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_combo_db.conf");
 
 	if (libconfig->load_file(&combo_conf, filepath) == CONFIG_FALSE) {
 		ShowError("itemdb_read_combodb_libconfig: can't read %s\n", filepath);
@@ -2040,6 +2050,8 @@ static int itemdb_readdb_libconfig_sub(struct config_setting_t *it, int n, const
 	 * BuyingStore: (true or false)
 	 * Delay: Delay to use item
 	 * ForceSerial: (true or false)
+	 * IgnoreDiscount: (true or false)
+	 * IgnoreOvercharge: (true or false)
 	 * Trade: {
 	 *   override: Group to override
 	 *   nodrop: (true or false)
@@ -2185,6 +2197,9 @@ static int itemdb_readdb_libconfig_sub(struct config_setting_t *it, int n, const
 	if( (t = libconfig->setting_get_member(it, "Refine")) )
 		id.flag.no_refine = libconfig->setting_get_bool(t) ? 0 : 1;
 
+	if( (t = libconfig->setting_get_member(it, "Grade")) )
+		id.flag.no_grade = libconfig->setting_get_bool(t) ? 1 : 0;
+
 	if ((t = libconfig->setting_get_member(it, "DisableOptions")))
 		id.flag.no_options = libconfig->setting_get_bool(t) ? 1 : 0;
 
@@ -2229,6 +2244,12 @@ static int itemdb_readdb_libconfig_sub(struct config_setting_t *it, int n, const
 
 	if (itemdb->lookup_const(it, "Delay", &i32) && i32 >= 0)
 		id.delay = i32;
+
+	if ((t = libconfig->setting_get_member(it, "IgnoreDiscount")))
+		id.flag.ignore_discount = libconfig->setting_get_bool(t) ? 1 : 0;
+
+	if ((t = libconfig->setting_get_member(it, "IgnoreOvercharge")))
+		id.flag.ignore_overcharge = libconfig->setting_get_bool(t) ? 1 : 0;
 
 	if ( (t = libconfig->setting_get_member(it, "Trade")) ) {
 		if (config_setting_is_group(t)) {
@@ -2440,12 +2461,12 @@ static int itemdb_readdb_libconfig(const char *filename)
 	struct DBMap *duplicate_db;
 	struct config_t item_db_conf;
 	struct config_setting_t *itdb, *it;
-	char filepath[256];
+	char filepath[260];
 	int i = 0, count = 0;
 
 	nullpo_ret(filename);
 
-	safesnprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, filename);
 	if (!libconfig->load_file(&item_db_conf, filepath))
 		return 0;
 
@@ -2504,12 +2525,12 @@ static bool itemdb_read_libconfig_lapineddukddak(void)
 {
 	struct config_t item_lapineddukddak;
 	struct config_setting_t *it = NULL;
-	char filepath[256];
+	char filepath[290];
 
 	int i = 0;
 	int count = 0;
 
-	safesnprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_lapineddukddak.conf");
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_lapineddukddak.conf");
 	if (libconfig->load_file(&item_lapineddukddak, filepath) == CONFIG_FALSE)
 		return false;
 
@@ -2592,6 +2613,395 @@ static bool itemdb_read_libconfig_lapineddukddak_sub_sources(struct config_setti
 	return true;
 }
 
+static bool itemdb_read_libconfig_lapineupgrade(void)
+{
+	struct config_t item_lapineupgrade;
+	struct config_setting_t *it = NULL;
+	char filepath[290];
+
+	int i = 0;
+	int count = 0;
+
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_lapineupgrade.conf");
+	if (libconfig->load_file(&item_lapineupgrade, filepath) == CONFIG_FALSE)
+		return false;
+
+	while ((it = libconfig->setting_get_elem(item_lapineupgrade.root, i++)) != NULL) {
+		if (itemdb->read_libconfig_lapineupgrade_sub(it, filepath))
+			++count;
+	}
+
+	libconfig->destroy(&item_lapineupgrade);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, filepath);
+	return true;
+}
+
+static bool itemdb_read_libconfig_lapineupgrade_sub(struct config_setting_t *it, const char *source)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, source);
+
+	struct item_data *data = NULL;
+	const char *name = config_setting_name(it);
+	const char *str = NULL;
+	int i32 = 0;
+	bool real_bool = false;
+
+	if ((data = itemdb->name2id(name)) == NULL) {
+		ShowWarning("itemdb_read_libconfig_lapineupgrade_sub: unknown item '%s', skipping..\n", name);
+		return false;
+	}
+
+	data->lapineupgrade = aCalloc(1, sizeof(struct item_lapineupgrade));
+
+	if (libconfig->setting_lookup_int(it, "NeedRefineMin", &i32) == CONFIG_TRUE)
+		data->lapineupgrade->NeedRefineMin = (int8)i32;
+
+	if (libconfig->setting_lookup_int(it, "NeedRefineMax", &i32) == CONFIG_TRUE)
+		data->lapineupgrade->NeedRefineMax = (int8)i32;
+
+	if (libconfig->setting_lookup_int(it, "NeedOptionMin", &i32) == CONFIG_TRUE)
+		data->lapineupgrade->NeedOptionMin = (int8)i32;
+
+	if (libconfig->setting_lookup_bool_real(it, "NoEnchants", &real_bool) == CONFIG_TRUE)
+		data->lapineupgrade->NoEnchant = real_bool;
+
+	struct config_setting_t *targets = libconfig->setting_get_member(it, "TargetItems");
+	itemdb->read_libconfig_lapineupgrade_sub_targets(targets, data);
+
+	if (libconfig->setting_lookup_string(it, "Script", &str) == CONFIG_TRUE)
+		data->lapineupgrade->script = *str ? script->parse(str, source, -data->nameid, SCRIPT_IGNORE_EXTERNAL_BRACKETS, NULL) : NULL;
+	return true;
+}
+
+static bool itemdb_read_libconfig_lapineupgrade_sub_targets(struct config_setting_t *targets, struct item_data *data)
+{
+	nullpo_retr(false, data);
+	nullpo_retr(false, data->lapineupgrade);
+
+	int i = 0;
+	struct config_setting_t *entry = NULL;
+
+	if (targets == NULL || !config_setting_is_group(targets))
+		return false;
+
+	VECTOR_INIT(data->lapineupgrade->TargetItems);
+	while ((entry = libconfig->setting_get_elem(targets, i++)) != NULL) {
+		struct item_data *edata = NULL;
+		struct itemlist_entry item = {0};
+		const char *name = config_setting_name(entry);
+		int i32 = 0;
+
+		if ((edata = itemdb->name2id(name)) == NULL) {
+			ShowWarning("itemdb_read_libconfig_lapineupgrade_sub_targets: unknown item '%s', skipping..\n", name);
+			continue;
+		}
+		item.id = edata->nameid;
+
+		if ((i32 = libconfig->setting_get_int(entry)) == CONFIG_TRUE && (i32 <= 0 || i32 > MAX_AMOUNT)) {
+			ShowWarning("itemdb_read_libconfig_lapineupgrade_sub_targets: invalid amount (%d) for target item '%s', skipping..\n", i32, name);
+			continue;
+		}
+		item.amount = i32;
+
+		VECTOR_ENSURE(data->lapineupgrade->TargetItems, 1, 1);
+		VECTOR_PUSH(data->lapineupgrade->TargetItems, item);
+	}
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_info(void)
+{
+	struct config_t item_reform;
+	char filepath[290];
+
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_reform_info.conf");
+	if (libconfig->load_file(&item_reform, filepath) == CONFIG_FALSE)
+		return false;
+
+	int i = 0;
+	int count = 0;
+	struct config_setting_t *it = NULL;
+	struct config_setting_t *rdb = libconfig->lookup(&item_reform, "item_reform_info");
+	while ((it = libconfig->setting_get_elem(rdb, i++)) != NULL) {
+		if (itemdb->read_libconfig_item_reform_info_sub(it, filepath))
+			++count;
+	}
+
+	libconfig->destroy(&item_reform);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, filepath);
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_info_sub(struct config_setting_t *it, const char *source)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, source);
+
+	struct item_reform ir = { 0 };
+
+	if (libconfig->setting_lookup_int(it, "Id", &ir.Id) == CONFIG_FALSE || ir.Id < 0) {
+		ShowWarning("%s: invalid entry Id %d at %s, skipping..\n", __func__, ir.Id, source);
+		return false;
+	}
+
+	if (!itemdb->lookup_const(it, "BaseItem", &ir.BaseItem)) {
+		ShowWarning("%s: invalid BaseItem for entry with Id %d, skipping..\n", __func__, ir.Id);
+		return false;
+	}
+
+	if (!itemdb->lookup_const(it, "ResultItem", &ir.ResultItem)) {
+		ShowWarning("%s: invalid ResultItem for entry with Id %d, skipping..\n", __func__, ir.Id);
+		return false;
+	}
+
+	struct config_setting_t *materials = libconfig->setting_get_member(it, "Materials");
+	if (materials != NULL && !itemdb->read_libconfig_item_reform_info_materials(materials, &ir))
+		return false;
+
+	struct config_setting_t *reqinfo = libconfig->setting_get_member(it, "RequirementInfo");
+	if (reqinfo != NULL && !itemdb->read_libconfig_item_reform_info_reqinfo(reqinfo, &ir))
+		return false;
+
+	struct config_setting_t *behinfo = libconfig->setting_get_member(it, "BehaviorInfo");
+	if (behinfo != NULL && !itemdb->read_libconfig_item_reform_info_behinfo(behinfo, &ir))
+		return false;
+
+	/* Allocate memory and copy contents */
+	struct item_reform *s_ir = aCalloc(1, sizeof(struct item_reform));
+	*s_ir = ir;
+
+	/* Store ptr in the database */
+	idb_put(itemdb->reform, ir.Id, s_ir);
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_info_materials(struct config_setting_t *it, struct item_reform *ir)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, ir);
+
+	if (!config_setting_is_group(it)) {
+		ShowWarning("%s: Materials for entry with Id %d must be a group, skipping..\n", __func__, ir->Id);
+		return false;
+	}
+
+	VECTOR_INIT(ir->Materials);
+	int i = 0;
+	struct config_setting_t *entry = NULL;
+	while ((entry = libconfig->setting_get_elem(it, i++)) != NULL) {
+		const char *name = config_setting_name(entry);
+		struct item_data *idata = itemdb->name2id(name);
+		struct itemlist_entry item = { 0 };
+
+		if (idata == NULL) {
+			ShowWarning("%s: unknown item '%s' for entry with Id %d, skipping..\n", __func__, name, ir->Id);
+			continue;
+		}
+		item.id = idata->nameid;
+
+		int i32 = 0;
+		if ((i32 = libconfig->setting_get_int(entry)) == CONFIG_TRUE && (i32 <= 0 || i32 > MAX_AMOUNT)) {
+			ShowWarning("%s: invalid amount (%d) for materials item '%s' at entry with Id %d, skipping..\n", __func__, i32, name, ir->Id);
+			continue;
+		}
+		item.amount = i32;
+
+		VECTOR_ENSURE(ir->Materials, 1, 1);
+		VECTOR_PUSH(ir->Materials, item);
+	}
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_info_reqinfo(struct config_setting_t *it, struct item_reform *ir)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, ir);
+
+	int i32 = 0;
+	if (libconfig->setting_lookup_int(it, "NeedRefineMin", &i32) == CONFIG_TRUE)
+		ir->NeedRefineMin = cap_value(i32, 0, MAX_REFINE);
+
+	if (libconfig->setting_lookup_int(it, "NeedRefineMax", &i32) == CONFIG_TRUE)
+		ir->NeedRefineMax = cap_value(i32, 0, MAX_REFINE);
+
+	if (libconfig->setting_lookup_int(it, "NeedOptionNumMin", &i32) == CONFIG_TRUE)
+		ir->NeedOptionNumMin = cap_value(i32, 0, MAX_ITEM_OPTIONS);
+
+	if (libconfig->setting_lookup_bool(it, "IsEmptySocket", &i32) == CONFIG_TRUE)
+		ir->IsEmptySocket = (bool)i32;
+
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_info_behinfo(struct config_setting_t *it, struct item_reform *ir)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, ir);
+
+	int i32 = 0;
+	if (libconfig->setting_lookup_int(it, "ChangeRefineValue", &i32) == CONFIG_TRUE)
+		ir->ChangeRefineValue = cap_value(i32, -MAX_REFINE, MAX_REFINE);
+
+	if (libconfig->setting_lookup_bool(it, "PreserveSocketItem", &i32) == CONFIG_TRUE)
+		ir->PreserveSocketItem = (bool)i32;
+
+	if (libconfig->setting_lookup_bool(it, "PreserveOptions", &i32) == CONFIG_TRUE)
+		ir->PreserveOptions = (bool)i32;
+
+	if (libconfig->setting_lookup_bool(it, "PreserveGrade", &i32) == CONFIG_TRUE)
+		ir->PreserveGrade = (bool)i32;
+
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_list(void)
+{
+	struct config_t item_reform;
+	char filepath[290];
+
+	snprintf(filepath, sizeof(filepath), "%s/%s", map->db_path, DBPATH"item_reform_list.conf");
+	if (libconfig->load_file(&item_reform, filepath) == CONFIG_FALSE)
+		return false;
+
+	int i = 0;
+	int count = 0;
+	struct config_setting_t *irl = libconfig->lookup(&item_reform, "item_reform_list");
+	if (irl != NULL) {
+		struct config_setting_t *gr = libconfig->setting_get_elem(irl, 0);
+		struct config_setting_t *it = NULL;
+		while ((it = libconfig->setting_get_elem(gr, i++)) != NULL) {
+			if (itemdb->read_libconfig_item_reform_list_sub(it, filepath))
+				++count;
+		}
+	}
+
+	libconfig->destroy(&item_reform);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, filepath);
+	return true;
+}
+
+static bool itemdb_read_libconfig_item_reform_list_sub(struct config_setting_t *it, const char *source)
+{
+	nullpo_retr(false, it);
+	nullpo_retr(false, source);
+
+	struct item_data *itd = NULL;
+	const char *name = config_setting_name(it);
+
+	if ((itd = itemdb->name2id(name)) == NULL) {
+		ShowWarning("%s: unknown item '%s', in (%s), skipping..\n", __func__, name, source);
+		return false;
+	}
+
+	if (!config_setting_is_array(it)) {
+		ShowWarning("%s: reform list for item (%s) must be an array, in (%s), skipping..\n", __func__, name, source);
+		return false;
+	}
+
+	const int len = libconfig->setting_length(it);
+	for (int i = 0; i < len; i++) {
+		const int reform_id = libconfig->setting_get_int_elem(it, i);
+		const struct item_reform *ir = itemdb->reform_exists(reform_id);
+		if (ir == NULL) {
+			ShowWarning("%s: unknown reform id #%d for item '%s', in (%s), skipping..\n", __func__, reform_id, name, source);
+			continue;
+		}
+		if (itemdb->search_reform_baseitem(itd, ir->BaseItem) != NULL) {
+			ShowWarning("%s: duplicated BaseItem in reform id #%d for item '%s', in (%s), skipping..\n", __func__, reform_id, name, source);
+			continue;
+		}
+		VECTOR_ENSURE(itd->reform_list, len, 1);
+		VECTOR_PUSH(itd->reform_list, reform_id);
+	}
+	return true;
+}
+
+static void itemdb_item_reform(struct map_session_data *sd, const struct item_reform *ir, int idx)
+{
+	nullpo_retv(sd);
+	nullpo_retv(ir);
+	Assert_retv(idx >= 0 && idx < sd->status.inventorySize);
+
+	const struct item *itr = &sd->status.inventory[idx];
+
+	// Validate refine rate requirement
+	if ((itemdb_type(itr->nameid) == IT_ARMOR || itemdb_type(itr->nameid) == IT_WEAPON)
+		&& (itr->refine < ir->NeedRefineMin || itr->refine > ir->NeedRefineMax))
+		return;
+
+	// Validate random option requirement
+	int options = 0;
+	for (int i = 0; i < MAX_ITEM_OPTIONS; ++i) {
+		if (itr->option[i].index != 0)
+			options++;
+	}
+
+	if (ir->NeedOptionNumMin > options)
+		return;
+
+	// Validate empty slots requirement
+	if (ir->IsEmptySocket) {
+		int cards = 0;
+		for (int i = 0; i < MAX_SLOTS; ++i) {
+			if (itr->card[i] != 0)
+				cards++;
+		}
+
+		if (cards > 0)
+			return;
+	}
+
+	// Validate materials requirement
+	for (int i = 0; i < VECTOR_LENGTH(ir->Materials); ++i) {
+		int material_idx = pc->search_inventory(sd, VECTOR_INDEX(ir->Materials, i).id);
+
+		if (material_idx == INDEX_NOT_FOUND || sd->status.inventory[material_idx].amount < VECTOR_INDEX(ir->Materials, i).amount) {
+			clif->item_reform_result(sd, idx, IT_REFORM_NOT_ENOUGH_MATERIALS);
+			return;
+		}
+	}
+
+	// Create the result item
+	struct item item_tmp;
+	memset(&item_tmp, 0, sizeof(item_tmp));
+	item_tmp.nameid = ir->ResultItem;
+	item_tmp.identify = 1;
+
+	// Apply reform changes
+	if (ir->PreserveSocketItem)
+		memcpy(&item_tmp.card, itr->card, sizeof(item_tmp.card));
+	if (ir->PreserveOptions)
+		memcpy(&item_tmp.option, itr->option, sizeof(item_tmp.option));
+	if (ir->PreserveGrade)
+		item_tmp.grade = itr->grade;
+	item_tmp.refine = cap_value(itr->refine + ir->ChangeRefineValue, 0, MAX_REFINE);
+
+	// Consume the required materials
+	for (int i = 0; i < VECTOR_LENGTH(ir->Materials); ++i) {
+		int material_idx = pc->search_inventory(sd, VECTOR_INDEX(ir->Materials, i).id);
+		pc->delitem(sd, material_idx, VECTOR_INDEX(ir->Materials, i).amount, 0, DELITEM_NORMAL, LOG_TYPE_SCRIPT);
+	}
+	pc->delitem(sd, idx, 1, 0, DELITEM_NORMAL, LOG_TYPE_SCRIPT);
+
+	// Give the reformed item
+	pc->additem(sd, &item_tmp, 1, LOG_TYPE_SCRIPT);
+	clif->item_reform_result(sd, idx, IT_REFORM_SUCCESS);
+}
+
+static const struct item_reform *itemdb_search_reform_baseitem(const struct item_data *itd, int nameid)
+{
+	nullpo_retr(NULL, itd);
+	nullpo_retr(NULL, itemdb->exists(nameid));
+
+	for (int i = 0; i < VECTOR_LENGTH(itd->reform_list); ++i) {
+		const struct item_reform *ir = itemdb->reform_exists(VECTOR_INDEX(itd->reform_list, i));
+		if (ir != NULL && ir->BaseItem == nameid)
+			return ir;
+	}
+	return NULL;
+}
+
 /**
  * Reads all item-related databases.
  */
@@ -2631,6 +3041,9 @@ static void itemdb_read(bool minimal)
 	itemdb->read_chains();
 	itemdb->read_packages();
 	itemdb->read_libconfig_lapineddukddak();
+	itemdb->read_libconfig_lapineupgrade();
+	itemdb->read_libconfig_item_reform_info();
+	itemdb->read_libconfig_item_reform_list();
 }
 
 /**
@@ -2697,6 +3110,13 @@ static void destroy_item_data(struct item_data *self, int free_self)
 		VECTOR_CLEAR(self->lapineddukddak->SourceItems);
 		aFree(self->lapineddukddak);
 	}
+	if (self->lapineupgrade != NULL) {
+		if (self->lapineupgrade->script != NULL)
+			script->free_code(self->lapineupgrade->script);
+		VECTOR_CLEAR(self->lapineupgrade->TargetItems);
+		aFree(self->lapineupgrade);
+	}
+	VECTOR_CLEAR(self->reform_list);
 	HPM->data_store_destroy(&self->hdata);
 #if defined(DEBUG)
 	// trash item
@@ -2726,6 +3146,15 @@ static int itemdb_options_final_sub(union DBKey key, struct DBData *data, va_lis
 
 	if (ito->script != NULL)
 		script->free_code(ito->script);
+
+	return 0;
+}
+
+static int itemdb_reform_final_sub(union DBKey key, struct DBData *data, va_list ap)
+{
+	struct item_reform *ito = DB->data2ptr(data);
+
+	VECTOR_CLEAR(ito->Materials);
 
 	return 0;
 }
@@ -2795,6 +3224,7 @@ static void itemdb_clear(bool total)
 
 	itemdb->other->clear(itemdb->other, itemdb->final_sub);
 	itemdb->options->clear(itemdb->options, itemdb->options_final_sub);
+	itemdb->reform->clear(itemdb->reform, itemdb->reform_final_sub);
 
 	memset(itemdb->array, 0, sizeof(itemdb->array));
 
@@ -2886,6 +3316,7 @@ static void do_final_itemdb(void)
 
 	itemdb->other->destroy(itemdb->other, itemdb->final_sub);
 	itemdb->options->destroy(itemdb->options, itemdb->options_final_sub);
+	itemdb->reform->destroy(itemdb->reform, itemdb->reform_final_sub);
 	itemdb->destroy_item_data(&itemdb->dummy, 0);
 	db_destroy(itemdb->names);
 	VECTOR_CLEAR(clif->attendance_data);
@@ -2896,6 +3327,7 @@ static void do_init_itemdb(bool minimal)
 	memset(itemdb->array, 0, sizeof(itemdb->array));
 	itemdb->other = idb_alloc(DB_OPT_BASE);
 	itemdb->options = idb_alloc(DB_OPT_RELEASE_DATA);
+	itemdb->reform = idb_alloc(DB_OPT_RELEASE_DATA);
 	itemdb->names = strdb_alloc(DB_OPT_BASE,ITEM_NAME_LENGTH);
 	itemdb->create_dummy_data(); //Dummy data item.
 	itemdb->read(minimal);
@@ -2953,6 +3385,7 @@ void itemdb_defaults(void)
 	itemdb->search = itemdb_search;
 	itemdb->exists = itemdb_exists;
 	itemdb->option_exists = itemdb_option_exists;
+	itemdb->reform_exists = itemdb_reform_exists;
 	itemdb->in_group = itemdb_in_group;
 	itemdb->group_item = itemdb_searchrandomid;
 	itemdb->chain_item = itemdb_chain_item;
@@ -2995,6 +3428,7 @@ void itemdb_defaults(void)
 	itemdb->destroy_item_data = destroy_item_data;
 	itemdb->final_sub = itemdb_final_sub;
 	itemdb->options_final_sub = itemdb_options_final_sub;
+	itemdb->reform_final_sub = itemdb_reform_final_sub;
 	itemdb->clear = itemdb_clear;
 	itemdb->id2combo = itemdb_id2combo;
 	itemdb->is_item_usable = itemdb_is_item_usable;
@@ -3004,4 +3438,16 @@ void itemdb_defaults(void)
 	itemdb->read_libconfig_lapineddukddak = itemdb_read_libconfig_lapineddukddak;
 	itemdb->read_libconfig_lapineddukddak_sub = itemdb_read_libconfig_lapineddukddak_sub;
 	itemdb->read_libconfig_lapineddukddak_sub_sources = itemdb_read_libconfig_lapineddukddak_sub_sources;
+	itemdb->read_libconfig_lapineupgrade = itemdb_read_libconfig_lapineupgrade;
+	itemdb->read_libconfig_lapineupgrade_sub = itemdb_read_libconfig_lapineupgrade_sub;
+	itemdb->read_libconfig_lapineupgrade_sub_targets = itemdb_read_libconfig_lapineupgrade_sub_targets;
+	itemdb->read_libconfig_item_reform_info = itemdb_read_libconfig_item_reform_info;
+	itemdb->read_libconfig_item_reform_info_sub = itemdb_read_libconfig_item_reform_info_sub;
+	itemdb->read_libconfig_item_reform_info_materials = itemdb_read_libconfig_item_reform_info_materials;
+	itemdb->read_libconfig_item_reform_info_reqinfo = itemdb_read_libconfig_item_reform_info_reqinfo;
+	itemdb->read_libconfig_item_reform_info_behinfo = itemdb_read_libconfig_item_reform_info_behinfo;
+	itemdb->read_libconfig_item_reform_list = itemdb_read_libconfig_item_reform_list;
+	itemdb->read_libconfig_item_reform_list_sub = itemdb_read_libconfig_item_reform_list_sub;
+	itemdb->item_reform = itemdb_item_reform;
+	itemdb->search_reform_baseitem = itemdb_search_reform_baseitem;
 }

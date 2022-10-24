@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -77,6 +77,9 @@ struct timer_interface {
 	int (*perform) (int64 tick);
 	void (*init) (void);
 	void (*final) (void);
+	void (*check_timers) (void);
+	bool (*get_current_clocksource) (char *buf, int buf_size);
+	bool (*get_available_clocksource) (char *buf, int buf_size);
 };
 
 #ifdef HERCULES_CORE

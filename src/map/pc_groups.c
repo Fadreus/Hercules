@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -450,6 +450,7 @@ static void do_init_pc_groups(void)
 		{ "disable_exp", PC_PERM_DISABLE_EXP },
 		{ "disable_skill_usage", PC_PERM_DISABLE_SKILL_USAGE },
 		{ "bypass_nostorage", PC_PERM_BYPASS_NOSTORAGE },
+		{ "use_macro_interface", PC_PERM_USE_MACRO_INTERFACE },
 	};
 	unsigned char i, len = ARRAYLENGTH(pc_g_defaults);
 

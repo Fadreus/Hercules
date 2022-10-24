@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Joseph
 //= Copyright (C) Euphy
 //= Copyright (C) Muad_Dib
@@ -3835,6 +3835,8 @@ L_Info:
 job3_guil01,80,77,0	script	#gate_to_guil05	WARPNPC,1,1,{
 	end;
 OnTouch:
+	if (checkhiding())
+		end;
 	if (job_3rd_gc > 3)
 		warp "job3_guil01",60,50;
 	else {
@@ -3848,6 +3850,8 @@ OnTouch:
 job3_guil01,51,55,0	script	#gate_to_guil07	WARPNPC,1,1,{
 	end;
 OnTouch:
+	if (checkhiding())
+		end;
 	if (job_3rd_gc == 4 || job_3rd_gc == 14 || job_3rd_gc > 17)
 		warp "job3_guil01",12,7;
 	else {
@@ -3865,6 +3869,8 @@ OnTouch:
 job3_guil01,51,44,0	script	#gate_to_guil09	WARPNPC,1,1,{
 	end;
 OnTouch:
+	if (checkhiding())
+		end;
 	if (job_3rd_gc == 11 || job_3rd_gc == 12)
 		warp "job3_guil01",79,23;
 	else if (job_3rd_gc > 19)
@@ -3876,6 +3882,7 @@ OnTouch:
 	end;
 }
 
+/*@LOADGMSCRIPTS
 job3_guil02,1,3,0	script	#GMhelper01_gc	CLEAR_NPC,{
 	callfunc "F_GM_NPC";
 	mes "What can I do for you?";
@@ -3913,8 +3920,13 @@ job3_guil02,1,3,0	script	#GMhelper01_gc	CLEAR_NPC,{
 		mes "-_-.";
 		close;
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
+/*@LOADGMSCRIPTS
 job3_guil03,1,8,0	script	#GMhelper02_gc	CLEAR_NPC,{
 	callfunc "F_GM_NPC";
 	mes "What can I do for you?";
@@ -3984,4 +3996,8 @@ job3_guil03,1,8,0	script	#GMhelper02_gc	CLEAR_NPC,{
 		mes "-_-.";
 		close;
 	}
+	end;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2016-2021 Hercules Dev Team
+ * Copyright (C) 2016-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,11 +116,17 @@ void script_add_translatable_string_posthook(const struct script_string_buf *str
 
 	if (!duplicate) {
 		if (script->syntax.last_func == script->buildin_mes_offset
+		 || script->syntax.last_func == script->buildin_mes2_offset
+		 || script->syntax.last_func == script->buildin_zmes1_offset
+		 || script->syntax.last_func == script->buildin_zmes2_offset
 		 || script->syntax.last_func == script->buildin_select_offset
 		 || script->syntax.lang_macro_active
 		 ) {
 			is_translatable_string = true;
 		} else if (script->syntax.last_func == script->buildin_mesf_offset
+				|| script->syntax.last_func == script->buildin_mes2f_offset
+				|| script->syntax.last_func == script->buildin_zmes1f_offset
+				|| script->syntax.last_func == script->buildin_zmes2f_offset
 				|| script->syntax.lang_macro_fmtstring_active
 				) {
 			is_translatable_fmtstring = true;

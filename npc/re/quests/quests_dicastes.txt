@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Frost
 //= Copyright (C) Dastgir
 //= Copyright (C) Joseph
@@ -188,6 +188,7 @@ dic_dun01,266,113,5	script	Curious Sapha#ep13_3_	4_MAN_BENKUNI,{
 	}
 }
 
+/*@LOADGMSCRIPTS
 sec_in02,16,43,5	script	Scaraba Dungeon Entrance	4_MAN_BENKUNI,{
 	callfunc "F_GM_NPC";
 	mes "Setting you for dungeon entry.";
@@ -200,7 +201,10 @@ sec_in02,16,43,5	script	Scaraba Dungeon Entrance	4_MAN_BENKUNI,{
 	} else
 		mes "Wrong Password";
 	close;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Vigilantes ============================================
 -	script	Vigilante#main	FAKE_NPC,{
@@ -449,6 +453,7 @@ dic_in01,254,119,0	script	Item Storage#01	CLEAR_NPC,{
 	end;
 }
 
+/*@LOADGMSCRIPTS
 sec_in02,10,42,1	script	13.3 Related Reset	4_MAN_BENKUNI,{
 	callfunc "F_GM_NPC";
 	mes "[Reset]";
@@ -460,7 +465,10 @@ sec_in02,10,42,1	script	13.3 Related Reset	4_MAN_BENKUNI,{
 	}
 	freeloop(0);
 	close;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/
 
 //== Civil Services ========================================
 function	script	que_dic	{
@@ -1324,7 +1332,7 @@ OnTouch:
 	if (ep13_3_secret == 13) {
 		mes "As soon as you enter the room, someone";
 		mes "pushes down your head to force you to bow.";
-		soundeffect "wander_man_move.wav",0;
+		soundeffect "wander_man_move.wav", PLAY_SOUND_ONCE;
 		sc_start SC_BLIND,60000,0;
 		next;
 		mes "[Ringing Voice]";
@@ -1529,7 +1537,7 @@ dic_in01,300,280,5	script	Minister Ahat#ep133_21	4_HUMAN_GERUTOO,{
 	else if (ep13_3_secret == 13) {
 		mes "As soon as you try to approach Ahat, someone";
 		mes "pushes down your head to force you to bow.";
-		soundeffect "wander_man_move.wav",0;
+		soundeffect "wander_man_move.wav", PLAY_SOUND_ONCE;
 		sc_start SC_BLIND,60000,0;
 		next;
 		mes "[Ringing Voice]";

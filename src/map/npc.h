@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -147,6 +147,14 @@ struct npc_data {
 		} tomb;
 	} u;
 	VECTOR_DECL(struct questinfo) qi_data;
+
+	struct {
+		bool isdynamic;
+		int owner_id;
+		int64 last_interaction_tick;
+		int despawn_timer;
+	} dyn;
+
 	struct hplugin_data_store *hdata; ///< HPM Plugin Data Store
 };
 
@@ -166,7 +174,7 @@ enum actor_classes {
 #define MAX_NPC_CLASS 1000
 // New NPC range
 #define MAX_NPC_CLASS2_START 10001
-#define MAX_NPC_CLASS2_END 10376
+#define MAX_NPC_CLASS2_END 10509
 
 //Script NPC events.
 enum npce_event {
@@ -352,6 +360,10 @@ struct npc_interface {
 	 * For the Secure NPC Timeout option (check config/Secure.h) [RR]
 	 **/
 	int (*secure_timeout_timer) (int tid, int64 tick, int id, intptr_t data);
+	void (*process_files) (int npc_min);
+
+	int (*dynamic_npc_despawn) (int tid, int64 tick, int id, intptr_t data);
+	void (*update_interaction_tick) (struct npc_data *nd);
 };
 
 #ifdef HERCULES_CORE

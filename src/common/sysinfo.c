@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -32,6 +32,7 @@
 #include "common/core.h"
 #include "common/memmgr.h"
 #include "common/nullpo.h"
+#include "common/showmsg.h"
 #include "common/strlib.h"
 
 #include <stdio.h> // fopen
@@ -42,20 +43,24 @@
 #	include <sys/time.h> // time constants
 #	include <unistd.h>
 #endif
+#include <zlib.h>
 
 /// Private interface fields
 struct sysinfo_private {
-	char *platform;
-	char *osversion;
-	char *cpu;
+	const char *platform;
+	const char *osversion;
+	const char *cpu;
 	int cpucores;
-	char *arch;
-	char *compiler;
-	char *cflags;
+	const char *arch;
+	const char *compiler;
+	const char *cflags;
 	char *vcstype_name;
 	int vcstype;
-	char *vcsrevision_src;
+	const char *vcsrevision_src;
 	char *vcsrevision_scripts;
+
+	bool (*git_get_revision) (char **out);
+	bool (*svn_get_revision) (char **out);
 };
 
 /// sysinfo.c interface source
@@ -225,8 +230,10 @@ enum windows_ver_suite {
 #define SYSINFO_COMPILER "Microsoft Visual C++ 2015 (v" EXPAND_AND_QUOTE(_MSC_VER) ")"
 #elif _MSC_VER >= 1910 && _MSC_VER < 1920
 #define SYSINFO_COMPILER "Microsoft Visual C++ 2017 (v" EXPAND_AND_QUOTE(_MSC_VER) ")"
-#elif _MSC_VER >= 1920 && _MSC_VER < 2000
+#elif _MSC_VER >= 1920 && _MSC_VER < 1930
 #define SYSINFO_COMPILER "Microsoft Visual C++ 2019 (v" EXPAND_AND_QUOTE(_MSC_VER) ")"
+#elif _MSC_VER >= 1930 && _MSC_VER < 2000
+#define SYSINFO_COMPILER "Microsoft Visual C++ 2022 (v" EXPAND_AND_QUOTE(_MSC_VER) ")"
 #else // < 1300 || >= 2000
 #define SYSINFO_COMPILER "Microsoft Visual C++ v" EXPAND_AND_QUOTE(_MSC_VER)
 #endif
@@ -318,14 +325,14 @@ static bool sysinfo_git_get_revision(char **out)
 {
 	// Only include Git support if we detected it, or we're on MSVC
 #if !defined(SYSINFO_VCSTYPE) || SYSINFO_VCSTYPE == VCSTYPE_GIT || SYSINFO_VCSTYPE == VCSTYPE_UNKNOWN
-	char ref[128], filepath[128], line[128];
+	char ref[128], filepath[256], line[128];
 
 	nullpo_ret(out);
 	strcpy(ref, "HEAD");
 
 	while (*ref) {
 		FILE *fp;
-		safesnprintf(filepath, sizeof(filepath), ".git/%s", ref);
+		snprintf(filepath, sizeof(filepath), ".git/%s", ref);
 		if ((fp = fopen(filepath, "r")) != NULL) {
 			if (fgets(line, sizeof(line)-1, fp) == NULL) {
 				fclose(fp);
@@ -411,26 +418,17 @@ static void sysinfo_osversion_retrieve(void)
 			} else if (osvi.dwMinorVersion == 1) {
 				StrBuf->AppendStr(&buf, osvi.wProductType == VER_NT_WORKSTATION ? "Windows 7" : "Windows Server 2008 R2");
 			} else {
-				// If it's 2, it can be Windows 8, or any newer version (8.1 at the time of writing this) -- see above for the reason.
-				switch (osvi.dwMinorVersion) {
-				case 2:
-					{
-						ULONGLONG mask = 0;
-						OSVERSIONINFOEX osvi2;
-						ZeroMemory(&osvi2, sizeof(OSVERSIONINFOEX));
-						osvi2.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-						osvi2.dwMajorVersion = 6;
-						osvi2.dwMinorVersion = 2;
-						VER_SET_CONDITION(mask, VER_MAJORVERSION, VER_LESS_EQUAL);
-						VER_SET_CONDITION(mask, VER_MINORVERSION, VER_LESS_EQUAL);
-						if (VerifyVersionInfo(&osvi2, VER_MAJORVERSION | VER_MINORVERSION, mask)) {
-							StrBuf->AppendStr(&buf, osvi.wProductType == VER_NT_WORKSTATION ? "Windows 8" : "Windows Server 2012");
-							break;
-						}
-					}
-				case 3:
-					StrBuf->AppendStr(&buf, osvi.wProductType == VER_NT_WORKSTATION ? "Windows 8.1" : "Windows Server 2012 R2");
-				}
+				// If it's 2, it can be Windows 8, or any newer version -- see above for the reason.
+				// Fallback to using RtlGetVersion api to get the version
+				NTSTATUS(WINAPI *RtlGetVersion)(LPOSVERSIONINFOEX);
+				*(FARPROC *)&RtlGetVersion = GetProcAddress(GetModuleHandle(TEXT("ntdll")), "RtlGetVersion");
+				RtlGetVersion((LPOSVERSIONINFOEX)&osvi);
+
+				// Windows 10 and Windows Server 2016 and 2019 all have 10.0 version as documented at
+				// https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_osversioninfoexw#remarks
+				StrBuf->Printf(&buf, "Windows%s %d", osvi.wProductType == VER_NT_WORKSTATION ? "" : " Server", osvi.dwMajorVersion);
+				if (osvi.dwMinorVersion > 0)
+					StrBuf->Printf(&buf, ".%d", osvi.dwMinorVersion);
 			}
 
 			pGPI = (PGPI) GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetProductInfo");
@@ -708,11 +706,11 @@ static void sysinfo_vcsrevision_src_retrieve(void)
 		sysinfo->p->vcsrevision_src = NULL;
 	}
 	// Try Git, then SVN
-	if (sysinfo_git_get_revision(&sysinfo->p->vcsrevision_src)) {
+	if (sysinfo->p->git_get_revision(&sysinfo->p->vcsrevision_src)) {
 		sysinfo->p->vcstype = VCSTYPE_GIT;
 		return;
 	}
-	if (sysinfo_svn_get_revision(&sysinfo->p->vcsrevision_src)) {
+	if (sysinfo->p->svn_get_revision(&sysinfo->p->vcsrevision_src)) {
 		sysinfo->p->vcstype = VCSTYPE_SVN;
 		return;
 	}
@@ -971,18 +969,20 @@ static const char *sysinfo_vcsrevision_scripts(void)
  */
 static void sysinfo_vcsrevision_reload(void)
 {
+#ifdef WIN32
 	if (sysinfo->p->vcsrevision_scripts != NULL) {
 		aFree(sysinfo->p->vcsrevision_scripts);
 		sysinfo->p->vcsrevision_scripts = NULL;
 	}
 	// Try Git, then SVN
-	if (sysinfo_git_get_revision(&sysinfo->p->vcsrevision_scripts)) {
+	if (sysinfo->p->git_get_revision(&sysinfo->p->vcsrevision_scripts)) {
 		return;
 	}
-	if (sysinfo_svn_get_revision(&sysinfo->p->vcsrevision_scripts)) {
+	if (sysinfo->p->svn_get_revision(&sysinfo->p->vcsrevision_scripts)) {
 		return;
 	}
 	sysinfo->p->vcsrevision_scripts = aStrdup("Unknown");
+#endif  // WIN32
 }
 
 /**
@@ -1076,6 +1076,31 @@ static int sysinfo_build_revision(void)
 	return HERCULES_VERSION;
 }
 
+static uint32 sysinfo_fflags(void)
+{
+	const uint32 flags = 0
+#ifdef ENABLE_CASHSHOP_PREVIEW_PATCH
+		| 1
+#endif  // ENABLE_CASHSHOP_PREVIEW_PATCH
+#ifdef ENABLE_OLD_CASHSHOP_PREVIEW_PATCH
+		| 2
+#endif  // ENABLE_OLD_CASHSHOP_PREVIEW_PATCH
+	;
+	return flags;
+}
+
+static const char* sysinfo_zlib(void)
+{
+	const char *compiled = ZLIB_VERSION;
+#if ZLIB_VERNUM >= 0x1020
+	const char *linked = zlibVersion();
+	if (strcmp(compiled, linked) != 0) {
+		ShowError("Detected different zlib version: compiled %s, linked %s\n", compiled, linked);
+	}
+#endif  // ZLIB_VERNUM >= 0x1020
+	return compiled;
+}
+
 /**
  * Interface default values initialization.
  */
@@ -1084,6 +1109,9 @@ void sysinfo_defaults(void)
 	sysinfo = &sysinfo_s;
 	memset(&sysinfo_p, '\0', sizeof(sysinfo_p));
 	sysinfo->p = &sysinfo_p;
+	sysinfo->p->git_get_revision = sysinfo_git_get_revision;
+	sysinfo->p->svn_get_revision = sysinfo_svn_get_revision;
+
 	sysinfo->getpagesize = sysinfo_getpagesize;
 	sysinfo->platform = sysinfo_platform;
 	sysinfo->osversion = sysinfo_osversion;
@@ -1100,7 +1128,9 @@ void sysinfo_defaults(void)
 	sysinfo->vcsrevision_scripts = sysinfo_vcsrevision_scripts;
 	sysinfo->vcsrevision_reload = sysinfo_vcsrevision_reload;
 	sysinfo->build_revision = sysinfo_build_revision;
+	sysinfo->fflags = sysinfo_fflags;
 	sysinfo->is_superuser = sysinfo_is_superuser;
+	sysinfo->zlib = sysinfo_zlib;
 	sysinfo->init = sysinfo_init;
 	sysinfo->final = sysinfo_final;
 }

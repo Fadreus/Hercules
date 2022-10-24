@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -256,6 +256,7 @@ static int Sql_Query(struct Sql *self, const char *query, ...)
 }
 
 /// Executes a query.
+static int Sql_QueryV(struct Sql *self, const char *query, va_list args) __attribute__((format(printf, 2, 0)));
 static int Sql_QueryV(struct Sql *self, const char *query, va_list args)
 {
 	if( self == NULL )
@@ -639,6 +640,7 @@ static int SqlStmt_Prepare(struct SqlStmt *self, const char *query, ...)
 }
 
 /// Prepares the statement.
+static int SqlStmt_PrepareV(struct SqlStmt *self, const char *query, va_list args) __attribute__((format(printf, 2, 0)));
 static int SqlStmt_PrepareV(struct SqlStmt *self, const char *query, va_list args)
 {
 	if( self == NULL )

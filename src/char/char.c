@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -54,7 +54,6 @@
 #include "common/mapindex.h"
 #include "common/mmo.h"
 #include "common/nullpo.h"
-#include "common/packetsstatic_len.h"
 #include "common/showmsg.h"
 #include "common/socket.h"
 #include "common/strlib.h"
@@ -441,7 +440,7 @@ static int char_mmo_char_tosql(int char_id, struct mmo_charstatus *p)
 
 	//map inventory data
 	if( memcmp(p->inventory, cp->inventory, sizeof(p->inventory)) ) {
-		if (!chr->memitemdata_to_sql(p->inventory, p->char_id, TABLE_INVENTORY))
+		if (chr->memitemdata_to_sql(p->inventory, -1, p->char_id, TABLE_INVENTORY) >= 0)
 			strcat(save_status, " inventory");
 		else
 			errors++;
@@ -449,7 +448,7 @@ static int char_mmo_char_tosql(int char_id, struct mmo_charstatus *p)
 
 	//map cart data
 	if( memcmp(p->cart, cp->cart, sizeof(p->cart)) ) {
-		if (!chr->memitemdata_to_sql(p->cart, p->char_id, TABLE_CART))
+		if (chr->memitemdata_to_sql(p->cart, -1, p->char_id, TABLE_CART) >= 0)
 			strcat(save_status, " cart");
 		else
 			errors++;
@@ -746,12 +745,13 @@ static int char_getitemdata_from_sql(struct item *items, int max, int guid, enum
 	StringBuf buf;
 	struct item item = { 0 }; // temp storage variable
 
-	nullpo_retr(-1, items);
+	if (max > 0)
+		nullpo_retr(-1, items);
 	Assert_retr(-1, guid > 0);
-	Assert_retr(-1, max > 0);
 
 	// Initialize the array.
-	memset(items, 0x0, sizeof(struct item) * max);
+	if (max > 0)
+		memset(items, 0x0, sizeof(struct item) * max);
 
 	switch (table) {
 	case TABLE_INVENTORY:
@@ -775,7 +775,7 @@ static int char_getitemdata_from_sql(struct item *items, int max, int guid, enum
 	}
 
 	StrBuf->Init(&buf);
-	StrBuf->AppendStr(&buf, "SELECT `id`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`, `expire_time`, `bound`, `unique_id`");
+	StrBuf->AppendStr(&buf, "SELECT `id`, `nameid`, `amount`, `equip`, `identify`, `refine`, `grade`, `attribute`, `expire_time`, `bound`, `unique_id`");
 	for(i = 0; i < MAX_SLOTS; i++)
 		StrBuf->Printf(&buf, ", `card%d`", i);
 	for(i = 0; i < MAX_ITEM_OPTIONS; i++)
@@ -800,27 +800,28 @@ static int char_getitemdata_from_sql(struct item *items, int max, int guid, enum
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 3, SQLDT_UINT,   &item.equip,       sizeof item.equip,       NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 4, SQLDT_CHAR,   &item.identify,    sizeof item.identify,    NULL, NULL)
 	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 5, SQLDT_CHAR,   &item.refine,      sizeof item.refine,      NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 6, SQLDT_CHAR,   &item.attribute,   sizeof item.attribute,   NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 7, SQLDT_UINT,   &item.expire_time, sizeof item.expire_time, NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 8, SQLDT_UCHAR,  &item.bound,       sizeof item.bound,       NULL, NULL)
-	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 9, SQLDT_UINT64, &item.unique_id,   sizeof item.unique_id,   NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 6, SQLDT_CHAR,   &item.grade,       sizeof item.grade,      NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 7, SQLDT_CHAR,   &item.attribute,   sizeof item.attribute,   NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 8, SQLDT_UINT,   &item.expire_time, sizeof item.expire_time, NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 9, SQLDT_UCHAR,  &item.bound,       sizeof item.bound,       NULL, NULL)
+	 || SQL_ERROR == SQL->StmtBindColumn(stmt, 10, SQLDT_UINT64, &item.unique_id,   sizeof item.unique_id,   NULL, NULL)
 	) {
 		SqlStmt_ShowDebug(stmt);
 	}
 
 	for (i = 0; i < MAX_SLOTS; i++) {
-		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 10 + i, SQLDT_INT, &item.card[i], sizeof item.card[i], NULL, NULL))
+		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 11 + i, SQLDT_INT, &item.card[i], sizeof item.card[i], NULL, NULL))
 			SqlStmt_ShowDebug(stmt);
 	}
 
 	for (i = 0; i < MAX_ITEM_OPTIONS; i++) {
-		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 10 + MAX_SLOTS + i * 2, SQLDT_INT16, &item.option[i].index, sizeof item.option[i].index, NULL, NULL)
-		 || SQL_ERROR == SQL->StmtBindColumn(stmt, 11 + MAX_SLOTS + i * 2, SQLDT_INT16, &item.option[i].value, sizeof item.option[i].index, NULL, NULL))
+		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 11 + MAX_SLOTS + i * 2, SQLDT_INT16, &item.option[i].index, sizeof item.option[i].index, NULL, NULL)
+		 || SQL_ERROR == SQL->StmtBindColumn(stmt, 12 + MAX_SLOTS + i * 2, SQLDT_INT16, &item.option[i].value, sizeof item.option[i].index, NULL, NULL))
 			SqlStmt_ShowDebug(stmt);
 	}
 
 	if (has_favorite) {
-		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 10 + MAX_SLOTS + MAX_ITEM_OPTIONS * 2, SQLDT_CHAR, &item.favorite, sizeof item.favorite, NULL, NULL))
+		if (SQL_ERROR == SQL->StmtBindColumn(stmt, 11 + MAX_SLOTS + MAX_ITEM_OPTIONS * 2, SQLDT_CHAR, &item.favorite, sizeof item.favorite, NULL, NULL))
 			SqlStmt_ShowDebug(stmt);
 	}
 
@@ -839,41 +840,37 @@ static int char_getitemdata_from_sql(struct item *items, int max, int guid, enum
 
 /**
  * Saves an array of 'item' entries into the specified table. [Smokexyz/Hercules]
- * @param[in] items       The items array.
- * @param[in] guid        The character/account/guild ID (depending on table).
- * @param[in] tableswitch The type of table (@see enum inventory_table_type).
+ * @param[in] items        The items array.
+ * @param[in] current_size The current size of the items array (-1 to automatically use the maximum size, for fixed size inventories).
+ * @param[in] guid         The character/account/guild ID (depending on table).
+ * @param[in] table        The type of table (@see enum inventory_table_type).
  * @retval -1 in case of failure, or number of changes made within the table.
  */
-static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum inventory_table_type table)
+static int char_memitemdata_to_sql(const struct item *p_items, int current_size, int guid, enum inventory_table_type table)
 {
-	StringBuf buf;
-	int i = 0, j = 0;
 	const char *tablename = NULL;
 	const char *selectoption = NULL;
 	bool has_favorite = false;
-	struct item *cp_items = NULL; // temp item storage variable
-	bool *matched_p = NULL;
-	int total_updates = 0, total_deletes = 0, total_inserts = 0, total_changes = 0;
-	int item_count = 0, db_max = 0;
-
-	nullpo_ret(p_items);
+	int total_updates = 0, total_deletes = 0, total_inserts = 0;
+	int max_size = 0;
+	int db_size = 0;
 
 	switch (table) {
 	case TABLE_INVENTORY:
 		tablename = inventory_db;
 		selectoption = "char_id";
 		has_favorite = true;
-		item_count = MAX_INVENTORY;
+		max_size = MAX_INVENTORY;
 		break;
 	case TABLE_CART:
 		tablename = cart_db;
 		selectoption = "char_id";
-		item_count = MAX_CART;
+		max_size = MAX_CART;
 		break;
 	case TABLE_GUILD_STORAGE:
 		tablename = guild_storage_db;
 		selectoption = "guild_id";
-		item_count = MAX_GUILD_STORAGE;
+		max_size = MAX_GUILD_STORAGE;
 		break;
 	case TABLE_STORAGE:
 	default:
@@ -881,22 +878,31 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 		Assert_retr(-1, table);
 		return -1;
 	}
+	if (current_size == -1)
+		current_size = max_size;
 
-	cp_items = aCalloc(item_count, sizeof(struct item));
-	matched_p = aCalloc(item_count, sizeof(bool));
+	bool *matched_p = NULL;
+	if (current_size > 0) {
+		nullpo_ret(p_items);
 
+		matched_p = aCalloc(current_size, sizeof(bool));
+	}
+
+	StringBuf buf;
 	StrBuf->Init(&buf);
 
 	/**
 	 * If the storage table is not empty, check for items and replace or delete where needed.
 	 */
-	if ((db_max = chr->getitemdata_from_sql(cp_items, item_count, guid, table)) > 0) {
-		int *deletes = aCalloc(db_max, sizeof(struct item));
+	struct item *cp_items = aCalloc(max_size, sizeof(struct item));
+	if ((db_size = chr->getitemdata_from_sql(cp_items, max_size, guid, table)) > 0) {
+		int *deletes = aCalloc(db_size, sizeof(struct item));
 
-		for (i = 0; i < db_max; i++) {
-			struct item *cp_it = &cp_items[i];
+		for (int i = 0; i < db_size; i++) {
+			const struct item *cp_it = &cp_items[i];
 
-			ARR_FIND(0, item_count, j,
+			int j = 0;
+			ARR_FIND(0, current_size, j,
 					 matched_p[j] != true
 					 && p_items[j].nameid != 0
 					 && cp_it->nameid == p_items[j].nameid
@@ -904,19 +910,17 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 					 && memcmp(p_items[j].card, cp_it->card, sizeof(int) * MAX_SLOTS) == 0
 					 && memcmp(p_items[j].option, cp_it->option, 5 * MAX_ITEM_OPTIONS) == 0);
 
-			if (j < item_count) { // Item found.
+			if (j < current_size) { // Item found.
 				matched_p[j] = true; // Mark the item as matched.
 
 				// If the amount has changed, set for replacement with current item properties.
 				if (memcmp(cp_it, &p_items[j], sizeof(struct item)) != 0) {
-					int k = 0;
-
 					if (total_updates == 0) {
 						StrBuf->Clear(&buf);
-						StrBuf->Printf(&buf, "REPLACE INTO `%s` (`id`, `%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`", tablename, selectoption);
-						for (k = 0; k < MAX_SLOTS; k++)
+						StrBuf->Printf(&buf, "REPLACE INTO `%s` (`id`, `%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `grade`, `attribute`", tablename, selectoption);
+						for (int k = 0; k < MAX_SLOTS; k++)
 							StrBuf->Printf(&buf, ", `card%d`", k);
-						for (k = 0; k < MAX_ITEM_OPTIONS; k++)
+						for (int k = 0; k < MAX_ITEM_OPTIONS; k++)
 							StrBuf->Printf(&buf, ", `opt_idx%d`, `opt_val%d`", k, k);
 						StrBuf->AppendStr(&buf, ", `expire_time`, `bound`, `unique_id`");
 						if (has_favorite)
@@ -926,11 +930,11 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 
 					}
 
-					StrBuf->Printf(&buf, "%s('%d', '%d', '%d', '%d', '%u', '%d', '%d', '%d'",
-								   total_updates > 0 ? ", " : "", cp_it->id, guid, p_items[j].nameid, p_items[j].amount, p_items[j].equip, p_items[j].identify, p_items[j].refine, p_items[j].attribute);
-					for (k = 0; k < MAX_SLOTS; k++)
+					StrBuf->Printf(&buf, "%s('%d', '%d', '%d', '%d', '%u', '%d', '%d', '%d', '%d'",
+								   total_updates > 0 ? ", " : "", cp_it->id, guid, p_items[j].nameid, p_items[j].amount, p_items[j].equip, p_items[j].identify, p_items[j].refine, p_items[j].grade, p_items[j].attribute);
+					for (int k = 0; k < MAX_SLOTS; k++)
 						StrBuf->Printf(&buf, ", '%d'", p_items[j].card[k]);
-					for (k = 0; k < MAX_ITEM_OPTIONS; ++k)
+					for (int k = 0; k < MAX_ITEM_OPTIONS; ++k)
 						StrBuf->Printf(&buf, ", '%d', '%d'", p_items[j].option[k].index, p_items[j].option[k].value);
 					StrBuf->Printf(&buf, ", '%u', '%d', '%"PRIu64"'", p_items[j].expire_time, p_items[j].bound, p_items[j].unique_id);
 					if (has_favorite)
@@ -954,7 +958,7 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 		if (total_deletes > 0) {
 			StrBuf->Clear(&buf);
 			StrBuf->Printf(&buf, "DELETE FROM `%s` WHERE `id` IN (", tablename);
-			for (i = 0; i < total_deletes; i++)
+			for (int i = 0; i < total_deletes; i++)
 				StrBuf->Printf(&buf, "%s'%d'", i == 0 ? "" : ", ", deletes[i]);
 
 			StrBuf->AppendStr(&buf, ");");
@@ -969,7 +973,7 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 	/**
 	 * Check for new items and add if required.
 	 */
-	for (i = 0; i < item_count; i++) {
+	for (int i = 0; i < current_size; i++) {
 		const struct item *p_it = &p_items[i];
 
 		if (matched_p[i] || p_it->nameid == 0)
@@ -977,23 +981,23 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 
 		if (total_inserts == 0) {
 			StrBuf->Clear(&buf);
-			StrBuf->Printf(&buf, "INSERT INTO `%s` (`%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`, `expire_time`, `bound`, `unique_id`", tablename, selectoption);
-			for (j = 0; j < MAX_SLOTS; ++j)
+			StrBuf->Printf(&buf, "INSERT INTO `%s` (`%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `grade`, `attribute`, `expire_time`, `bound`, `unique_id`", tablename, selectoption);
+			for (int j = 0; j < MAX_SLOTS; ++j)
 				StrBuf->Printf(&buf, ", `card%d`", j);
-			for (j = 0; j < MAX_ITEM_OPTIONS; ++j)
+			for (int j = 0; j < MAX_ITEM_OPTIONS; ++j)
 				StrBuf->Printf(&buf, ", `opt_idx%d`, `opt_val%d`", j, j);
 			if (has_favorite)
 				StrBuf->AppendStr(&buf, ", `favorite`");
 			StrBuf->AppendStr(&buf, ") VALUES ");
 		}
 
-		StrBuf->Printf(&buf, "%s('%d', '%d', '%d', '%u', '%d', '%d', '%d', '%u', '%d', '%"PRIu64"'",
-					   total_inserts > 0 ? ", " : "", guid, p_it->nameid, p_it->amount, p_it->equip, p_it->identify, p_it->refine,
+		StrBuf->Printf(&buf, "%s('%d', '%d', '%d', '%u', '%d', '%d', '%d', '%d', '%u', '%d', '%"PRIu64"'",
+					   total_inserts > 0 ? ", " : "", guid, p_it->nameid, p_it->amount, p_it->equip, p_it->identify, p_it->refine, p_it->grade,
 					   p_it->attribute, p_it->expire_time, p_it->bound, p_it->unique_id);
 
-		for (j = 0; j < MAX_SLOTS; ++j)
+		for (int j = 0; j < MAX_SLOTS; ++j)
 			StrBuf->Printf(&buf, ", '%d'", p_it->card[j]);
-		for (j = 0; j < MAX_ITEM_OPTIONS; ++j)
+		for (int j = 0; j < MAX_ITEM_OPTIONS; ++j)
 			StrBuf->Printf(&buf, ", '%d', '%d'", p_it->option[j].index, p_it->option[j].value);
 
 		if (has_favorite)
@@ -1010,11 +1014,12 @@ static int char_memitemdata_to_sql(const struct item *p_items, int guid, enum in
 	StrBuf->Destroy(&buf);
 
 	aFree(cp_items);
-	aFree(matched_p);
+	if (matched_p != NULL)
+		aFree(matched_p);
 
 	ShowInfo("%s save complete - guid: %d (replace: %d, insert: %d, delete: %d)\n", tablename, guid, total_updates, total_inserts, total_deletes);
 
-	return total_changes;
+	return total_updates + total_inserts + total_deletes;
 }
 
 /**
@@ -2029,9 +2034,7 @@ static int char_count_users(void)
 }
 
 // Writes char data to the buffer in the format used by the client.
-// Used in packets 0x6b (chars info) and 0x6d (new char info)
-// Returns the size
-#define MAX_CHAR_BUF (PACKET_LEN_0x006d - 2)
+// Returns CHARACTER_INFO size
 static int char_mmo_char_tobuf(uint8 *buffer, struct mmo_charstatus *p)
 {
 	unsigned short offset = 0;
@@ -2065,7 +2068,12 @@ static int char_mmo_char_tobuf(uint8 *buffer, struct mmo_charstatus *p)
 	WBUFL(buf,32) = p->karma;
 	WBUFL(buf,36) = p->manner;
 	WBUFW(buf,40) = min(p->status_point, INT16_MAX);
-#if PACKETVER > 20081217
+#if PACKETVER_MAIN_NUM >= 20201007 || PACKETVER_RE_NUM >= 20211103
+	WBUFQ(buf, 42) = p->hp;
+	WBUFQ(buf, 50) = p->max_hp;
+	offset += 12;
+	buf = WBUFP(buffer, offset);
+#elif PACKETVER > 20081217
 	WBUFL(buf,42) = p->hp;
 	WBUFL(buf,46) = p->max_hp;
 	offset+=4;
@@ -2074,8 +2082,15 @@ static int char_mmo_char_tobuf(uint8 *buffer, struct mmo_charstatus *p)
 	WBUFW(buf,42) = min(p->hp, INT16_MAX);
 	WBUFW(buf,44) = min(p->max_hp, INT16_MAX);
 #endif
-	WBUFW(buf,46) = min(p->sp, INT16_MAX);
-	WBUFW(buf,48) = min(p->max_sp, INT16_MAX);
+#if PACKETVER_MAIN_NUM >= 20201007 || PACKETVER_RE_NUM >= 20211103
+	WBUFQ(buf, 46) = p->sp;
+	WBUFQ(buf, 54) = p->max_sp;
+	offset += 12;
+	buf = WBUFP(buffer, offset);
+#else  // PACKETVER_MAIN_NUM >= 20201007 || PACKETVER_RE_NUM >= 20211103
+	WBUFW(buf, 46) = min(p->sp, INT16_MAX);
+	WBUFW(buf, 48) = min(p->max_sp, INT16_MAX);
+#endif  // PACKETVER_MAIN_NUM >= 20201007 || PACKETVER_RE_NUM >= 20211103
 	WBUFW(buf,50) = DEFAULT_WALK_SPEED; // p->speed;
 	WBUFW(buf,52) = p->class;
 	WBUFW(buf,54) = p->hair;
@@ -2145,11 +2160,12 @@ static int char_mmo_char_tobuf(uint8 *buffer, struct mmo_charstatus *p)
 static void char_send_HC_ACK_CHARINFO_PER_PAGE(int fd, struct char_session_data *sd)
 {
 #if PACKETVER_MAIN_NUM >= 20130522 || PACKETVER_RE_NUM >= 20130327 || defined(PACKETVER_ZERO)
-	WFIFOHEAD(fd, sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE) + (MAX_CHARS * MAX_CHAR_BUF));
+	const int len = sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
+	WFIFOHEAD(fd, len + (MAX_CHARS * MAX_CHAR_BUF));
 	struct PACKET_HC_ACK_CHARINFO_PER_PAGE *p = WFIFOP(fd, 0);
 	int count = 0;
 	p->packetId = HEADER_HC_ACK_CHARINFO_PER_PAGE;
-	p->packetLen = chr->mmo_chars_fromsql(sd, WFIFOP(fd, 4), &count) + sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
+	p->packetLen = chr->mmo_chars_fromsql(sd, WFIFOP(fd, len), &count) + len;
 	WFIFOSET(fd, p->packetLen);
 	// send empty packet if chars count is 3, for trigger final code in client
 	if (count == 3) {
@@ -2161,10 +2177,11 @@ static void char_send_HC_ACK_CHARINFO_PER_PAGE(int fd, struct char_session_data 
 static void char_send_HC_ACK_CHARINFO_PER_PAGE_tail(int fd, struct char_session_data *sd)
 {
 #if PACKETVER_MAIN_NUM >= 20130522 || PACKETVER_RE_NUM >= 20130327 || defined(PACKETVER_ZERO)
-	WFIFOHEAD(fd, sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE));
+	const int len = sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
+	WFIFOHEAD(fd, len);
 	struct PACKET_HC_ACK_CHARINFO_PER_PAGE *p = WFIFOP(fd, 0);
 	p->packetId = HEADER_HC_ACK_CHARINFO_PER_PAGE;
-	p->packetLen = sizeof(struct PACKET_HC_ACK_CHARINFO_PER_PAGE);
+	p->packetLen = len;
 	WFIFOSET(fd, p->packetLen);
 #endif
 }
@@ -2651,7 +2668,7 @@ static int char_parse_fromlogin_changesex_reply(int fd)
 	}
 
 	for (i = 0; i < MAX_CHARS && SQL_SUCCESS == SQL->StmtNextRow(stmt); ++i) {
-		char_change_sex_sub(sex, acc, char_id, class, guild_id);
+		chr->change_sex_sub(sex, acc, char_id, class, guild_id);
 	}
 	SQL->StmtFree(stmt);
 
@@ -3604,7 +3621,7 @@ static int char_changecharsex(int char_id, int sex)
 	}
 
 	SQL->StmtFree(stmt);
-	char_change_sex_sub(sex, account_id, char_id, class, guild_id);
+	chr->change_sex_sub(sex, account_id, char_id, class, guild_id);
 	chr->disconnect_player(account_id); // Disconnect player if online on char-server.
 	chr->changesex(account_id, sex); // Notify all mapservers about this change.
 
@@ -4815,10 +4832,10 @@ static void char_creation_ok(int fd, struct mmo_charstatus *char_dat)
 	int len;
 
 	// send to player
-	WFIFOHEAD(fd,2+MAX_CHAR_BUF);
-	WFIFOW(fd,0) = 0x6d;
-	len = 2 + chr->mmo_char_tobuf(WFIFOP(fd,2), char_dat);
-	WFIFOSET(fd,len);
+	WFIFOHEAD(fd, 2 + MAX_CHAR_BUF);
+	WFIFOW(fd, 0) = HEADER_HC_ACCEPT_MAKECHAR;
+	len = 2 + chr->mmo_char_tobuf(WFIFOP(fd, 2), char_dat);
+	WFIFOSET(fd, len);
 }
 
 static void char_parse_char_create_new_char(int fd, struct char_session_data *sd) __attribute__((nonnull (2)));
@@ -5157,7 +5174,7 @@ static void char_parse_char_request_chars(int fd, struct char_session_data *sd)
 static void char_change_character_slot_ack(int fd, bool ret)
 {
 	WFIFOHEAD(fd, 8);
-	WFIFOW(fd, 0) = 0x8d5;
+	WFIFOW(fd, 0) = HEADER_HC_ACK_CHANGE_CHARACTER_SLOT;
 	WFIFOW(fd, 2) = 8;
 	WFIFOW(fd, 4) = ret?0:1;
 	WFIFOW(fd, 6) = 0;/* we enforce it elsewhere, go 0 */
@@ -6699,6 +6716,7 @@ void char_defaults(void)
 	chr->check_connect_login_server = char_check_connect_login_server;
 	chr->online_data_cleanup_sub = char_online_data_cleanup_sub;
 	chr->online_data_cleanup = char_online_data_cleanup;
+	chr->change_sex_sub = char_change_sex_sub;
 	chr->sql_config_read = char_sql_config_read;
 	chr->sql_config_read_registry = char_sql_config_read_registry;
 	chr->sql_config_read_pc = char_sql_config_read_pc;

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -54,7 +54,7 @@ static int inter_mail_fromsql(int char_id, struct mail_data *md)
 
 	StrBuf->Init(&buf);
 	StrBuf->AppendStr(&buf, "SELECT `id`,`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,"
-		"`zeny`,`amount`,`nameid`,`refine`,`attribute`,`identify`,`unique_id`");
+		"`zeny`,`amount`,`nameid`,`refine`,`grade`,`attribute`,`identify`,`unique_id`");
 	for (i = 0; i < MAX_SLOTS; i++)
 		StrBuf->Printf(&buf, ",`card%d`", i);
 	for (i = 0; i < MAX_ITEM_OPTIONS; i++)
@@ -87,21 +87,22 @@ static int inter_mail_fromsql(int char_id, struct mail_data *md)
 		SQL->GetData(inter->sql_handle,10, &data, NULL); item->amount = (short)atoi(data);
 		SQL->GetData(inter->sql_handle,11, &data, NULL); item->nameid = atoi(data);
 		SQL->GetData(inter->sql_handle,12, &data, NULL); item->refine = atoi(data);
-		SQL->GetData(inter->sql_handle,13, &data, NULL); item->attribute = atoi(data);
-		SQL->GetData(inter->sql_handle,14, &data, NULL); item->identify = atoi(data);
-		SQL->GetData(inter->sql_handle,15, &data, NULL); item->unique_id = strtoull(data, NULL, 10);
+		SQL->GetData(inter->sql_handle,13, &data, NULL); item->grade = atoi(data);
+		SQL->GetData(inter->sql_handle,14, &data, NULL); item->attribute = atoi(data);
+		SQL->GetData(inter->sql_handle,15, &data, NULL); item->identify = atoi(data);
+		SQL->GetData(inter->sql_handle,16, &data, NULL); item->unique_id = strtoull(data, NULL, 10);
 		item->expire_time = 0;
 		item->bound = 0;
 		/* Card Slots */
 		for (j = 0; j < MAX_SLOTS; j++) {
-			SQL->GetData(inter->sql_handle, 16 + j, &data, NULL);
+			SQL->GetData(inter->sql_handle, 17 + j, &data, NULL);
 			item->card[j] = atoi(data);
 		}
 		/* Item Options */
 		for (j = 0; j < MAX_ITEM_OPTIONS; j++) {
-			SQL->GetData(inter->sql_handle, 16 + MAX_SLOTS + j * 2, &data, NULL);
-			item->option[j].index = atoi(data);
 			SQL->GetData(inter->sql_handle, 17 + MAX_SLOTS + j * 2, &data, NULL);
+			item->option[j].index = atoi(data);
+			SQL->GetData(inter->sql_handle, 18 + MAX_SLOTS + j * 2, &data, NULL);
 			item->option[j].value = atoi(data);
 		}
 	}
@@ -143,13 +144,13 @@ static int inter_mail_savemessage(struct mail_message *msg)
 	nullpo_ret(msg);
 	// build message save query
 	StrBuf->Init(&buf);
-	StrBuf->Printf(&buf, "INSERT INTO `%s` (`send_name`, `send_id`, `dest_name`, `dest_id`, `title`, `message`, `time`, `status`, `zeny`, `amount`, `nameid`, `refine`, `attribute`, `identify`, `unique_id`", mail_db);
+	StrBuf->Printf(&buf, "INSERT INTO `%s` (`send_name`, `send_id`, `dest_name`, `dest_id`, `title`, `message`, `time`, `status`, `zeny`, `amount`, `nameid`, `refine`, `grade`, `attribute`, `identify`, `unique_id`", mail_db);
 	for (j = 0; j < MAX_SLOTS; j++)
 		StrBuf->Printf(&buf, ", `card%d`", j);
 	for (j = 0; j < MAX_ITEM_OPTIONS; j++)
 		StrBuf->Printf(&buf, ", `opt_idx%d`, `opt_val%d`", j, j);
-	StrBuf->Printf(&buf, ") VALUES (?, '%d', ?, '%d', ?, ?, '%lu', '%u', '%d', '%d', '%d', '%d', '%d', '%d', '%"PRIu64"'",
-		msg->send_id, msg->dest_id, (unsigned long)msg->timestamp, msg->status, msg->zeny, msg->item.amount, msg->item.nameid, msg->item.refine, msg->item.attribute, msg->item.identify, msg->item.unique_id);
+	StrBuf->Printf(&buf, ") VALUES (?, '%d', ?, '%d', ?, ?, '%lu', '%u', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%"PRIu64"'",
+		msg->send_id, msg->dest_id, (unsigned long)msg->timestamp, msg->status, msg->zeny, msg->item.amount, msg->item.nameid, msg->item.refine, msg->item.grade, msg->item.attribute, msg->item.identify, msg->item.unique_id);
 	for (j = 0; j < MAX_SLOTS; j++)
 		StrBuf->Printf(&buf, ", '%d'", msg->item.card[j]);
 	for (j = 0; j < MAX_ITEM_OPTIONS; j++)
@@ -188,7 +189,7 @@ static bool inter_mail_loadmessage(int mail_id, struct mail_message *msg)
 
 	StrBuf->Init(&buf);
 	StrBuf->AppendStr(&buf, "SELECT `id`,`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,"
-		"`zeny`,`amount`,`nameid`,`refine`,`attribute`,`identify`,`unique_id`");
+		"`zeny`,`amount`,`nameid`,`refine`,`grade`,`attribute`,`identify`,`unique_id`");
 	for (j = 0; j < MAX_SLOTS; j++)
 		StrBuf->Printf(&buf, ",`card%d`", j);
 	for (j = 0; j < MAX_ITEM_OPTIONS; j++)
@@ -217,21 +218,22 @@ static bool inter_mail_loadmessage(int mail_id, struct mail_message *msg)
 		SQL->GetData(inter->sql_handle,10, &data, NULL); msg->item.amount = (short)atoi(data);
 		SQL->GetData(inter->sql_handle,11, &data, NULL); msg->item.nameid = atoi(data);
 		SQL->GetData(inter->sql_handle,12, &data, NULL); msg->item.refine = atoi(data);
-		SQL->GetData(inter->sql_handle,13, &data, NULL); msg->item.attribute = atoi(data);
-		SQL->GetData(inter->sql_handle,14, &data, NULL); msg->item.identify = atoi(data);
-		SQL->GetData(inter->sql_handle,15, &data, NULL); msg->item.unique_id = strtoull(data, NULL, 10);
+		SQL->GetData(inter->sql_handle,13, &data, NULL); msg->item.grade = atoi(data);
+		SQL->GetData(inter->sql_handle,14, &data, NULL); msg->item.attribute = atoi(data);
+		SQL->GetData(inter->sql_handle,15, &data, NULL); msg->item.identify = atoi(data);
+		SQL->GetData(inter->sql_handle,16, &data, NULL); msg->item.unique_id = strtoull(data, NULL, 10);
 		msg->item.expire_time = 0;
 		msg->item.bound = 0;
 		/* Card Slots */
 		for (j = 0; j < MAX_SLOTS; j++) {
-			SQL->GetData(inter->sql_handle,16 + j, &data, NULL);
+			SQL->GetData(inter->sql_handle,17 + j, &data, NULL);
 			msg->item.card[j] = atoi(data);
 		}
 		/* Item Options */
 		for (j = 0 ; j < MAX_ITEM_OPTIONS; j++) {
-			SQL->GetData(inter->sql_handle, 16 + MAX_SLOTS + j * 2, &data, NULL);
-			msg->item.option[j].index = atoi(data);
 			SQL->GetData(inter->sql_handle, 17 + MAX_SLOTS + j * 2, &data, NULL);
+			msg->item.option[j].index = atoi(data);
+			SQL->GetData(inter->sql_handle, 18 + MAX_SLOTS + j * 2, &data, NULL);
 			msg->item.option[j].value = atoi(data);
 		}
 	}
@@ -263,7 +265,7 @@ static bool inter_mail_DeleteAttach(int mail_id)
 	int i;
 
 	StrBuf->Init(&buf);
-	StrBuf->Printf(&buf, "UPDATE `%s` SET `zeny` = '0', `nameid` = '0', `amount` = '0', `refine` = '0', `attribute` = '0', `identify` = '0'", mail_db);
+	StrBuf->Printf(&buf, "UPDATE `%s` SET `zeny` = '0', `nameid` = '0', `amount` = '0', `refine` = '0', `grade` = '0', `attribute` = '0', `identify` = '0'", mail_db);
 	for (i = 0; i < MAX_SLOTS; i++)
 		StrBuf->Printf(&buf, ", `card%d` = '0'", i);
 	for (i = 0; i < MAX_ITEM_OPTIONS; i++)
@@ -335,7 +337,11 @@ static bool inter_mail_return_message(int char_id, int mail_id, int *new_mail)
 		safestrncpy(msg.dest_name, temp_, NAME_LENGTH);
 
 		// set reply message title
-		safesnprintf(temp_, MAIL_TITLE_LENGTH, "RE:%s", msg.title);
+		PRAGMA_GCC7(GCC diagnostic push)
+		PRAGMA_GCC7(GCC diagnostic ignored "-Wformat-truncation")
+		// Note: truncation of the last three characters may happen and is safe to ignore
+		snprintf(temp_, MAIL_TITLE_LENGTH, "RE:%s", msg.title);
+		PRAGMA_GCC7(GCC diagnostic pop)
 		safestrncpy(msg.title, temp_, MAIL_TITLE_LENGTH);
 
 		msg.status = MAIL_NEW;

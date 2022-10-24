@@ -1,7 +1,7 @@
 # This file is part of Hercules.
 # http://herc.ws - http://github.com/HerculesWS/Hercules
 #
-# Copyright (C) 2012-2021 Hercules Dev Team
+# Copyright (C) 2012-2022 Hercules Dev Team
 # Copyright (C) Athena Dev Teams
 #
 # Hercules is free software: you can redistribute it and/or modify
@@ -54,15 +54,15 @@ MT19937AR_OBJ = $(MT19937AR_D)/mt19937ar.o
 MT19937AR_H = $(MT19937AR_D)/mt19937ar.h
 
 MAP_C = achievement.c atcommand.c battle.c battleground.c buyingstore.c channel.c chat.c \
-        chrif.c clan.c clif.c date.c duel.c elemental.c guild.c homunculus.c HPMmap.c \
-        instance.c intif.c irc-bot.c itemdb.c log.c mail.c map.c mapreg_sql.c \
+        chrif.c clan.c clif.c date.c duel.c elemental.c grader.c guild.c homunculus.c HPMmap.c \
+        instance.c intif.c irc-bot.c itemdb.c log.c macro.c mail.c map.c mapreg_sql.c \
         mercenary.c mob.c npc.c npc_chat.c party.c path.c pc.c pc_groups.c \
         pet.c quest.c refine.c rodex.c script.c searchstore.c skill.c status.c storage.c \
         stylist.c trade.c unit.c vending.c
 MAP_OBJ = $(addprefix obj_sql/, $(patsubst %c,%o,$(MAP_C)))
 MAP_H = achievement.h atcommand.h battle.h battleground.h buyingstore.h channel.h chat.h \
-        chrif.h clan.h clif.h date.h duel.h elemental.h guild.h homunculus.h HPMmap.h \
-        instance.h intif.h irc-bot.h itemdb.h log.h mail.h map.h mapreg.h \
+        chrif.h clan.h clif.h date.h duel.h elemental.h grader.h guild.h homunculus.h HPMmap.h \
+        instance.h intif.h irc-bot.h itemdb.h log.h macro.h mail.h map.h mapreg.h \
         mercenary.h messages.h messages_ad.h messages_main.h messages_re.h \
         messages_sak.h messages_zero.h mob.h npc.h packets.h packets_keys_main.h \
         packets_keys_zero.h packets_shuffle_main.h packets_shuffle_re.h \

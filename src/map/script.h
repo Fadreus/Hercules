@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -211,7 +211,8 @@ typedef enum c_op {
 	C_LSTR, //Language Str (struct script_code_str)
 
 	// operators
-	C_OP3, // a ? b : c
+	C_OP3_JNZ, // a ? b : c (jnz)
+	C_OP3_JMP, // a ? b : c (jmp)
 	C_LOR, // a || b
 	C_LAND, // a && b
 	C_LE, // a <= b
@@ -440,6 +441,7 @@ enum script_unit_data_types {
 	UDT_BODY2,
 	UDT_GROUP,
 	UDT_DAMAGE_TAKEN_RATE,
+	UDT_OPTIONS,
 	UDT_MAX
 };
 
@@ -474,6 +476,7 @@ enum script_iteminfo_types {
 	ITEMINFO_CLASS_UPPER,
 	// ITEMINFO_FLAG_AVAILABLE,
 	ITEMINFO_FLAG_NO_REFINE,
+	ITEMINFO_FLAG_NO_GRADE,
 	ITEMINFO_FLAG_DELAY_CONSUME,
 	ITEMINFO_FLAG_AUTOEQUIP,
 	ITEMINFO_FLAG_AUTO_FAVORITE,
@@ -583,6 +586,20 @@ enum itemskill_flag {
 };
 
 /**
+ * Homunculus Info types.
+ */
+enum script_hominfo_types {
+	HOMINFO_ID = 0,
+	HOMINFO_CLASS,
+	HOMINFO_NAME,
+	HOMINFO_INTIMACY,
+	HOMINFO_HUNGRY,
+	HOMINFO_RENAME,
+	HOMINFO_LEVEL,
+	HOMINFO_MAX
+};
+
+/**
  * Structures
  **/
 
@@ -591,6 +608,7 @@ struct Script_Config {
 	bool warn_func_mismatch_paramnum;
 	bool functions_private_by_default;
 	bool functions_as_events;
+	bool load_gm_scripts;
 	int check_cmdcount;
 	int check_gotocount;
 	int input_min_value;
@@ -876,7 +894,13 @@ struct script_interface {
 	const char *parser_current_npc_name;
 	/* */
 	int buildin_mes_offset;
+	int buildin_mes2_offset;
+	int buildin_zmes1_offset;
+	int buildin_zmes2_offset;
 	int buildin_mesf_offset;
+	int buildin_mes2f_offset;
+	int buildin_zmes1f_offset;
+	int buildin_zmes2f_offset;
 	int buildin_select_offset;
 	int buildin_lang_macro_offset;
 	int buildin_lang_macro_fmtstring_offset;
@@ -890,6 +914,9 @@ struct script_interface {
 	struct script_string_buf parse_simpleexpr_strbuf;
 	/* */
 	int parse_cleanup_timer_id;
+
+	VECTOR_DECL(char *) conditional_features;
+
 	/*  */
 	void (*init) (bool minimal);
 	void (*final) (void);
@@ -1048,6 +1075,7 @@ struct script_interface {
 	int (*buildin_query_sql_sub) (struct script_state *st, struct Sql *handle);
 	int (*buildin_instance_warpall_sub) (struct block_list *bl, va_list ap);
 	int (*buildin_mobuseskill_sub) (struct block_list *bl, va_list ap);
+	bool (*buildin_rodex_sendmail_sub) (struct script_state *st, struct rodex_message *msg);
 	int (*cleanfloor_sub) (struct block_list *bl, va_list ap);
 	int (*run_func) (struct script_state *st);
 	bool (*sprintf_helper) (struct script_state *st, int start, struct StringBuf *out);
@@ -1095,7 +1123,9 @@ struct script_interface {
 	void (*run_item_rental_end_script) (struct map_session_data *sd, struct item_data *data, int oid);
 	void (*run_item_rental_start_script) (struct map_session_data *sd, struct item_data *data, int oid);
 	void (*run_item_lapineddukddak_script) (struct map_session_data *sd, struct item_data *data, int oid);
+	void (*run_item_lapineupgrade_script) (struct map_session_data *sd, struct item_data *data, int oid);
 	bool (*sellitemcurrency_add) (struct npc_data *nd, struct script_state* st, int argIndex);
+	void (*declare_conditional_feature) (const char *feature, bool enabled);
 };
 
 #ifdef HERCULES_CORE

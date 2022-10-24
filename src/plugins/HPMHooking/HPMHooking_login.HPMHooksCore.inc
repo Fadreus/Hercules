@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  *
  * Hercules is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -480,6 +480,8 @@ struct {
 	struct HPMHookPoint *HP_login_config_set_md5hash_post;
 	struct HPMHookPoint *HP_login_convert_users_to_colors_pre;
 	struct HPMHookPoint *HP_login_convert_users_to_colors_post;
+	struct HPMHookPoint *HP_login_check_client_version_pre;
+	struct HPMHookPoint *HP_login_check_client_version_post;
 	struct HPMHookPoint *HP_loginlog_failedattempts_pre;
 	struct HPMHookPoint *HP_loginlog_failedattempts_post;
 	struct HPMHookPoint *HP_loginlog_log_pre;
@@ -534,6 +536,12 @@ struct {
 	struct HPMHookPoint *HP_packets_addLens_post;
 	struct HPMHookPoint *HP_packets_addLen_pre;
 	struct HPMHookPoint *HP_packets_addLen_post;
+	struct HPMHookPoint *HP_packets_addLenIntif_pre;
+	struct HPMHookPoint *HP_packets_addLenIntif_post;
+	struct HPMHookPoint *HP_packets_addLenInter_pre;
+	struct HPMHookPoint *HP_packets_addLenInter_post;
+	struct HPMHookPoint *HP_packets_addLenChrif_pre;
+	struct HPMHookPoint *HP_packets_addLenChrif_post;
 	struct HPMHookPoint *HP_rnd_init_pre;
 	struct HPMHookPoint *HP_rnd_init_post;
 	struct HPMHookPoint *HP_rnd_final_pre;
@@ -778,10 +786,14 @@ struct {
 	struct HPMHookPoint *HP_sysinfo_vcsrevision_scripts_post;
 	struct HPMHookPoint *HP_sysinfo_build_revision_pre;
 	struct HPMHookPoint *HP_sysinfo_build_revision_post;
+	struct HPMHookPoint *HP_sysinfo_fflags_pre;
+	struct HPMHookPoint *HP_sysinfo_fflags_post;
 	struct HPMHookPoint *HP_sysinfo_vcsrevision_reload_pre;
 	struct HPMHookPoint *HP_sysinfo_vcsrevision_reload_post;
 	struct HPMHookPoint *HP_sysinfo_is_superuser_pre;
 	struct HPMHookPoint *HP_sysinfo_is_superuser_post;
+	struct HPMHookPoint *HP_sysinfo_zlib_pre;
+	struct HPMHookPoint *HP_sysinfo_zlib_post;
 	struct HPMHookPoint *HP_sysinfo_init_pre;
 	struct HPMHookPoint *HP_sysinfo_init_post;
 	struct HPMHookPoint *HP_sysinfo_final_pre;
@@ -834,6 +846,12 @@ struct {
 	struct HPMHookPoint *HP_timer_init_post;
 	struct HPMHookPoint *HP_timer_final_pre;
 	struct HPMHookPoint *HP_timer_final_post;
+	struct HPMHookPoint *HP_timer_check_timers_pre;
+	struct HPMHookPoint *HP_timer_check_timers_post;
+	struct HPMHookPoint *HP_timer_get_current_clocksource_pre;
+	struct HPMHookPoint *HP_timer_get_current_clocksource_post;
+	struct HPMHookPoint *HP_timer_get_available_clocksource_pre;
+	struct HPMHookPoint *HP_timer_get_available_clocksource_post;
 } list;
 
 struct {
@@ -1291,6 +1309,8 @@ struct {
 	int HP_login_config_set_md5hash_post;
 	int HP_login_convert_users_to_colors_pre;
 	int HP_login_convert_users_to_colors_post;
+	int HP_login_check_client_version_pre;
+	int HP_login_check_client_version_post;
 	int HP_loginlog_failedattempts_pre;
 	int HP_loginlog_failedattempts_post;
 	int HP_loginlog_log_pre;
@@ -1345,6 +1365,12 @@ struct {
 	int HP_packets_addLens_post;
 	int HP_packets_addLen_pre;
 	int HP_packets_addLen_post;
+	int HP_packets_addLenIntif_pre;
+	int HP_packets_addLenIntif_post;
+	int HP_packets_addLenInter_pre;
+	int HP_packets_addLenInter_post;
+	int HP_packets_addLenChrif_pre;
+	int HP_packets_addLenChrif_post;
 	int HP_rnd_init_pre;
 	int HP_rnd_init_post;
 	int HP_rnd_final_pre;
@@ -1589,10 +1615,14 @@ struct {
 	int HP_sysinfo_vcsrevision_scripts_post;
 	int HP_sysinfo_build_revision_pre;
 	int HP_sysinfo_build_revision_post;
+	int HP_sysinfo_fflags_pre;
+	int HP_sysinfo_fflags_post;
 	int HP_sysinfo_vcsrevision_reload_pre;
 	int HP_sysinfo_vcsrevision_reload_post;
 	int HP_sysinfo_is_superuser_pre;
 	int HP_sysinfo_is_superuser_post;
+	int HP_sysinfo_zlib_pre;
+	int HP_sysinfo_zlib_post;
 	int HP_sysinfo_init_pre;
 	int HP_sysinfo_init_post;
 	int HP_sysinfo_final_pre;
@@ -1645,6 +1675,12 @@ struct {
 	int HP_timer_init_post;
 	int HP_timer_final_pre;
 	int HP_timer_final_post;
+	int HP_timer_check_timers_pre;
+	int HP_timer_check_timers_post;
+	int HP_timer_get_current_clocksource_pre;
+	int HP_timer_get_current_clocksource_post;
+	int HP_timer_get_available_clocksource_pre;
+	int HP_timer_get_available_clocksource_post;
 } count;
 
 struct {

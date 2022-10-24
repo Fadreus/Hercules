@@ -9,7 +9,7 @@
 //= This file is part of Hercules.
 //= http://herc.ws - http://github.com/HerculesWS/Hercules
 //=
-//= Copyright (C) 2012-2021 Hercules Dev Team
+//= Copyright (C) 2012-2022 Hercules Dev Team
 //= Copyright (C) Daegaladh
 //= Copyright (C) Euphy
 //= Copyright (C) Joseph
@@ -1085,7 +1085,7 @@ prt_monk,226,257,6	script	Ill Girl#tu	4_F_04,{
 		mes "................";
 		next;
 		specialeffect EF_CURSEATTACK;
-		soundeffectall "_curse.wav",0;
+		soundeffectall "_curse.wav", PLAY_SOUND_ONCE;
 		emotion e_omg;
 		mes "["+strcharinfo(PC_NAME)+"]";
 		mes "This is....!";
@@ -1781,6 +1781,7 @@ prt_monk,223,123,3	script	Eavesdrop#tu	HIDDEN_NPC,{
 	}
 }
 
+/*@LOADGMSCRIPTS
 sec_in02,17,156,3	script	1st Job Quest Reset	4_F_JOB_BLACKSMITH,{
 	callfunc "F_GM_NPC";
 	mes "[1st Job Quest]";
@@ -1809,4 +1810,7 @@ sec_in02,17,156,3	script	1st Job Quest Reset	4_F_JOB_BLACKSMITH,{
 	}
 	mes "Completed.";
 	close;
+OnInit:
+	consolemes(CONSOLEMES_INFO, "GM script loaded: %s", strnpcinfo(NPC_NAME_UNIQUE));
 }
+//@*/

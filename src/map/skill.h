@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -51,8 +51,8 @@ struct status_change_entry;
 #define MAX_SKILL_ABRA_DB         210
 #define MAX_SKILL_IMPROVISE_DB    30
 #define MAX_SKILL_LEVEL           20
-#define MAX_SKILL_UNIT_LAYOUT     45
-#define MAX_SQUARE_LAYOUT         5 // 11*11 Placement of a maximum unit
+#define MAX_SKILL_UNIT_LAYOUT     (48 + MAX_SQUARE_LAYOUT)
+#define MAX_SQUARE_LAYOUT         7 // 15*15 Placement of a maximum unit
 #define MAX_SKILL_UNIT_COUNT      ((MAX_SQUARE_LAYOUT*2+1)*(MAX_SQUARE_LAYOUT*2+1))
 #define MAX_SKILLTIMERSKILL       15
 #define MAX_SKILLUNITGROUP        25
@@ -81,6 +81,9 @@ struct status_change_entry;
 //Walk intervals at which chase-skills are attempted to be triggered.
 #define WALK_SKILL_INTERVAL 5
 
+// Max Crimson Marker targets (RL_C_MARKER)
+#define MAX_SKILL_CRIMSON_MARKER 3
+
 /**
  * Enumerations
  **/
@@ -91,9 +94,10 @@ enum e_skill_inf {
 	INF_ATTACK_SKILL  = 0x01,
 	INF_GROUND_SKILL  = 0x02,
 	INF_SELF_SKILL    = 0x04, // Skills casted on self where target is automatically chosen
-	// 0x08 not assigned
+	INF_ITEM_SKILL    = 0x08,
 	INF_SUPPORT_SKILL = 0x10,
 	INF_TARGET_TRAP   = 0x20,
+	INF_UNKNOWN       = 0xff,
 };
 
 //Constants to identify a skill's nk value (damage properties)
@@ -112,33 +116,39 @@ enum e_skill_nk {
 	NK_NO_CARDFIX_DEF = 0x80,
 };
 
-//A skill with 3 would be no damage + splash: area of effect.
-//Constants to identify a skill's inf2 value.
+/// A skill with 3 would be no damage + splash: area of effect.
+/// Constants to identify a skill's inf2 value.
 enum e_skill_inf2 {
-	INF2_NONE              = 0x00000,
-	INF2_QUEST_SKILL       = 0x00001,
-	INF2_NPC_SKILL         = 0x00002, // NPC skills are those that players can't have in their skill tree.
-	INF2_WEDDING_SKILL     = 0x00004,
-	INF2_SPIRIT_SKILL      = 0x00008,
-	INF2_GUILD_SKILL       = 0x00010,
-	INF2_SONG_DANCE        = 0x00020,
-	INF2_ENSEMBLE_SKILL    = 0x00040,
-	INF2_TRAP              = 0x00080,
-	INF2_TARGET_SELF       = 0x00100, // Refers to ground placed skills that will target the caster as well (like Grandcross)
-	INF2_NO_TARGET_SELF    = 0x00200,
-	INF2_PARTY_ONLY        = 0x00400,
-	INF2_GUILD_ONLY        = 0x00800,
-	INF2_NO_ENEMY          = 0x01000,
-	INF2_NOLP              = 0x02000, // Spells that can ignore Land Protector
-	INF2_CHORUS_SKILL      = 0x04000, // Chorus skill
-	INF2_FREE_CAST_NORMAL  = 0x08000,
-	INF2_FREE_CAST_REDUCED = 0x10000,
-	INF2_SHOW_SKILL_SCALE  = 0x20000,
-	INF2_ALLOW_REPRODUCE   = 0x40000,
-	INF2_HIDDEN_TRAP       = 0x80000, // Traps that are hidden (based on trap_visiblity battle conf)
-	INF2_IS_COMBO_SKILL    = 0x100000, // Sets whether a skill can be used in combos or not
-	INF2_NO_STASIS         = 0x200000,
-	INF2_NO_KAGEHUMI       = 0x400000,
+	INF2_NONE               = 0x00000000,
+	INF2_QUEST_SKILL        = 0x00000001,
+	INF2_NPC_SKILL          = 0x00000002, ///< NPC skills are those that players can't have in their skill tree.
+	INF2_WEDDING_SKILL      = 0x00000004,
+	INF2_SPIRIT_SKILL       = 0x00000008,
+	INF2_GUILD_SKILL        = 0x00000010,
+	INF2_SONG_DANCE         = 0x00000020,
+	INF2_ENSEMBLE_SKILL     = 0x00000040,
+	INF2_TRAP               = 0x00000080,
+	INF2_TARGET_SELF        = 0x00000100, ///< Refers to ground placed skills that will target the caster as well (like Grandcross)
+	INF2_NO_TARGET_SELF     = 0x00000200,
+	INF2_PARTY_ONLY         = 0x00000400,
+	INF2_GUILD_ONLY         = 0x00000800,
+	INF2_NO_ENEMY           = 0x00001000,
+	INF2_NOLP               = 0x00002000, ///< Spells that can ignore Land Protector
+	INF2_CHORUS_SKILL       = 0x00004000, ///< Chorus skill
+	INF2_FREE_CAST_NORMAL   = 0x00008000,
+	INF2_FREE_CAST_REDUCED  = 0x00010000,
+	INF2_SHOW_SKILL_SCALE   = 0x00020000,
+	INF2_ALLOW_REPRODUCE    = 0x00040000, ///< Allow skill to be copied via SC_REPRODUCE
+	INF2_HIDDEN_TRAP        = 0x00080000, ///< Traps that are hidden (based on trap_visiblity battle conf)
+	INF2_IS_COMBO_SKILL     = 0x00100000, ///< Sets whether a skill can be used in combos or not
+	INF2_NO_STASIS          = 0x00200000,
+	INF2_NO_KAGEHUMI        = 0x00400000, 
+	INF2_RANGE_VULTURE      = 0x00800000, ///< Range is modified by AC_VULTURE
+	INF2_RANGE_SNAKEEYE     = 0x01000000, ///< Range is modified by GS_SNAKEEYE
+	INF2_RANGE_SHADOWJUMP   = 0x02000000, ///< Range is modified by NJ_SHADOWJUMP
+	INF2_RANGE_RADIUS       = 0x04000000, ///< Range is modified by WL_RADIUS
+	INF2_RANGE_RESEARCHTRAP = 0x08000000, ///< Range is modified by RA_RESEARCHTRAP
+	INF2_ALLOW_PLAGIARIZE   = 0x10000000, ///< Allow skill to be copied via RG_PLAGIARISM[KeiKun]
 };
 
 
@@ -151,20 +161,21 @@ enum e_skill_display {
 };
 
 enum {
-	UF_NONE             = 0x0000,
-	UF_DEFNOTENEMY      = 0x0001, // If 'defunit_not_enemy' is set, the target is changed to 'friend'
-	UF_NOREITERATION    = 0x0002, // Spell cannot be stacked
-	UF_NOFOOTSET        = 0x0004, // Spell cannot be cast near/on targets
-	UF_NOOVERLAP        = 0x0008, // Spell effects do not overlap
-	UF_PATHCHECK        = 0x0010, // Only cells with a shootable path will be placed
-	UF_NOPC             = 0x0020, // May not target players
-	UF_NOMOB            = 0x0040, // May not target mobs
-	UF_SKILL            = 0x0080, // May target skills
-	UF_DANCE            = 0x0100, // Dance
-	UF_ENSEMBLE         = 0x0200, // Duet
-	UF_SONG             = 0x0400, // Song
-	UF_DUALMODE         = 0x0800, // Spells should trigger both ontimer and onplace/onout/onleft effects.
-	UF_RANGEDSINGLEUNIT = 0x2000, // Hack for ranged layout, only display center
+	UF_NONE              = 0x0000,
+	UF_DEFNOTENEMY       = 0x0001, // If 'defunit_not_enemy' is set, the target is changed to 'friend'
+	UF_NOREITERATION     = 0x0002, // Spell cannot be stacked
+	UF_NOFOOTSET         = 0x0004, // Spell cannot be cast near/on targets
+	UF_NOOVERLAP         = 0x0008, // Spell effects do not overlap
+	UF_PATHCHECK         = 0x0010, // Only cells with a shootable path will be placed
+	UF_NOPC              = 0x0020, // May not target players
+	UF_NOMOB             = 0x0040, // May not target mobs
+	UF_SKILL             = 0x0080, // May target skills
+	UF_DANCE             = 0x0100, // Dance
+	UF_ENSEMBLE          = 0x0200, // Duet
+	UF_SONG              = 0x0400, // Song
+	UF_DUALMODE          = 0x0800, // Spells should trigger both ontimer and onplace/onout/onleft effects.
+	UF_RANGEDSINGLEUNIT  = 0x2000, // Hack for ranged layout, only display center
+	UF_REMOVEDBYFIRERAIN = 0x4000, // Can be deleted by RL_FIRE_RAIN
 };
 
 //Returns the cast type of the skill: ground cast, castend damage, castend no damage
@@ -206,6 +217,11 @@ enum {
 	ST_MH_FIGHTING,
 	ST_MH_GRAPPLING,
 	ST_PECO,
+	ST_QD_SHOT_READY,
+	ST_SUNSTANCE,
+	ST_MOONSTANCE,
+	ST_STARSTANCE,
+	ST_UNIVERSESTANCE,
 };
 
 enum e_skill {
@@ -1759,11 +1775,10 @@ enum {
 	UNT_KINGS_GRACE,
 	UNT_GLITTERING_GREED,
 	UNT_B_TRAP,
-	UNT_FIRE_RAIN,
-
+	UNT_FIRE_RAIN, // 0x105
 	UNT_CATNIPPOWDER,
 	UNT_SV_ROOTTWIST,
-
+	UNT_BOOKOFCREATINGSTAR,
 	/**
 	 * Guild Auras
 	 **/
@@ -2033,6 +2048,7 @@ struct skill_interface {
 	int firewall_unit_pos;
 	int icewall_unit_pos;
 	int earthstrain_unit_pos;
+	int firerain_unit_pos;
 	int area_temp[8];
 	int unit_temp[20];  // temporary storage for tracking skill unit skill ids as players move in/out of them
 	int unit_group_newid;
@@ -2173,6 +2189,7 @@ struct skill_interface {
 	void (*toggle_magicpower) (struct block_list *bl, uint16 skill_id, int skill_lv);
 	int (*magic_reflect) (struct block_list* src, struct block_list* bl, int type);
 	int (*onskillusage) (struct map_session_data *sd, struct block_list *bl, uint16 skill_id, int64 tick);
+	int (*bind_trap) (struct block_list *bl, va_list ap);
 	int (*cell_overlap) (struct block_list *bl, va_list ap);
 	int (*timerskill) (int tid, int64 tick, int id, intptr_t data);
 	void (*trap_do_splash) (struct block_list *bl, uint16 skill_id, uint16 skill_lv, int bl_flag, int64 tick);

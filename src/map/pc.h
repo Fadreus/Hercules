@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include "map/buyingstore.h"  // struct s_buyingstore
 #include "map/itemdb.h" // MAX_ITEMDELAYS
 #include "map/log.h" // struct e_log_pick_type
+#include "map/macro.h" // struct macro_detect
 #include "map/map.h" // RC_MAX, ELE_MAX
 #include "map/pc_groups.h" // GroupSettings
 #include "map/rodex.h"
@@ -46,6 +47,8 @@
 #define MAX_PC_FEELHATE 3
 #define MAX_PC_DEVOTION 5          ///< Max amount of devotion targets
 #define PVP_CALCRANK_INTERVAL 1000 ///< PVP calculation interval
+
+enum delitem_reason;
 
 //Equip indexes constants. (eg: sd->equip_index[EQI_AMMO] returns the index
 //where the arrows are equipped)
@@ -190,7 +193,6 @@ struct autocast_data {
 	bool itemskill_instant_cast; // Used by itemskill() script command, to cast skill instantaneously.
 	bool itemskill_cast_on_self; // Used by itemskill() script command, to forcefully cast skill on invoking character.
 };
-
 struct map_session_data {
 	struct block_list bl;
 	struct unit_data ud;
@@ -260,6 +262,9 @@ struct map_session_data {
 		unsigned int refine_ui : 1;
 		unsigned int npc_unloaded : 1; ///< The player is talking with an unloaded NPCs (respawned tombstones)
 		unsigned int lapine_ui : 1;
+		unsigned int onekillmonster : 1;
+		unsigned int grade_ui : 1;
+		unsigned int reform_ui : 1;
 	} state;
 	struct {
 		unsigned char no_weapon_damage, no_magic_damage, no_misc_damage;
@@ -368,13 +373,14 @@ BEGIN_ZEROED_BLOCK; // this block will be globally zeroed at the beginning of st
 #ifdef RENEWAL
 	int race_tolerance[RC_MAX];
 #endif
+	int dropaddrace[RC_MAX];
 	struct s_autospell autospell[15], autospell2[15], autospell3[15];
 	struct s_addeffect addeff[MAX_PC_BONUS], addeff2[MAX_PC_BONUS];
 	struct s_addeffectonskill addeff3[MAX_PC_BONUS];
 	struct { //skillatk raises bonus dmg% of skills, skillheal increases heal%, skillblown increases bonus blewcount for some skills.
 		unsigned int id;
 		int val;
-	} skillatk[MAX_PC_BONUS], skillusesprate[MAX_PC_BONUS], skillusesp[MAX_PC_BONUS], skillheal[5], skillheal2[5], skillblown[MAX_PC_BONUS], skillcast[MAX_PC_BONUS], skillcooldown[MAX_PC_BONUS], skillfixcast[MAX_PC_BONUS], skillvarcast[MAX_PC_BONUS], skillfixcastrate[MAX_PC_BONUS];
+	} skillatk[MAX_PC_BONUS], skillusesprate[MAX_PC_BONUS], skillusesp[MAX_PC_BONUS], skillheal[5], skillheal2[5], skillblown[MAX_PC_BONUS], skillcast[MAX_PC_BONUS], skillcooldown[MAX_PC_BONUS], skillfixcast[MAX_PC_BONUS], skillvarcast[MAX_PC_BONUS], skillfixcastrate[MAX_PC_BONUS], subskill[MAX_PC_BONUS];
 	struct {
 		int value;
 		int rate;
@@ -455,11 +461,14 @@ END_ZEROED_BLOCK;
 	int charm_count;
 	enum spirit_charm_types charm_type;
 	int charm_timer[MAX_SPIRITCHARM];
+	int soulball;
 	unsigned char potion_success_counter; //Potion successes in row counter
 	unsigned char mission_count; //Stores the bounty kill count for TK_MISSION
 	int mission_mobid; //Stores the target mob_id for TK_MISSION
 	int die_counter; //Total number of times you've died
 	int devotion[MAX_PC_DEVOTION]; //Stores the account IDs of chars devoted to.
+	int stellar_mark[MAX_STELLAR_MARKS]; // Stores the account ID's of character's with a stellar mark.
+	int united_soul[MAX_UNITED_SOULS]; // Stores the account ID's of character's who's soul is united.
 	int trade_partner;
 	struct {
 		struct {
@@ -663,6 +672,11 @@ END_ZEROED_BLOCK;
 	bool achievements_received;
 	// Title
 	VECTOR_DECL(int) title_ids;
+
+	int c_marker[MAX_SKILL_CRIMSON_MARKER]; /// Store target that marked by Crimson Marker [Cydh]
+	bool flicker; /// Check RL_FLICKER usage status [Cydh]
+
+	struct macro_detect macro_detect;
 };
 
 #define EQP_WEAPON EQP_HAND_R
@@ -688,10 +702,12 @@ END_ZEROED_BLOCK;
 #define pc_isidle(sd)         ( (sd)->chat_id != 0 || (sd)->state.vending || (sd)->state.buyingstore || DIFF_TICK(sockt->last_tick, (sd)->idletime) >= battle->bc->idle_no_share )
 #define pc_istrading(sd)      ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->state.trading )
 #define pc_istrading_except_npc(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || (sd)->state.trading != 0 )
-#define pc_cant_act(sd)       ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
-#define pc_cant_act_except_lapine(sd) ((sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1)
-#define pc_cant_act_except_npc(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || (sd)->chat_id != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
-#define pc_cant_act_except_npc_chat(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
+#define pc_cant_act(sd)       ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1 || (sd)->state.grade_ui == 1 || (sd)->state.reform_ui == 1)
+#define pc_cant_act_except_lapine(sd) ((sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.grade_ui == 1 || (sd)->state.reform_ui == 1)
+#define pc_cant_act_except_npc(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || (sd)->chat_id != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1 || (sd)->state.grade_ui == 1 || (sd)->state.reform_ui == 1)
+#define pc_cant_act_except_npc_chat(sd) ( (sd)->state.vending != 0 || (sd)->state.buyingstore != 0 || ((sd)->sc.opt1 != 0 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading != 0 || (sd)->state.storage_flag != 0 || (sd)->state.prevend != 0 || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1 || (sd)->state.grade_ui == 1 || (sd)->state.reform_ui == 1)
+#define pc_cant_act_except_grade(sd)       ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1 || (sd)->state.reform_ui == 1)
+#define pc_cant_act_except_reform(sd)       ( (sd)->npc_id || (sd)->state.vending || (sd)->state.buyingstore || (sd)->chat_id != 0 || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1 || (sd)->state.grade_ui == 1)
 
 /* equals pc_cant_act except it doesn't check for chat rooms */
 #define pc_cant_act2(sd)       ( (sd)->npc_id || (sd)->state.buyingstore || ((sd)->sc.opt1 && (sd)->sc.opt1 != OPT1_BURNING) || (sd)->state.trading || (sd)->state.storage_flag || (sd)->state.prevend || (sd)->state.refine_ui == 1 || (sd)->state.lapine_ui == 1)
@@ -961,6 +977,7 @@ END_ZEROED_BLOCK; /* End */
 	int (*checkskill2) (struct map_session_data *sd,uint16 index);
 	int (*checkallowskill) (struct map_session_data *sd);
 	int (*checkequip) (struct map_session_data *sd,int pos);
+	int (*get_skill_cooldown) (struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
 
 	int (*calc_skilltree) (struct map_session_data *sd);
 	void (*calc_skilltree_clear) (struct map_session_data *sd);
@@ -979,7 +996,7 @@ END_ZEROED_BLOCK; /* End */
 	int (*payzeny) (struct map_session_data *sd,int zeny, enum e_log_pick_type type, struct map_session_data *tsd);
 	int (*additem) (struct map_session_data *sd, const struct item *item_data, int amount, e_log_pick_type log_type);
 	int (*getzeny) (struct map_session_data *sd,int zeny, enum e_log_pick_type type, struct map_session_data *tsd);
-	int (*delitem) (struct map_session_data *sd,int n,int amount,int type, short reason, e_log_pick_type log_type);
+	int (*delitem) (struct map_session_data *sd,int n,int amount,int type, enum delitem_reason reason, e_log_pick_type log_type);
 
 	// Special Shop System
 	int (*paycash) (struct map_session_data *sd, int price, int points);
@@ -1005,6 +1022,9 @@ END_ZEROED_BLOCK; /* End */
 	int (*endautobonus) (int tid, int64 tick, int id, intptr_t data);
 	int (*delautobonus) (struct map_session_data* sd,struct s_autobonus *bonus,char max,bool restore);
 
+	void (*bonus_addele) (struct map_session_data* sd, unsigned char ele, short rate, short flag);
+	void (*bonus_subele) (struct map_session_data* sd, unsigned char ele, short rate, short flag);
+
 	int (*bonus) (struct map_session_data *sd,int type,int val);
 	int (*bonus2) (struct map_session_data *sd,int type,int type2,int val);
 	int (*bonus3) (struct map_session_data *sd,int type,int type2,int type3,int val);
@@ -1019,8 +1039,8 @@ END_ZEROED_BLOCK; /* End */
 	int (*steal_item) (struct map_session_data *sd,struct block_list *bl, uint16 skill_lv);
 	int (*steal_coin) (struct map_session_data *sd,struct block_list *bl, uint16 skill_lv);
 
-	int (*modifybuyvalue) (struct map_session_data *sd,int orig_value);
-	int (*modifysellvalue) (struct map_session_data *sd,int orig_value);
+	int (*modifybuyvalue) (struct map_session_data *sd, int orig_value, bool ignore_discount);
+	int (*modifysellvalue) (struct map_session_data *sd, int orig_value, bool ignore_overcharge);
 
 	int (*follow) (struct map_session_data *sd, int target_id); // [MouseJstr]
 	int (*stop_following) (struct map_session_data *sd);
@@ -1060,6 +1080,7 @@ END_ZEROED_BLOCK; /* End */
 	void (*autocast_remove) (struct map_session_data *sd, enum autocast_type type, int skill_id, int skill_lv);
 
 	int (*skillatk_bonus) (struct map_session_data *sd, uint16 skill_id);
+	int (*sub_skillatk_bonus) (struct map_session_data *sd, uint16 skill_id);
 	int (*skillheal_bonus) (struct map_session_data *sd, uint16 skill_id);
 	int (*skillheal2_bonus) (struct map_session_data *sd, uint16 skill_id);
 
@@ -1129,6 +1150,8 @@ END_ZEROED_BLOCK; /* End */
 	int (*delspiritball) (struct map_session_data *sd,int count,int type);
 	int (*delspiritball_sub) (struct map_session_data *sd);
 	int (*getmaxspiritball) (struct map_session_data *sd, int min);
+	void (*addsoulball) (struct map_session_data *sd, int max);
+	void (*delsoulball) (struct map_session_data *sd, int count, bool type);
 	void (*addfame) (struct map_session_data *sd, int ranktype, int count);
 	int (*fame_rank) (int char_id, int ranktype);
 	int (*famelist_type) (uint16 job_mapid);
@@ -1138,6 +1161,9 @@ END_ZEROED_BLOCK; /* End */
 	bool (*read_exp_db) (void);
 	int (*read_exp_db_sub) (struct config_setting_t *conf, bool base);
 	bool (*read_exp_db_sub_class) (struct config_setting_t *t, bool base);
+	bool (*read_attr_fix_db) (void);
+	int (*read_attr_fix_db_entry) (struct config_setting_t *def_attr, enum elements def_ele, const char *def_ele_name);
+	int (*read_attr_fix_db_level) (struct config_setting_t *def_lv, enum elements def_ele, int lv, const char *def_ele_name);
 	int (*map_day_timer) (int tid, int64 tick, int id, intptr_t data); // by [yor]
 	int (*map_night_timer) (int tid, int64 tick, int id, intptr_t data); // by [yor]
 	// Rental System
@@ -1238,6 +1264,8 @@ END_ZEROED_BLOCK; /* End */
 	bool (*has_second_costume) (struct map_session_data *sd);
 	bool (*expandInventory) (struct map_session_data *sd, int adjustSize);
 	bool (*auto_exp_insurance) (struct map_session_data *sd);
+
+	void (*crimson_marker_clear) (struct map_session_data *sd);
 };
 
 #ifdef HERCULES_CORE

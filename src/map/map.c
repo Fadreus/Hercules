@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 #include "map/clif.h"
 #include "map/duel.h"
 #include "map/elemental.h"
+#include "map/grader.h"
 #include "map/guild.h"
 #include "map/homunculus.h"
 #include "map/instance.h"
@@ -41,6 +42,7 @@
 #include "map/irc-bot.h"
 #include "map/itemdb.h"
 #include "map/log.h"
+#include "map/macro.h"
 #include "map/mail.h"
 #include "map/mapreg.h"
 #include "map/mercenary.h"
@@ -124,6 +126,9 @@ static inline void map_block_free_expand(void)
 {
 	map->block_free_list_size += 100;
 	RECREATE(map->block_free, struct block_list *, map->block_free_list_size);
+#ifdef SANITIZE
+	RECREATE(map->block_free_sanitize, int *, map->block_free_list_size);
+#endif
 }
 
 /*==========================================
@@ -148,10 +153,17 @@ static int map_freeblock(struct block_list *bl)
 			aFree(bl);
 		bl = NULL;
 	} else {
-		if( map->block_free_count >= map->block_free_list_size )
+		if (bl->deleted == true)
+			return map->block_free_lock;
+		if (map->block_free_count >= map->block_free_list_size)
 			map_block_free_expand();
 
-		map->block_free[map->block_free_count++] = bl;
+		map->block_free[map->block_free_count] = bl;
+#ifdef SANITIZE
+		map->block_free_sanitize[map->block_free_count] = aMalloc(4);
+#endif
+		bl->deleted = true;
+		map->block_free_count++;
 	}
 
 	return map->block_free_lock;
@@ -172,6 +184,10 @@ static int map_freeblock_unlock(void)
 	if ((--map->block_free_lock) == 0) {
 		int i;
 		for (i = 0; i < map->block_free_count; i++) {
+#ifdef SANITIZE
+			aFree(map->block_free_sanitize[i]);
+			map->block_free_sanitize[i] = NULL;
+#endif
 			if( map->block_free[i]->type == BL_ITEM )
 				ers_free(map->flooritem_ers, map->block_free[i]);
 			else
@@ -475,7 +491,7 @@ static int map_count_oncell(int16 m, int16 x, int16 y, int type, int flag)
 						continue;
 					if (bl->type == BL_NPC) {
 						const struct npc_data *nd = BL_UCCAST(BL_NPC, bl);
-						if (nd->class_ == FAKE_NPC || nd->class_ == HIDDEN_WARP_CLASS)
+						if (nd->class_ == FAKE_NPC || nd->class_ == HIDDEN_WARP_CLASS || nd->dyn.isdynamic)
 							continue;
 					}
 				}
@@ -1352,7 +1368,6 @@ static int bl_vgetall_inpath(struct block_list *bl, va_list args)
 
 	int xi;
 	int yi;
-	int xu, yu;
 	int k;
 
 	nullpo_ret(bl);
@@ -1366,21 +1381,29 @@ static int bl_vgetall_inpath(struct block_list *bl, va_list args)
 	if ( k > magnitude2 && !path->search_long(NULL, NULL, m, x0, y0, xi, yi, CELL_CHKWALL) )
 		return 0; //Targets beyond the initial ending point need the wall check.
 
-	//All these shifts are to increase the precision of the intersection point and distance considering how it's
-	//int math.
-	k  = ( k << 4 ) / magnitude2; //k will be between 1~16 instead of 0~1
-	xi <<= 4;
-	yi <<= 4;
-	xu = ( x0 << 4 ) + k * ( x1 - x0 );
-	yu = ( y0 << 4 ) + k * ( y1 - y0 );
+	/**
+	 * We're shifting the coords 8 bits higher
+	 * to have higher precision on the cell comparisons.
+	 * Especially the multiplication of k * (x1 - x0)
+	 * between the intersecting point on the line and the bl we might affect
+	 * requires higher precision due to int math.
+	 * Since the coords are 8 bits higher,
+	 * the range is 8 bits higher too when comparing
+	 */
+	k = (k << 8) / magnitude2;
+	int xu = (x0 << 8) + k * (x1 - x0);
+	int yu = (y0 << 8) + k * (y1 - y0);
+	xi <<= 8;
+	yi <<= 8;
 
-//Avoid needless calculations by not getting the sqrt right away.
-#define MAGNITUDE2(x0, y0, x1, y1) ( ( ( x1 ) - ( x0 ) ) * ( ( x1 ) - ( x0 ) ) + ( ( y1 ) - ( y0 ) ) * ( ( y1 ) - ( y0 ) ) )
-
-	k  = MAGNITUDE2(xi, yi, xu, yu);
-
-	//If all dot coordinates were <<4 the square of the magnitude is <<8
-	if ( k > range )
+	/**
+	 * We're calculating the distance like path->distance,
+	 * but without CIRCULAR_AREA since NPCs use map->foreachinpath too.
+	 */
+	int dx = abs(xi - xu);
+	int dy = abs(yi - yu);
+	int distance = (dx < dy ? dy : dx);
+	if (distance > (range << 8))
 		return 0;
 
 	return 1;
@@ -1425,6 +1448,8 @@ static int map_vforeachinpath(int (*func)(struct block_list*, va_list), int16 m,
 	int magnitude2, len_limit; //The square of the magnitude
 	int mx0 = x0, mx1 = x1, my0 = y0, my1 = y1;
 
+//Avoid needless calculations by not getting the sqrt right away.
+#define MAGNITUDE2(x0, y0, x1, y1) ( ( ( x1 ) - ( x0 ) ) * ( ( x1 ) - ( x0 ) ) + ( ( y1 ) - ( y0 ) ) * ( ( y1 ) - ( y0 ) ) )
 	len_limit = magnitude2 = MAGNITUDE2(x0, y0, x1, y1);
 	if (magnitude2 < 1) //Same begin and ending point, can't trace path.
 		return 0;
@@ -1451,7 +1476,6 @@ static int map_vforeachinpath(int (*func)(struct block_list*, va_list), int16 m,
 		my0 -= range;
 		my1 += range;
 	}
-	range *= range << 8; //Values are shifted later on for higher precision using int math.
 
 	bl_getall_area(type, m, mx0, my0, mx1, my1, bl_vgetall_inpath, m, x0, y0, x1, y1, range, len_limit, magnitude2);
 
@@ -2112,6 +2136,8 @@ static int map_quit(struct map_session_data *sd)
 	party->booking_delete(sd); // Party Booking [Spiria]
 	pc->makesavestatus(sd);
 	pc->clean_skilltree(sd);
+	pc->crimson_marker_clear(sd);
+	macro->detector_disconnect(sd);
 	chrif->save(sd,1);
 	unit->free_pc(sd);
 	return 0;
@@ -4375,15 +4401,15 @@ static bool map_config_read(const char *filename, bool imported)
 	libconfig->setting_lookup_bool(setting, "use_grf", &map->enable_grf);
 	libconfig->setting_lookup_mutable_string(setting, "default_language", map->default_lang_str, sizeof(map->default_lang_str));
 
-	if (!map_config_read_console(filename, &config, imported))
+	if (!map->config_read_console(filename, &config, imported))
 		retval = false;
-	if (!map_config_read_connection(filename, &config, imported))
+	if (!map->config_read_connection(filename, &config, imported))
 		retval = false;
-	if (!map_config_read_inter(filename, &config, imported))
+	if (!map->config_read_inter(filename, &config, imported))
 		retval = false;
-	if (!map_config_read_database(filename, &config, imported))
+	if (!map->config_read_database(filename, &config, imported))
 		retval = false;
-	if (!map_config_read_map_list(filename, &config, imported))
+	if (!map->config_read_map_list(filename, &config, imported))
 		retval = false;
 
 	// import should overwrite any previous configuration, so it should be called last
@@ -4675,14 +4701,27 @@ static int map_sql_close(void)
  **/
 static struct map_zone_data *map_merge_zone(struct map_zone_data *main, struct map_zone_data *other)
 {
-	char newzone[MAP_ZONE_NAME_LENGTH];
+	char newzone[MAP_ZONE_NAME_LENGTH * 2];
 	struct map_zone_data *zone = NULL;
 	int cursor, i, j;
 
 	nullpo_retr(NULL, main);
 	nullpo_retr(NULL, other);
 
-	safesnprintf(newzone, MAP_ZONE_NAME_LENGTH, "%s+%s", main->name, other->name);
+	if (snprintf(newzone, MAP_ZONE_NAME_LENGTH * 2, "%s+%s", main->name, other->name) >= MAP_ZONE_NAME_LENGTH) {
+		// In the unlikely case the name is too long and won't fit, there's a chance two different zones might be truncated to the same name.
+		// Hash the concatenation of the two names if that happens, to minimize the chance of collisions.
+		char newzone_temp[33];
+		md5->string(newzone, newzone_temp);
+		STATIC_ASSERT(MAP_ZONE_NAME_LENGTH > 32 + 12 + 12 + 2, "The next lines needs to be adjusted if MAP_ZONE_NAME_LENGTH is changed");
+		snprintf(newzone, MAP_ZONE_NAME_LENGTH, "%s_", newzone_temp);
+		size_t len = strlen(newzone);
+		safestrncpy(newzone + len, main->name, len + 12);
+		len = strlen(newzone);
+		newzone[len++] = '+';
+		newzone[len] = '\0';
+		safestrncpy(newzone + len, main->name, len + 12);
+	}
 
 	if( (zone = strdb_get(map->zone_db, newzone)) )
 		return zone;/* this zone has already been merged */
@@ -6471,6 +6510,7 @@ int do_final(void)
 	skill->final();
 	status->final();
 	refine->final();
+	grader->final();
 	unit->final();
 	bg->final();
 	duel->final();
@@ -6511,6 +6551,10 @@ int do_final(void)
 
 	if( map->block_free )
 		aFree(map->block_free);
+#ifdef SANITIZE
+	if (map->block_free_sanitize)
+		aFree(map->block_free_sanitize);
+#endif
 	if( map->bl_list )
 		aFree(map->bl_list);
 
@@ -6648,6 +6692,7 @@ static void map_load_defaults(void)
 {
 	mapindex_defaults();
 	map_defaults();
+	mapit_defaults();
 	/* */
 	atcommand_defaults();
 	battle_defaults();
@@ -6664,6 +6709,7 @@ static void map_load_defaults(void)
 	ircbot_defaults();
 	itemdb_defaults();
 	log_defaults();
+	macro_defaults();
 	mail_defaults();
 	npc_defaults();
 	script_defaults();
@@ -6692,6 +6738,7 @@ static void map_load_defaults(void)
 	rodex_defaults();
 	stylist_defaults();
 	refine_defaults();
+	grader_defaults();
 }
 /**
  * --run-once handler
@@ -6999,6 +7046,7 @@ int do_init(int argc, char *argv[])
 	mob->init(minimal);
 	pc->init(minimal);
 	refine->init(minimal);
+	grader->init(minimal);
 	status->init(minimal);
 	party->init(minimal);
 	guild->init(minimal);
@@ -7010,6 +7058,7 @@ int do_init(int argc, char *argv[])
 	quest->init(minimal);
 	achievement->init(minimal);
 	stylist->init(minimal);
+	macro->init(minimal);
 	npc->init(minimal);
 	unit->init(minimal);
 	bg->init(minimal);
@@ -7140,6 +7189,9 @@ void map_defaults(void)
 	map->iwall_db = NULL;
 
 	map->block_free = NULL;
+#ifdef SANITIZE
+	map->block_free_sanitize = NULL;
+#endif
 	map->block_free_count = 0;
 	map->block_free_lock = 0;
 	map->block_free_list_size = 0;
@@ -7318,6 +7370,13 @@ PRAGMA_GCC9(GCC diagnostic pop)
 	map->readgat = map_readgat;
 	map->readallmaps = map_readallmaps;
 	map->config_read = map_config_read;
+
+	map->config_read_console = map_config_read_console;
+	map->config_read_connection = map_config_read_connection;
+	map->config_read_inter = map_config_read_inter;
+	map->config_read_database = map_config_read_database;
+	map->config_read_map_list = map_config_read_map_list;
+
 	map->read_npclist = map_read_npclist;
 	map->inter_config_read = inter_config_read;
 	map->inter_config_read_database_names = inter_config_read_database_names;
@@ -7344,7 +7403,10 @@ PRAGMA_GCC9(GCC diagnostic pop)
 	map->zone_clear_single = map_zone_clear_single;
 
 	map->lock_check = map_lock_check;
+}
 
+void mapit_defaults(void)
+{
 	/**
 	 * mapit interface
 	 **/

@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2012-2021 Hercules Dev Team
+ * Copyright (C) 2012-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -223,7 +223,7 @@ static int VFPRINTF(HANDLE handle, const char *fmt, va_list argptr)
 			p=q+1; //and start searching again
 		} else {
 			// from here, we will skip the '\033['
-			// we break at the first unprocessible position
+			// we break at the first unprocessable position
 			// assuming regular text is starting there
 			uint8 numbers[16], numpoint=0;
 			CONSOLE_SCREEN_BUFFER_INFO info;
@@ -489,6 +489,7 @@ static int FPRINTF(HANDLE handle, const char *fmt, ...)
 #define is_console(file) (0!=isatty(fileno(file)))
 
 //vprintf_without_ansiformats
+static int VFPRINTF(FILE *file, const char *fmt, va_list argptr) __attribute__((format(printf, 2, 0)));
 static int VFPRINTF(FILE *file, const char *fmt, va_list argptr)
 {
 	char *p, *q;
@@ -516,7 +517,7 @@ static int VFPRINTF(FILE *file, const char *fmt, va_list argptr)
 			p=q+1; //and start searching again
 		} else {
 			// from here, we will skip the '\033['
-			// we break at the first unprocessible position
+			// we break at the first unprocessable position
 			// assuming regular text is starting there
 
 			// skip escape and bracket
@@ -603,6 +604,7 @@ static int FPRINTF(FILE *file, const char *fmt, ...)
 
 #endif// not _WIN32
 
+static int vShowMessage_(enum msg_type flag, const char *string, va_list ap) __attribute__((format(printf, 2, 0)));
 static int vShowMessage_(enum msg_type flag, const char *string, va_list ap)
 {
 	va_list apcopy;
@@ -722,6 +724,7 @@ static int vShowMessage_(enum msg_type flag, const char *string, va_list ap)
 	return 0;
 }
 
+static int showmsg_vShowMessage(const char *string, va_list ap) __attribute__((format(printf, 1, 0)));
 static int showmsg_vShowMessage(const char *string, va_list ap)
 {
 	int ret;

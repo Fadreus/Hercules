@@ -2,7 +2,7 @@
  * This file is part of Hercules.
  * http://herc.ws - http://github.com/HerculesWS/Hercules
  *
- * Copyright (C) 2013-2021 Hercules Dev Team
+ * Copyright (C) 2013-2022 Hercules Dev Team
  * Copyright (C) Athena Dev Teams
  *
  * Hercules is free software: you can redistribute it and/or modify
@@ -54,8 +54,10 @@ struct sysinfo_interface {
 	const char *(*vcsrevision_src) (void);
 	const char *(*vcsrevision_scripts) (void);
 	int (*build_revision) (void);
+	uint32 (*fflags) (void);
 	void (*vcsrevision_reload) (void);
 	bool (*is_superuser) (void);
+	const char *(*zlib) (void);
 	void (*init) (void);
 	void (*final) (void);
 };
